@@ -1,9 +1,9 @@
 name: Android-app bouwen
 
+# Bij elke update (elke push naar main) een nieuwe APK, ook als alleen de backend of documentatie wijzigt.
 on:
   push:
     branches: [main]
-    paths: ["android/**", ".github/workflows/android.yml"]
   pull_request:
     paths: ["android/**", ".github/workflows/android.yml"]
   workflow_dispatch:
@@ -33,6 +33,8 @@ jobs:
           gradle-version: "8.14.3"
 
       - name: Debug-APK bouwen
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
         run: |
           set -o pipefail
           gradle assembleDebug --no-daemon --console=plain 2>&1 | tee build.log
@@ -45,9 +47,16 @@ jobs:
                  | sed -e 's/%/%25/g' -e 's#file:///home/runner/work/VitalConnect/VitalConnect/##' | awk '{printf "%s%%0A", $0}')
           echo "::error title=Build mislukt::${msg}"
 
+      - name: Naam van het artefact
+        if: success()
+        id: meta
+        run: |
+          version=$(grep -m1 'versionName = ' app/build.gradle.kts | sed -E 's/.*"(.*)".*/\1/')
+          echo "name=VitalConnect-${version}-build${{ github.run_number }}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
       - uses: actions/upload-artifact@v5
         if: success()
         with:
-          name: VitalConnect-debug-apk
+          name: ${{ steps.meta.outputs.name }}
           path: android/app/build/outputs/apk/debug/*.apk
-          retention-days: 14
+          retention-days: 90

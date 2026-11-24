@@ -12,7 +12,8 @@ android {
         applicationId = "nl.vitaal.app"
         minSdk = 28            // Health Connect werkt vanaf Android 9
         targetSdk = 35
-        versionCode = 2
+        // In GitHub Actions telt het buildnummer op, zodat elke APK over de vorige heen te installeren is
+        versionCode = System.getenv("BUILD_NUMBER")?.toIntOrNull() ?: 2
         versionName = "0.2.0"
     }
 
@@ -34,9 +35,9 @@ android {
     }
 }
 
-// APK heet VitalConnect-<versie>-debug.apk
+// APK heet VitalConnect-<versie>[-build<n>]-debug.apk
 base {
-    archivesName.set("VitalConnect-" + android.defaultConfig.versionName)
+    archivesName.set("VitalConnect-" + android.defaultConfig.versionName + (System.getenv("BUILD_NUMBER")?.let { "-build$it" } ?: ""))
 }
 
 dependencies {
