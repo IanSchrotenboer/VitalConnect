@@ -44,9 +44,12 @@ fun SleepScreen(vm: MainViewModel) {
 
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Column(Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp)) {
-                Text("Slaap", style = MaterialTheme.typography.headlineLarge, color = p.ink)
-                Text("Hoe goed je rust, en hoe je lichaam herstelt", style = MaterialTheme.typography.bodyMedium, color = p.muted)
+            Row(verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f).padding(start = 4.dp, top = 8.dp, bottom = 4.dp)) {
+                    Text("Slaap", style = MaterialTheme.typography.headlineLarge, color = p.ink)
+                    Text("Hoe goed je rust, en hoe je lichaam herstelt", style = MaterialTheme.typography.bodyMedium, color = p.muted)
+                }
+                IconLabel(VIcons.Sliders, "Aanpassen", p.primary) { vm.editing = EditTarget.Sleep }
             }
         }
 
@@ -104,7 +107,7 @@ fun SleepScreen(vm: MainViewModel) {
         }
 
         // Advies op basis van de eigen cijfers
-        if (avg7 != null) item {
+        if (avg7 != null && vm.layout.sleepAdvice) item {
             val diff = goal - avg7
             val text = when {
                 diff > 0.5 -> "Je slaapt deze week gemiddeld ${fmtHours(diff)} korter dan je doel. Een vaste bedtijd, ook in het weekend, helpt je ritme."
@@ -116,13 +119,19 @@ fun SleepScreen(vm: MainViewModel) {
         }
 
         // Herstel tijdens de slaap
-        item { SectionTitle("Herstel tijdens je slaap", Modifier.padding(start = 4.dp, top = 8.dp)) }
-        item {
-            // Op heel smalle schermen (buitenscherm klaptelefoon) onder elkaar, anders naast elkaar
+        val tiles = vm.layout.sleepTiles.filter { it in vm.metrics }
+        if (tiles.isNotEmpty()) item { SectionTitle("Herstel tijdens je slaap", Modifier.padding(start = 4.dp, top = 8.dp)) }
+        if (tiles.isNotEmpty()) item {
+            // Drie per rij; op heel smalle schermen (buitenscherm klaptelefoon) onder elkaar
             if (LocalWidthClass.current == WidthClass.Tiny) Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                listOf("hrv", "rhr", "resp").forEach { id -> RecoveryTile(vm, id, Modifier.fillMaxWidth()) }
-            } else Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                listOf("hrv", "rhr", "resp").forEach { id -> RecoveryTile(vm, id, Modifier.weight(1f).fillMaxHeight()) }
+                tiles.forEach { id -> RecoveryTile(vm, id, Modifier.fillMaxWidth()) }
+            } else Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                tiles.chunked(3).forEach { row ->
+                    Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        row.forEach { id -> RecoveryTile(vm, id, Modifier.weight(1f).fillMaxHeight()) }
+                        repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
             }
         }
     }

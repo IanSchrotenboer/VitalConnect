@@ -14,6 +14,8 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.doubleOrNull
@@ -57,6 +59,51 @@ data class Pref(
     val preferredSource: String? = null,
     val goal: Double? = null,
     val inRings: Boolean = false,
+    /** Plaats in de dagringen, 1 = buitenste ring. */
+    val ringPosition: Int? = null,
+)
+
+/** Welk scherm je aanpast. */
+enum class EditTarget { Today, Health, Sleep }
+
+/**
+ * Indeling van de app (profiles.layout). Los van de tegels op Vandaag:
+ * wat je op Vandaag weghaalt of in de ringen zet, blijft gewoon in Gezondheid staan.
+ */
+data class Layout(
+    val greetName: Boolean = true,
+    val motivation: Boolean = true,
+    val healthTotals: Boolean = true,
+    val healthHidden: Set<String> = emptySet(),
+    val sleepTiles: List<String> = listOf("hrv", "rhr", "resp"),
+    val sleepAdvice: Boolean = true,
+) {
+    fun toJson(): JsonObject = buildJsonObject {
+        put("greetName", greetName); put("motivation", motivation); put("healthTotals", healthTotals)
+        put("healthHidden", JsonArray(healthHidden.sorted().map { JsonPrimitive(it) }))
+        put("sleepTiles", JsonArray(sleepTiles.map { JsonPrimitive(it) }))
+        put("sleepAdvice", sleepAdvice)
+    }
+
+    companion object {
+        fun from(o: JsonObject?): Layout {
+            if (o == null) return Layout()
+            fun b(k: String, d: Boolean) = o[k]?.jsonPrimitive?.booleanOrNull ?: d
+            fun list(k: String) = (o[k] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+            return Layout(
+                greetName = b("greetName", true), motivation = b("motivation", true), healthTotals = b("healthTotals", true),
+                healthHidden = list("healthHidden")?.toSet() ?: emptySet(),
+                sleepTiles = list("sleepTiles") ?: Layout().sleepTiles,
+                sleepAdvice = b("sleepAdvice", true),
+            )
+        }
+    }
+}
+
+/** Startdoel als je een metric zonder doel in de ringen zet. */
+val DEFAULT_GOALS = mapOf(
+    "steps" to 10000.0, "active" to 30.0, "kcal" to 600.0, "dist" to 5.0, "floors" to 10.0,
+    "sleep" to 8.0, "sscore" to 80.0, "energy" to 70.0, "hrv" to 50.0, "spo2" to 96.0, "vo2" to 45.0,
 )
 
 data class DayValue(val value: Double, val source: String)
@@ -97,7 +144,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var needsConsent by mutableStateOf(false); private set
     var busy by mutableStateOf(false); private set
     var message by mutableStateOf<String?>(null)
-    var editing by mutableStateOf(false)
+    var editing by mutableStateOf<EditTarget?>(null)
+    var layout by mutableStateOf(Layout()); private set
     var tab by mutableStateOf(Tab.Today)
     var showSettings by mutableStateOf(false)
     var profileTab by mutableStateOf(ProfileTab.Profile)
@@ -138,8 +186,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var lastSync by mutableStateOf(hc.lastSync); private set
 
     val visible: List<Pref> get() = prefs.values.filter { it.visible }.sortedBy { it.position }
+    /** Dagringen (max. 3) op volgorde. */
+    val rings: List<Pref>
+        get() = prefs.values.filter { it.inRings && it.goal != null && metrics[it.metric]?.lowerIsBetter != true }
+            .sortedWith(compareBy({ it.ringPosition ?: 9 }, { it.position })).take(3)
+    /** Tegels op Vandaag: zichtbaar en niet al in de ringen. */
+    val tiles: List<Pref> get() = visible.filter { !it.inRings }
     val allForEdit: List<Pref>
-        get() = visible + metrics.keys.filter { prefs[it]?.visible != true }.map { prefs[it] ?: Pref(it) }
+        get() = tiles + metrics.keys.filter { prefs[it]?.visible != true || prefs[it]?.inRings == true }.map { prefs[it] ?: Pref(it) }
 
     fun isConnected(provider: String) = connections[provider]?.status == "active"
 
@@ -224,7 +278,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun signOut() {
         api.signOut(); hc.reset(); Notifier.clear(getApplication())
         signedIn = false; authStep = AuthStep.Login
-        tab = Tab.Today; showSettings = false; detailMetric = null; editing = false
+        tab = Tab.Today; showSettings = false; detailMetric = null; editing = null; layout = Layout()
         profile = Profile(); profileTab = ProfileTab.Profile; onboarding = null
         prefs = emptyMap(); today = emptyMap(); connections = emptyMap()
     }
@@ -337,10 +391,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 preferredSource = o.str("preferred_source").ifEmpty { null },
                 goal = o["goal"]?.takeIf { it != JsonNull }?.jsonPrimitive?.doubleOrNull,
                 inRings = o["in_rings"]?.jsonPrimitive?.booleanOrNull == true,
+                ringPosition = o["ring_position"]?.takeIf { it != JsonNull }?.jsonPrimitive?.intOrNull,
             )
             p.metric to p
         }
-        val prof = api.select("profiles?select=email,display_name,birth_date,sex,height_cm,weight_kg,theme,consent_health_at,onboarded_at")
+        val prof = api.select("profiles?select=email,display_name,birth_date,sex,height_cm,weight_kg,theme,consent_health_at,onboarded_at,layout")
             .firstOrNull()?.jsonObject
         needsConsent = prof?.get("consent_health_at").let { it == null || it == JsonNull }
         if (prof != null) {
@@ -354,6 +409,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 weightKg = d("weight_kg"),
             )
             applyTheme(ThemeMode.of(prof.str("theme")))
+            layout = Layout.from(prof["layout"] as? JsonObject)
             if (!needsConsent && onboarding == null && prof.str("onboarded_at").isEmpty()) onboarding = Onboarding.Import
         }
         connections = api.select("connections?select=provider,status,last_sync_at,last_error").associate {
@@ -501,11 +557,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun setVisible(metric: String, on: Boolean) {
         val cur = prefs[metric] ?: Pref(metric)
         val pos = if (on) (visible.maxOfOrNull { it.position } ?: -1) + 1 else cur.position
-        save(cur.copy(visible = on, position = pos, inRings = cur.inRings && on))
+        save(cur.copy(visible = on, position = pos))
     }
 
     fun move(metric: String, dir: Int) = task {
-        val list = visible.toMutableList()
+        val list = tiles.toMutableList()
         val i = list.indexOfFirst { it.metric == metric }
         val j = i + dir
         if (i < 0 || j !in list.indices) return@task
@@ -513,6 +569,41 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val renumbered = list.mapIndexed { idx, p -> p.copy(position = idx) }
         api.upsert("metric_prefs", JsonArray(renumbered.map(::prefJson)))
         prefs = prefs + renumbered.associateBy { it.metric }
+    }
+
+    // ---------- Dagringen ----------
+    /** Zet een metric in de ringen (achteraan). Hij verdwijnt dan uit de tegels, niet uit Gezondheid. */
+    fun addRing(metric: String) {
+        if (rings.size >= 3) { message = "Er passen drie doelen in de ringen. Haal er eerst één weg."; return }
+        val cur = prefs[metric] ?: Pref(metric)
+        val goal = cur.goal ?: DEFAULT_GOALS[metric]
+        if (goal == null) { message = "Stel eerst een dagdoel in voor ${metrics[metric]?.name ?: metric}."; return }
+        saveRings(rings.map { it.metric } + metric, extra = mapOf(metric to cur.copy(goal = goal)))
+    }
+
+    /** Haalt een metric uit de ringen; als tegel stond hij nog aan, dus hij komt terug tussen de tegels. */
+    fun removeRing(metric: String) = saveRings(rings.map { it.metric } - metric, removed = metric)
+
+    fun moveRing(metric: String, dir: Int) {
+        val order = rings.map { it.metric }.toMutableList()
+        val i = order.indexOf(metric); val j = i + dir
+        if (i < 0 || j !in order.indices) return
+        order[i] = order[j].also { order[j] = order[i] }
+        saveRings(order)
+    }
+
+    private fun saveRings(order: List<String>, extra: Map<String, Pref> = emptyMap(), removed: String? = null) = task {
+        val changed = order.mapIndexed { i, id -> (extra[id] ?: prefs[id] ?: Pref(id)).copy(inRings = true, ringPosition = i + 1) } +
+            listOfNotNull(removed?.let { (prefs[it] ?: Pref(it)).copy(inRings = false, ringPosition = null) })
+        // Eerst de weggehaalde ring opslaan, zodat de controle op maximaal drie ringen klopt
+        changed.sortedBy { it.inRings }.forEach { api.upsert("metric_prefs", prefJson(it)) }
+        prefs = prefs + changed.associateBy { it.metric }
+    }
+
+    // ---------- Indeling ----------
+    fun saveLayout(l: Layout) = task {
+        layout = l
+        api.patch("profiles?id=eq.${api.userId}", buildJsonObject { put("layout", l.toJson()) })
     }
 
     private fun prefJson(p: Pref): JsonObject = buildJsonObject {
@@ -524,6 +615,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         put("preferred_source", p.preferredSource)
         put("goal", p.goal)
         put("in_rings", p.inRings)
+        put("ring_position", if (p.inRings) p.ringPosition else null)
     }
 
     private fun JsonObject.str(k: String) =

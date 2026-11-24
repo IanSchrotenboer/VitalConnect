@@ -27,19 +27,23 @@ import androidx.compose.ui.unit.dp
 fun HealthScreen(vm: MainViewModel) {
     val p = LocalPalette.current
     val first = vm.stats.values.mapNotNull { it.firstDay }.minOrNull()
-    val groups = Category.values().map { c -> c to vm.metrics.keys.filter { categoryOf(it) == c }.sorted() }
+    // Eigen indeling van Gezondheid; los van de tegels op Vandaag
+    val groups = Category.entries.map { c -> c to vm.metrics.keys.filter { categoryOf(it) == c && it !in vm.layout.healthHidden }.sorted() }
         .filter { it.second.isNotEmpty() }
 
     val perRow = if (LocalWidthClass.current.wide) 2 else 1
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Column(Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp)) {
-                Text("Gezondheid", style = MaterialTheme.typography.headlineLarge, color = p.ink)
-                Text(if (first != null) "Al je statistieken sinds ${fmtDate(first)}" else "Al je statistieken, zodra er data binnenkomt",
-                    style = MaterialTheme.typography.bodyMedium, color = p.muted)
+            Row(verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f).padding(start = 4.dp, top = 8.dp, bottom = 4.dp)) {
+                    Text("Gezondheid", style = MaterialTheme.typography.headlineLarge, color = p.ink)
+                    Text(if (first != null) "Al je statistieken sinds ${fmtDate(first)}" else "Al je statistieken, zodra er data binnenkomt",
+                        style = MaterialTheme.typography.bodyMedium, color = p.muted)
+                }
+                IconLabel(VIcons.Sliders, "Aanpassen", p.primary) { vm.editing = EditTarget.Health }
             }
         }
-        item { Highlights(vm) }
+        if (vm.layout.healthTotals) item { Highlights(vm) }
         groups.forEach { (cat, ids) ->
             item {
                 SectionTitle(cat.label, Modifier.padding(start = 4.dp, top = 12.dp), dot = p.colorOf(cat))

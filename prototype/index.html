@@ -121,6 +121,7 @@ button,input,select{font:inherit;color:inherit}button{cursor:pointer}
 .fld{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:15px}
 .fld input{width:8em;min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 10px;font-size:16px;text-align:right}
 .fld input.sw{width:48px;min-height:28px;height:28px;padding:0;border:0;border-radius:14px;background:var(--line)}.fld input.sw:checked{background:var(--pri)}
+.ib:disabled{opacity:.3;cursor:default}
 .note{color:var(--bad);font-size:14px;min-height:1.2em;margin:0 4px}
 [hidden]{display:none!important}
 @media(max-width:380px){.dmid{grid-template-columns:120px minmax(0,1fr);gap:14px}.tv .num{font-size:24px}}
@@ -197,7 +198,7 @@ for(let i=0;i<N;i++){const n=(r()+r()+r()-1.5)/.75;w=.5*w+.5*n;const wk=Math.sin
 const dd=i=>new Date(NOW.getTime()-(N-1-i)*DAY);
 
 const KEY='vitalconnect.preview.v1';
-const fresh=()=>({order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},goal:{},rings:['steps','active','sleep'],conn:{hc:true,google:true,garmin:false},theme:'system',onb:'login',sync:60,nGoals:true,nStatus:false,prof:{name:'Sam de Vries',birth:'1991-04-18',sex:null,h:null,w:null}});
+const fresh=()=>({order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},goal:{},rings:['steps','active','sleep'],conn:{hc:true,google:true,garmin:false},theme:'system',onb:'login',sync:60,lay:{greetName:true,motivation:true,healthTotals:true,healthHidden:[],sleepTiles:['hrv','rhr','resp'],sleepAdvice:true},nGoals:true,nStatus:false,prof:{name:'Sam de Vries',birth:'1991-04-18',sex:null,h:null,w:null}});
 let S;try{S=Object.assign(fresh(),JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S=fresh()}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const applyTheme=()=>{const r=document.documentElement;if(S.theme==='light'||S.theme==='dark')r.dataset.theme=S.theme;else delete r.dataset.theme};applyTheme();
@@ -223,26 +224,28 @@ back:'<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>',
 sliders:'<svg viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M15 4v4M4 12h3M11 12h9M9 10v4M4 18h11M19 18h1M17 16v4"/></svg>',
 chev:'<svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>'};
 
-let tab='today',detail=null,period=30,sel=null,settings=false,ptab='profile',editing=false,busy=null,syncedAt=new Date(NOW.getTime()-6e5);
+let tab='today',detail=null,period=30,sel=null,settings=false,ptab='profile',editing=null,busy=null,syncedAt=new Date(NOW.getTime()-6e5);
 const views=['today','health','sleep','detail','settings','edit','auth'];
 function show(){const v=S.onb?'auth':editing?'edit':detail?'detail':settings?'settings':tab;views.forEach(n=>$('#v-'+n).hidden=n!==v);$('#tabs').hidden=v!==tab;$('.app').classList.toggle('auth',v==='auth');
 document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false'));window.scrollTo(0,0)}
 
 // ---------- Vandaag ----------
 function renderToday(){
-  const h=NOW.getHours(),first=(S.prof.name||'').trim().split(/\s+/)[0],greet=(h<12?'Goedemorgen':h<18?'Goedemiddag':'Goedenavond')+(first?', '+esc(first):'');
+  const h=NOW.getHours(),first=(S.prof.name||'').trim().split(/\s+/)[0],greet=(h<12?'Goedemorgen':h<18?'Goedemiddag':'Goedenavond')+(first&&S.lay.greetName?', '+esc(first):'');
   const date=NOW.toLocaleDateString(NL,{weekday:'long',day:'numeric',month:'long'});
   const rings=S.rings.filter(id=>goal(id)&&!MI[id].lo).slice(0,3),R=[68,50,32];
   const fr=rings.map(id=>today(id)/goal(id)),avg=Math.round(mean(fr.map(f=>Math.min(f,1)))*100);
   const open=rings.map((id,i)=>[id,fr[i]]).filter(x=>x[1]<1).sort((a,b)=>b[1]-a[1])[0];
   const mot=open?`Nog ${fmt(open[0],goal(open[0])-today(open[0]))} ${unit(open[0])} tot je doel voor ${MI[open[0]].n.toLowerCase()}.`.replace('  ',' '):'Alle dagdoelen gehaald. Mooi werk!';
-  const rows=[];let pair=[];for(const id of S.order){if(S.size[id]==='l'){if(pair.length){rows.push(pair);pair=[]}rows.push([id])}else{pair.push(id);if(pair.length===2){rows.push(pair);pair=[]}}}if(pair.length)rows.push(pair);
+  // Een metric in de ringen staat niet ook als tegel
+  const tiles=S.order.filter(id=>!rings.includes(id));
+  const rows=[];let pair=[];for(const id of tiles){if(S.size[id]==='l'){if(pair.length){rows.push(pair);pair=[]}rows.push([id])}else{pair.push(id);if(pair.length===2){rows.push(pair);pair=[]}}}if(pair.length)rows.push(pair);
   $('#v-today').innerHTML=`<header class="dial">
     <div class="dtop"><div class="t"><small>${date.charAt(0).toUpperCase()+date.slice(1)}</small><h1>${greet}</h1></div>
     <button class="ib" id="syncBtn" data-act="sync" aria-label="Bijwerken">${I.sync}</button><button class="ib" data-act="settings" aria-label="Profiel en koppelingen">${I.person}</button></div>
     ${rings.length?`<div class="dmid"><svg class="rsvg" viewBox="0 0 150 150" role="img" aria-label="Dagdoelen ${avg}% gehaald">${rings.map((id,i)=>{const r=R[i],c=2*Math.PI*r;return`<circle cx="75" cy="75" r="${r}" class="rt" style="stroke:${RING[i]}"/><circle cx="75" cy="75" r="${r}" class="rp" style="stroke:${RING[i]}" stroke-dasharray="0 ${c}" data-d="${c*Math.min(fr[i],1)} ${c}" transform="rotate(-90 75 75)"/>`}).join('')}<text x="75" y="83">${avg}%</text></svg>
     <ul class="leg">${rings.map((id,i)=>`<li><b><i class="dot" style="background:${RING[i]}"></i>${MI[id].n}</b><span class="num">${fmt(id,today(id))}</span> <small>/ ${fmt(id,goal(id))}</small></li>`).join('')}</ul></div>
-    <div class="mot ${open?'':'ok'}">${mot}</div>`:`<p class="mot">Kies tot drie dagdoelen via Aanpassen om hier je voortgang te zien.</p>`}
+    ${S.lay.motivation?`<div class="mot ${open?'':'ok'}">${mot}</div>`:''}`:`<p class="mot">Kies tot drie dagdoelen via Aanpassen om hier je voortgang te zien.</p>`}
     <p class="upd">Bijgewerkt om ${syncedAt.toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'})}</p>
     <p class="demo">Preview met voorbeelddata</p></header>
   <div class="pad"><div class="sh"><h2>Jouw metrics</h2><button class="lnk" data-act="edit">${I.sliders}Aanpassen</button></div>
@@ -260,11 +263,11 @@ function stats(id){const a=series(id),m=MI[id];return{last:a[N-1],avg:mean(a),av
 function renderHealth(){
   const first=dd(0).toLocaleDateString(NL,{day:'numeric',month:'short',year:'numeric'});
   const s=stats('steps'),k=stats('dist'),sl=stats('sleep');
-  $('#v-health').innerHTML=`<div class="ph"><h1>Gezondheid</h1><p>Al je statistieken sinds ${first}</p></div>
-  <div class="pad stack"><div class="card hero"><small style="opacity:.8;font-weight:500">Tot nu toe</small><div class="st" style="grid-template-columns:repeat(3,minmax(0,1fr))">
-  <div><small>Stappen</small><b>${compact(s.total)}</b></div><div><small>Kilometer</small><b>${compact(k.total)}</b></div><div><small>Gem. slaap</small><b>${fmtH(sl.avg)}</b></div></div></div>
-  ${Object.keys(CAT).map(c=>`<div class="cat"><i class="dot" style="background:var(--${c});width:10px;height:10px"></i><h2>${CAT[c]}</h2></div>
-  <div class="stack hl">${M.filter(m=>m.cat===c).map(m=>statCard(m.id)).join('')}</div>`).join('')}</div>`;
+  $('#v-health').innerHTML=`<div class="ph" style="display:flex;align-items:flex-start;gap:8px"><div style="flex:1"><h1>Gezondheid</h1><p>Al je statistieken sinds ${first}</p></div><button class="lnk" data-edit="health">${I.sliders}Aanpassen</button></div>
+  <div class="pad stack">${S.lay.healthTotals?`<div class="card hero"><small style="opacity:.8;font-weight:500">Tot nu toe</small><div class="st" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+  <div><small>Stappen</small><b>${compact(s.total)}</b></div><div><small>Kilometer</small><b>${compact(k.total)}</b></div><div><small>Gem. slaap</small><b>${fmtH(sl.avg)}</b></div></div></div>`:''}
+  ${Object.keys(CAT).filter(c=>M.some(m=>m.cat===c&&!S.lay.healthHidden.includes(m.id))).map(c=>`<div class="cat"><i class="dot" style="background:var(--${c});width:10px;height:10px"></i><h2>${CAT[c]}</h2></div>
+  <div class="stack hl">${M.filter(m=>m.cat===c&&!S.lay.healthHidden.includes(m.id)).map(m=>statCard(m.id)).join('')}</div>`).join('')}</div>`;
 }
 function statCard(id){const m=MI[id],s=stats(id),sum=m.agg==='sum'&&id!=='sleep',f=v=>fmt(id,v);
   return`<button class="card tap" data-open="${id}"><span style="display:flex;align-items:center;gap:8px"><i class="dot" style="background:${col(id)}"></i><h3>${m.n}</h3>${I.chev}</span>
@@ -280,7 +283,8 @@ function renderSleep(){
   const a=series('sleep'),g=goal('sleep')||8,nights=a.slice(N-14),last=a[N-1],f=last/g,wk=nights.slice(7),avg7=mean(wk),debt=wk.reduce((s,v)=>s+Math.max(g-v,0),0),score=series('sscore')[N-1];
   const diff=g-avg7,tip=diff>.5?`Je slaapt deze week gemiddeld ${fmtH(diff)} korter dan je doel. Een vaste bedtijd, ook in het weekend, helpt je ritme.`:diff>0?'Je zit dicht bij je slaapdoel. Nog een kwartier eerder naar bed en je haalt het.':'Je haalt je slaapdoel gemiddeld. Houd dit ritme vast.';
   const si=dd(N-14+sleepSel);
-  $('#v-sleep').innerHTML=`<div class="ph"><h1>Slaap</h1><p>Hoe goed je rust, en hoe je lichaam herstelt</p></div>
+  const rt=S.lay.sleepTiles.filter(id=>MI[id]);
+  $('#v-sleep').innerHTML=`<div class="ph" style="display:flex;align-items:flex-start;gap:8px"><div style="flex:1"><h1>Slaap</h1><p>Hoe goed je rust, en hoe je lichaam herstelt</p></div><button class="lnk" data-edit="sleep">${I.sliders}Aanpassen</button></div>
   <div class="pad stack"><button class="card tap night" data-open="sleep"><span class="mut" style="font-size:14px;font-weight:500">Afgelopen nacht</span>
   <span style="display:flex;align-items:flex-end;gap:12px"><span class="num xl">${fmtH(last)}</span><span style="margin-left:auto;text-align:right"><small class="mut" style="display:block;font-size:13px">Score</small><span class="num" style="font-size:28px;color:var(--dslaap)">${nl(score)}</span></span></span>
   <span class="bar" style="height:10px;background:rgba(140,151,242,.2)"><b style="width:${Math.min(f,1)*100}%;background:${f>=1?'var(--dgood)':'var(--dslaap)'}"></b></span>
@@ -288,9 +292,9 @@ function renderSleep(){
   <div class="card"><h3>Laatste 14 nachten</h3><p class="mut" style="margin:0;font-size:15px">${si.toLocaleDateString(NL,{weekday:'long',day:'numeric',month:'short'})}: ${fmtH(nights[sleepSel])}</p>
   <div class="fig" id="sleepFig"><svg></svg></div>
   <div class="st" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><small>Gem. 7 nachten</small><b>${fmtH(avg7)}</b></div><div><small>Tekort deze week</small><b class="${debt>2?'dn':''}">${fmtH(debt)}</b></div><div><small>Beste nacht</small><b style="color:var(--slaap)">${fmtH(Math.max(...nights))}</b></div></div></div>
-  <div class="tip">${tip}</div>
-  <div class="sh" style="margin-bottom:0"><h2>Herstel tijdens je slaap</h2></div>
-  <div class="trio">${['hrv','rhr','resp'].map(id=>`<button class="card tap" data-open="${id}"><span class="gl">${MI[id].n}</span><span class="tv"><span class="num">${fmt(id,today(id))}</span><small>${MI[id].u}</small></span><span class="tm">${deltaHtml(id)}</span></button>`).join('')}</div></div>`;
+  ${S.lay.sleepAdvice?`<div class="tip">${tip}</div>`:''}
+  ${rt.length?`<div class="sh" style="margin-bottom:0"><h2>Herstel tijdens je slaap</h2></div>`:''}
+  <div class="trio">${rt.map(id=>`<button class="card tap" data-open="${id}"><span class="gl">${MI[id].n}</span><span class="tv"><span class="num">${fmt(id,today(id))}</span><small>${MI[id].u}</small></span><span class="tm">${deltaHtml(id)}</span></button>`).join('')}</div></div>`;
   drawChart($('#sleepFig svg'),nights.map((v,i)=>({d:dd(N-14+i),v})),{bars:true,goal:g,color:'var(--slaap)',sel:sleepSel,axis:v=>Math.round(v)+'u',onSel:i=>{sleepSel=i;renderSleep()}});
 }
 
@@ -395,12 +399,12 @@ function profileHtml(){
   <div class="card"><span class="gl">Kies licht of donker, of laat het je telefoon volgen.</span><div class="row">${th('system','Systeem')}${th('light','Licht')}${th('dark','Donker')}</div></div>
   <div class="sh" style="margin-bottom:0"><h2>Meldingen</h2></div>
   <div class="card">${sw('nGoals','Doel gehaald','Een melding als je een dagdoel haalt, zoals je stappendoel. Eén keer per doel per dag.',S.nGoals,false)}
-  ${sw('nStatus','Draait op de achtergrond','Een stille, vaste melding die laat zien dat Vital Connect meesynchroniseert en wanneer voor het laatst.',S.nStatus&&S.sync>0,S.sync===0)}
+  ${sw('nStatus','Statusmelding','Een stille melding met wanneer je gegevens voor het laatst zijn bijgewerkt.',S.nStatus&&S.sync>0,S.sync===0)}
   ${S.sync===0?'<span class="gl">Zet synchroniseren op de achtergrond aan (Koppelingen) om deze melding te gebruiken.</span>':''}</div>
   <div class="sh" style="margin-bottom:0"><h2>Account</h2></div>
   <div class="card"><span class="gl">Je data is van jou. Je kunt alles exporteren of je account met alle data verwijderen.</span>
   <div class="row"><button class="btn">Mijn data exporteren</button><button class="btn" data-act="logout">Uitloggen</button></div><a class="lnk" style="padding:0;text-decoration:none" href="https://ianschrotenboer.github.io/VitalConnect/privacy.html">Privacyverklaring</a><button class="lnk" style="color:var(--bad);padding:0">Account verwijderen</button></div>
-  <p class="gl" style="margin:4px">Vital Connect 1.3.0 · preview</p>`;
+  <p class="gl" style="margin:4px">Vital Connect 1.4.0 · preview</p>`;
 }
 const SRCS={hc:['hc','H','#2f7d6e','Health Connect','Data van apps op deze telefoon, zoals Google Fit, Samsung Health en de Suunto-app.','@sync'],
   google:['google','F','#3f7f4a','Google Health','Data van Fitbit, Pixel Watch en de Google Health-app.','@sync'],
@@ -431,17 +435,47 @@ function connHtml(){
 
 // ---------- Aanpassen ----------
 let openEdit=null;
+const DEF_GOALS={steps:10000,active:30,kcal:600,dist:5,floors:10,sleep:8,sscore:80,energy:70,hrv:50,spo2:96,vo2:45};
+const SLEEP_CHOICES=['hrv','rhr','resp','spo2','sscore','stress','energy','recov'];
+const tog=(attr,val,t,sub,on)=>`<label class="fld" style="flex-wrap:nowrap;align-items:center;gap:12px"><span style="flex:1"><b style="font-weight:600">${t}</b>${sub?`<br><span class="gl">${sub}</span>`:''}</span><input type="checkbox" class="sw" ${attr}="${val}" ${on?'checked':''} aria-label="${t}"></label>`;
 function renderEdit(){
-  const ids=[...S.order,...M.map(m=>m.id).filter(id=>!S.order.includes(id))];
-  $('#v-edit').innerHTML=`<div class="pad"><div class="sh" style="margin-top:16px"><h2 style="font-size:22px">Dashboard aanpassen</h2><button class="btn pri" data-act="done">Klaar</button></div>
-  <p class="mut" style="margin:0 4px 12px">Zet metrics aan of uit en tik op een metric voor grootte en dagdoel. Maximaal drie doelen komen in de ringen.</p>
-  <p class="note" id="note" aria-live="polite"></p><div class="stack edit">${ids.map(id=>{const m=MI[id],on=S.order.includes(id),o=openEdit===id;
-  return`<div class="card"><div class="er"><i class="dot" style="background:${col(id)}"></i><div class="t"><h3>${m.n}</h3><span class="gl">${CAT[m.cat]}</span></div>
-  <button class="ib" data-exp="${id}" aria-expanded="${o}" aria-label="Instellingen ${m.n}"><svg viewBox="0 0 24 24" style="stroke:var(--mut)"><path d="${o?'M6 15l6-6 6 6':'M6 9l6 6 6-6'}"/></svg></button>
-  <input type="checkbox" class="sw" id="t-${id}" data-tog="${id}" ${on?'checked':''} aria-label="${m.n} tonen"></div>
-  ${o?`${on?`<div class="row"><button class="pill" data-mv="${id}:-1">Omhoog</button><button class="pill" data-mv="${id}:1">Omlaag</button><button class="pill" data-size="${id}:s" aria-pressed="${S.size[id]!=='l'}">Klein</button><button class="pill" data-size="${id}:l" aria-pressed="${S.size[id]==='l'}">Breed</button></div>`:''}
-  <label class="fld" for="g-${id}">${m.lo?'Streefwaarde':'Dagdoel'}<span><input type="number" step="any" min="0" id="g-${id}" data-goal="${id}" value="${goal(id)??''}" placeholder="geen"> ${id==='sleep'?'uur':m.u}</span></label>
-  ${!m.lo&&goal(id)?`<label class="fld" style="justify-content:flex-start"><input type="checkbox" id="r-${id}" data-ring="${id}" ${S.rings.includes(id)?'checked':''} style="width:22px;height:22px;min-height:0;accent-color:var(--pri)">Tonen in de dagringen</label>`:''}`:''}</div>`}).join('')}</div></div>`;
+  const head=(t,intro)=>`<div class="pad"><div class="sh" style="margin-top:16px"><h2 style="font-size:22px">${t}</h2><button class="btn pri" data-act="done">Klaar</button></div>
+  <p class="mut" style="margin:0 4px 12px">${intro}</p><p class="note" id="note" aria-live="polite"></p><div class="stack edit">`;
+  let h='';
+  if(editing==='health'){
+    h=head('Gezondheid aanpassen','Kies welke statistieken je in Gezondheid ziet. Dit staat los van Vandaag.')+
+    `<div class="card">${tog('data-lay','healthTotals','Tot nu toe','Totalen bovenaan: stappen, kilometers, gemiddelde slaap',S.lay.healthTotals)}</div>`+
+    Object.keys(CAT).map(c=>`<div class="cat"><i class="dot" style="background:var(--${c});width:10px;height:10px"></i><h2>${CAT[c]}</h2></div><div class="card">${M.filter(m=>m.cat===c).map(m=>tog('data-hh',m.id,m.n,'',!S.lay.healthHidden.includes(m.id))).join('')}</div>`).join('');
+  } else if(editing==='sleep'){
+    const g=goal('sleep')||8;
+    h=head('Slaap aanpassen','Kies je slaapdoel, de hersteltegels en of je slaapadvies wilt zien.')+
+    `<div class="card"><h3>Slaapdoel</h3><div class="row">${[7,7.5,8,8.5,9].map(v=>`<button class="pill" data-sg="${v}" aria-pressed="${g===v}">${fmtH(v)}</button>`).join('')}</div>
+    ${tog('data-lay','sleepAdvice','Slaapadvies','Een tip op basis van je eigen week',S.lay.sleepAdvice)}</div>
+    <div class="card"><h3>Hersteltegels</h3><span class="gl">Tik om aan of uit te zetten. Ze staan in de volgorde waarin je ze kiest.</span>
+    <div class="row">${SLEEP_CHOICES.filter(id=>MI[id]).map(id=>`<button class="pill" data-st="${id}" aria-pressed="${S.lay.sleepTiles.includes(id)}">${MI[id].n}</button>`).join('')}</div></div>`;
+  } else {
+    const rings=S.rings.filter(id=>goal(id)&&!MI[id].lo).slice(0,3),pos=['buitenste ring','middelste ring','binnenste ring'];
+    const ids=[...S.order.filter(id=>!rings.includes(id)),...M.map(m=>m.id).filter(id=>!S.order.includes(id)||rings.includes(id))];
+    h=head('Vandaag aanpassen','Kies je dagringen, je begroeting en welke tegels je ziet. Een metric in de ringen staat niet ook als tegel; in Gezondheid blijft hij altijd staan.')+
+    `<div class="sh" style="margin-bottom:0"><h2>Dagringen</h2></div><div class="card">
+    ${rings.length?'':'<span class="gl">Nog geen ringen. Kies hieronder tot drie doelen.</span>'}
+    ${rings.map((id,i)=>`<div class="er"><i class="dot" style="background:${RING[i]};width:12px;height:12px"></i><div class="t"><h3>${MI[id].n}</h3><span class="gl">Doel ${fmt(id,goal(id))} · ${i===rings.length-1&&i>0?pos[2]:pos[i]}</span></div>
+    <button class="ib" data-rmv="${id}:-1" ${i===0?'disabled':''} aria-label="${MI[id].n} naar buiten"><svg viewBox="0 0 24 24" style="stroke:var(--mut)"><path d="M6 15l6-6 6 6"/></svg></button>
+    <button class="ib" data-rmv="${id}:1" ${i===rings.length-1?'disabled':''} aria-label="${MI[id].n} naar binnen"><svg viewBox="0 0 24 24" style="stroke:var(--mut)"><path d="M6 9l6 6 6-6"/></svg></button>
+    <button class="lnk" data-rdel="${id}" style="color:var(--bad)">Weg</button></div>`).join('')}
+    ${rings.length<3?`<span class="gl">Toevoegen</span><div class="row">${M.filter(m=>!m.lo&&!rings.includes(m.id)).sort((a,b)=>a.n.localeCompare(b.n)).map(m=>`<button class="pill" data-radd="${m.id}">+ ${m.n}</button>`).join('')}</div>`:''}</div>
+    <div class="sh" style="margin-bottom:0"><h2>Begroeting</h2></div>
+    <div class="card">${tog('data-lay','greetName','Je voornaam','Goedemorgen, Sam',S.lay.greetName)}${tog('data-lay','motivation','Motiverende zin','Wat je vandaag nog kunt halen',S.lay.motivation)}</div>
+    <div class="sh" style="margin-bottom:0"><h2>Tegels</h2></div>`+
+    ids.map(id=>{const m=MI[id],ring=rings.includes(id),on=S.order.includes(id)&&!ring,o=openEdit===id;
+    return`<div class="card"><div class="er"><i class="dot" style="background:${col(id)}"></i><div class="t"><h3>${m.n}</h3><span class="gl" ${ring?'style="color:var(--pri)"':''}>${CAT[m.cat]}${ring?' · in de ringen':''}</span></div>
+    <button class="ib" data-exp="${id}" aria-expanded="${o}" aria-label="Instellingen ${m.n}"><svg viewBox="0 0 24 24" style="stroke:var(--mut)"><path d="${o?'M6 15l6-6 6 6':'M6 9l6 6 6-6'}"/></svg></button>
+    ${ring?'':`<input type="checkbox" class="sw" id="t-${id}" data-tog="${id}" ${on?'checked':''} aria-label="${m.n} tonen">`}</div>
+    ${o?`${on?`<div class="row"><button class="pill" data-mv="${id}:-1">Omhoog</button><button class="pill" data-mv="${id}:1">Omlaag</button><button class="pill" data-size="${id}:s" aria-pressed="${S.size[id]!=='l'}">Klein</button><button class="pill" data-size="${id}:l" aria-pressed="${S.size[id]==='l'}">Breed</button></div>`:''}
+    ${ring?'<span class="gl">Deze metric staat in de dagringen. Haal hem daar weg om hem weer als tegel te tonen.</span>':''}
+    <label class="fld" for="g-${id}">${m.lo?'Streefwaarde':'Dagdoel'}<span><input type="number" step="any" min="0" id="g-${id}" data-goal="${id}" value="${goal(id)??''}" placeholder="geen"> ${id==='sleep'?'uur':m.u}</span></label>`:''}</div>`}).join('');
+  }
+  $('#v-edit').innerHTML=h+'</div></div>';
 }
 
 function renderAll(){renderToday();renderHealth();renderSleep();if(detail)renderDetail();if(settings)renderSettings();if(editing)renderEdit();if(S.onb)renderAuth()}
@@ -466,9 +500,15 @@ document.addEventListener('click',e=>{
   else if(d.act==='consent'){S.onb='import';save();renderAuth();show()}
   else if(d.act==='toProfile'){S.onb='profile';draft=null;save();renderAuth();show()}
   else if(d.act==='toImport'){S.onb='import';save();renderAuth();show()}
-  else if(d.act==='logout'){S=fresh();S.conn={hc:false,google:false,garmin:false};save();applyTheme();tab='today';detail=null;settings=false;editing=false;draft=null;showEmail=false;renderAll();show()}
-  else if(d.act==='edit'){editing=true;renderEdit();show()}
-  else if(d.act==='done'){editing=false;save();renderAll();show()}
+  else if(d.act==='logout'){S=fresh();S.conn={hc:false,google:false,garmin:false};save();applyTheme();tab='today';detail=null;settings=false;editing=null;draft=null;showEmail=false;renderAll();show()}
+  else if(d.act==='edit'){editing='today';openEdit=null;renderEdit();show()}
+  else if(d.edit){editing=d.edit;renderEdit();show()}
+  else if(d.act==='done'){editing=null;save();renderAll();show()}
+  else if(d.rmv){const[id,dir]=d.rmv.split(':'),r=S.rings,i=r.indexOf(id),j=i+Number(dir);if(i>=0&&j>=0&&j<r.length){[r[i],r[j]]=[r[j],r[i]];save();renderEdit()}}
+  else if(d.rdel){S.rings=S.rings.filter(x=>x!==d.rdel);save();renderEdit()}
+  else if(d.radd){const id=d.radd;if(S.rings.length>=3){note('Er passen drie doelen in de ringen. Haal er eerst één weg.');return}if(!goal(id)){if(DEF_GOALS[id])S.goal[id]=DEF_GOALS[id];else{note(`Stel eerst een dagdoel in voor ${MI[id].n}.`);return}}S.rings.push(id);save();renderEdit()}
+  else if(d.sg){S.goal.sleep=+d.sg;save();renderEdit()}
+  else if(d.st){const l=S.lay.sleepTiles;S.lay.sleepTiles=l.includes(d.st)?l.filter(x=>x!==d.st):[...l,d.st];save();renderEdit()}
   else if(d.act==='sync'){const b=$('#syncBtn');b&&b.classList.add('spin');setTimeout(()=>{syncedAt=new Date();renderToday();rr();if(S.nGoals&&today('steps')>=goal('steps'))notify('Doel gehaald: stappen',`${fmt('steps',today('steps'))} stappen vandaag. Mooi werk!`)},900)}
   else if(d.conn){const k=d.conn;if(S.conn[k]){S.conn[k]=false;save();rr()}else if(k!=='hc'&&!d.ok){disclose(k)}else{closeDisc();busy=k;rr();setTimeout(()=>{S.conn[k]=true;busy=null;save();rr()},1100)}}
   else if(d.act==='discClose'){closeDisc()}
@@ -482,12 +522,13 @@ document.addEventListener('click',e=>{
 const later=f=>setTimeout(f,0);
 document.addEventListener('change',e=>{
   const t=e.target,d=t.dataset;
-  if(d.tog){const id=d.tog;if(t.checked){if(!S.order.includes(id))S.order.push(id)}else{S.order=S.order.filter(x=>x!==id);S.rings=S.rings.filter(x=>x!==id)}later(renderEdit)}
+  if(d.tog){const id=d.tog;if(t.checked){if(!S.order.includes(id))S.order.push(id)}else{S.order=S.order.filter(x=>x!==id)}later(renderEdit)}
   else if(d.prof){setProf(t);if(d.prof==='birth')later(rr)}
   else if(d.ntf){S[d.ntf]=t.checked;save();later(rr)}
   else if(t.id==='agree'){agreed=t.checked;const b=document.querySelector('[data-act=consent]');if(b)b.disabled=!agreed}
   else if(d.goal){const v=parseFloat(String(t.value).replace(',','.'));S.goal[d.goal]=isFinite(v)&&v>0?v:null;if(!S.goal[d.goal])S.rings=S.rings.filter(x=>x!==d.goal);later(renderEdit)}
-  else if(d.ring){const id=d.ring;if(t.checked){if(S.rings.length>=3){t.checked=false;note('Er passen drie doelen in de ringen. Zet er eerst één uit.');return}S.rings.push(id)}else S.rings=S.rings.filter(x=>x!==id)}
+  else if(d.lay){S.lay[d.lay]=t.checked;save()}
+  else if(d.hh){const l=S.lay.healthHidden;S.lay.healthHidden=t.checked?l.filter(x=>x!==d.hh):[...l,d.hh];save()}
 });
 document.addEventListener('input',e=>{if(e.target.dataset.prof)setProf(e.target)});
 // Verplichte uitleg vóór het toestemmingsscherm van Google Health of Garmin (zoals in de app)

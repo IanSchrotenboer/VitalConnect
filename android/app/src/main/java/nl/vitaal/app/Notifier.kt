@@ -88,8 +88,8 @@ object Notifier {
         nm.createNotificationChannel(NotificationChannel(CH_GOALS, "Doelen gehaald", NotificationManager.IMPORTANCE_DEFAULT).apply {
             description = "Een melding als je een dagdoel haalt, zoals je stappendoel."
         })
-        nm.createNotificationChannel(NotificationChannel(CH_STATUS, "Synchronisatie op de achtergrond", NotificationManager.IMPORTANCE_MIN).apply {
-            description = "Stille melding die laat zien dat Vital Connect op de achtergrond meesynchroniseert."
+        nm.createNotificationChannel(NotificationChannel(CH_STATUS, "Status", NotificationManager.IMPORTANCE_MIN).apply {
+            description = "Stille melding met wanneer je gegevens voor het laatst zijn bijgewerkt."
             setShowBadge(false)
             setSound(null, null)
             enableVibration(false)
@@ -109,12 +109,13 @@ object Notifier {
         val nm = NotificationManagerCompat.from(ctx)
         if (!settings.notifyStatus || settings.syncMinutes == 0 || !allowed(ctx)) { nm.cancel(ID_STATUS); return }
         channels(ctx)
-        val time = if (lastSync > 0) " · laatst om " +
-            Instant.ofEpochMilli(lastSync).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm")) else ""
+        // Kort en rustig; Android zet de app-naam er zelf boven
+        val title = if (lastSync > 0) "Bijgewerkt om " +
+            Instant.ofEpochMilli(lastSync).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm")) else "Gesynchroniseerd"
         val n = NotificationCompat.Builder(ctx, CH_STATUS)
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
-            .setContentTitle("$APP_NAME draait mee op de achtergrond")
-            .setContentText("Synchroniseert ${syncLabel(settings.syncMinutes)}$time")
+            .setContentTitle(title)
+            .setContentText(syncLabel(settings.syncMinutes).replaceFirstChar { it.uppercase() })
             .setOngoing(true)
             .setSilent(true)
             .setShowWhen(false)
@@ -136,7 +137,7 @@ object Notifier {
         val reached = prefs.filter { p ->
             val goal = p.goal ?: return@filter false
             val m = metrics[p.metric] ?: return@filter false
-            p.visible && !m.lowerIsBetter && p.metric !in done && (today[p.metric]?.value ?: 0.0) >= goal
+            (p.visible || p.inRings) && !m.lowerIsBetter && p.metric !in done && (today[p.metric]?.value ?: 0.0) >= goal
         }
         if (reached.isEmpty()) return
         channels(ctx)
@@ -167,9 +168,10 @@ object Notifier {
             id to MetricInfo(id, o["name_nl"]!!.jsonPrimitive.content, o["unit"]?.jsonPrimitive?.content.orEmpty(),
                 o["lower_is_better"]?.jsonPrimitive?.booleanOrNull == true)
         }
-        val prefs = api.select("metric_prefs?select=metric,visible,goal&goal=not.is.null").map {
+        val prefs = api.select("metric_prefs?select=metric,visible,in_rings,goal&goal=not.is.null").map {
             val o = it.jsonObject
             Pref(metric = o["metric"]!!.jsonPrimitive.content, visible = o["visible"]?.jsonPrimitive?.booleanOrNull == true,
+                inRings = o["in_rings"]?.jsonPrimitive?.booleanOrNull == true,
                 goal = o["goal"]?.takeIf { g -> g != JsonNull }?.jsonPrimitive?.doubleOrNull)
         }
         val day = LocalDate.now().toString()

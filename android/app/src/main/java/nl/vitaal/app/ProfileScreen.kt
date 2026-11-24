@@ -267,7 +267,7 @@ private fun NotificationsCard(vm: MainViewModel, onRequestNotifications: () -> U
         SwitchRow("Doel gehaald", "Een melding als je een dagdoel haalt, zoals je stappendoel. Eén keer per doel per dag.", vm.notifyGoals) {
             if (vm.setNotify(goals = it)) onRequestNotifications()
         }
-        SwitchRow("Draait op de achtergrond", "Een stille, vaste melding die laat zien dat $APP_NAME meesynchroniseert en wanneer voor het laatst.",
+        SwitchRow("Statusmelding", "Een stille melding met wanneer je gegevens voor het laatst zijn bijgewerkt.",
             vm.notifyStatus && vm.syncMinutes != 0, enabled = vm.syncMinutes != 0) {
             if (vm.setNotify(status = it)) onRequestNotifications()
         }

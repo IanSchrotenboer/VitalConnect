@@ -38,13 +38,13 @@ fun TodayScreen(vm: MainViewModel) {
     val p = LocalPalette.current
     val columns = LocalWidthClass.current.tileColumns
     // Kleine tegels nemen één kolom, brede twee (op telefoons de hele rij); op brede schermen meer kolommen
-    val rows = remember(vm.prefs, columns) { packRows(vm.visible, columns) { it.size == "l" } }
+    val rows = remember(vm.prefs, columns) { packRows(vm.tiles, columns) { it.size == "l" } }
 
     LazyColumn(contentPadding = PaddingValues(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { DialHeader(vm) }
         item {
             SectionTitle("Jouw metrics", Modifier.padding(start = 20.dp, end = 8.dp, top = 8.dp)) {
-                IconLabel(VIcons.Sliders, "Aanpassen", p.primary) { vm.editing = true }
+                IconLabel(VIcons.Sliders, "Aanpassen", p.primary) { vm.editing = EditTarget.Today }
             }
         }
         if (rows.isEmpty()) item {
@@ -67,8 +67,8 @@ private fun DialHeader(vm: MainViewModel) {
     val now = LocalTime.now()
     val firstName = vm.profile.name.trim().substringBefore(' ')
     val greeting = when { now.hour < 12 -> "Goedemorgen"; now.hour < 18 -> "Goedemiddag"; else -> "Goedenavond" } +
-        if (firstName.isNotEmpty()) ", $firstName" else ""
-    val rings = vm.visible.filter { it.inRings && it.goal != null && !(vm.metrics[it.metric]?.lowerIsBetter ?: false) }.take(3)
+        if (firstName.isNotEmpty() && vm.layout.greetName) ", $firstName" else ""
+    val rings = vm.rings
     val fractions = rings.map { pref -> ((vm.today[pref.metric]?.value ?: 0.0) / pref.goal!!).toFloat() }
     // Kleur per positie, zodat twee doelen uit dezelfde categorie niet dezelfde ring krijgen
     val ringColors = listOf(d.activity, d.recovery, d.sleep)
@@ -119,7 +119,7 @@ private fun DialHeader(vm: MainViewModel) {
                     }
                 }
             }
-            Motivation(vm, rings, fractions)
+            if (vm.layout.motivation) Motivation(vm, rings, fractions)
         }
 
         vm.lastLoaded?.let {

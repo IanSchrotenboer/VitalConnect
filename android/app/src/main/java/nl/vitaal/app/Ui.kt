@@ -55,13 +55,13 @@ fun VitaalRoot(
     }
 
     val inAuth = !vm.signedIn || vm.authStep !is AuthStep.Login || vm.needsConsent || vm.onboarding != null
-    val overlay = vm.editing || vm.detailMetric != null || vm.showSettings
+    val overlay = vm.editing != null || vm.detailMetric != null || vm.showSettings
     val showTabs = !inAuth && !overlay
 
     BackHandler(enabled = !inAuth && overlay) {
         when {
             vm.detailMetric != null -> vm.closeDetail()
-            vm.editing -> vm.editing = false
+            vm.editing != null -> vm.editing = null
             else -> vm.showSettings = false
         }
     }
@@ -117,7 +117,7 @@ fun VitaalRoot(
                             vm.needsConsent -> ConsentScreen(vm, onSignOut)
                             vm.onboarding == Onboarding.Import -> ImportScreen(vm, onRequestHc, onOpenUrl)
                             vm.onboarding == Onboarding.Profile -> OnboardingProfileScreen(vm)
-                            vm.editing -> EditScreen(vm)
+                            vm.editing != null -> EditScreen(vm, vm.editing!!)
                             vm.detailMetric != null -> DetailScreen(vm)
                             vm.showSettings -> ProfileScreen(vm, onRequestHc, onOpenUrl, onShare, onSignOut, onRequestNotifications)
                             vm.tab == Tab.Health -> HealthScreen(vm)
