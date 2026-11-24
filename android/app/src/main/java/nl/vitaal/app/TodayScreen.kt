@@ -2,6 +2,7 @@ package nl.vitaal.app
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -21,6 +22,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.runtime.remember
@@ -100,7 +102,8 @@ private fun DialHeader(vm: MainViewModel) {
             Column(Modifier.weight(1f)) {
                 Text(LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE d MMMM", NL)).replaceFirstChar { it.uppercase() },
                     style = MaterialTheme.typography.bodyMedium, color = d.dialMuted)
-                Text(greeting, style = MaterialTheme.typography.headlineLarge, color = d.dialInk, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                // Past zich aan lettergrootte, weergavegrootte en schermbreedte aan; lange namen op een tweede regel
+                FitText(greeting, MaterialTheme.typography.headlineLarge, d.dialInk, Modifier.semantics { heading() })
             }
             RefreshButton(vm, d)
             IconButton(onClick = { vm.openProfile() }) {
@@ -114,11 +117,12 @@ private fun DialHeader(vm: MainViewModel) {
         } else {
             val avg = (fractions.map { it.coerceAtMost(1f) }.average() * 100).roundToInt()
             val tiny = LocalWidthClass.current == WidthClass.Tiny
-            // Bij grote letters (vanaf 130%) de uitleg onder de ringen, zodat niets wordt afgekapt
-            val stacked = LocalDensity.current.fontScale > 1.3f
+            val ringSize = if (tiny) 108.dp else 150.dp
+            val gap = if (tiny) 12.dp else 20.dp
+            val fontScale = LocalDensity.current.fontScale
             val ringsView = @Composable {
                 Rings(
-                    rings.indices.map { i -> fractions[i] to ringColors[i] }, "$avg%", Modifier.size(if (tiny) 108.dp else 150.dp),
+                    rings.indices.map { i -> fractions[i] to ringColors[i] }, "$avg%", Modifier.size(ringSize),
                     description = "Dagringen: gemiddeld $avg procent van je doelen gehaald",
                     refreshing = vm.refresh == RefreshState.Busy,
                 )
@@ -132,7 +136,7 @@ private fun DialHeader(vm: MainViewModel) {
                                 Dot(ringColors[i], 9.dp)
                                 Spacer(Modifier.width(8.dp))
                                 Text(m?.name ?: pref.metric, style = MaterialTheme.typography.labelMedium, color = d.dialMuted,
-                                    maxLines = if (stacked) 2 else 1, overflow = TextOverflow.Ellipsis)
+                                    maxLines = 2, overflow = TextOverflow.Ellipsis)
                             }
                             Row(verticalAlignment = Alignment.Bottom) {
                                 Text(vm.today[pref.metric]?.let { fmt(pref.metric, it.value) } ?: "–",
@@ -144,12 +148,17 @@ private fun DialHeader(vm: MainViewModel) {
                     }
                 }
             }
-            if (stacked) Column(Modifier.padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                ringsView(); legend()
-            } else Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp)) {
-                ringsView()
-                Spacer(Modifier.width(if (tiny) 12.dp else 20.dp))
-                legend()
+            // Uitleg onder de ringen als hij ernaast niet past: bij grote letters (vanaf 130%) of een smal venster
+            // (grote weergavegrootte, gesplitst scherm), zodat niets wordt afgekapt
+            BoxWithConstraints(Modifier.padding(end = 12.dp)) {
+                val stacked = fontScale > 1.3f || ringSize + gap + 130.dp * fontScale > maxWidth
+                if (stacked) Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    ringsView(); legend()
+                } else Row(verticalAlignment = Alignment.CenterVertically) {
+                    ringsView()
+                    Spacer(Modifier.width(gap))
+                    legend()
+                }
             }
             if (vm.layout.motivation) Motivation(vm, rings, fractions)
         }

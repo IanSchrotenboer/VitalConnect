@@ -1,6 +1,6 @@
 // Chaostest van de preview: dingen die een gewone gebruiker per ongeluk doet of die de telefoon doet.
 // Kapotte of oude opslag, opslag die weigert, razendsnel tikken en vegen, herladen midden in een handeling,
-// draaien en in- en uitvouwen, terug-knop, extreme invoer. Faalt bij JavaScript-fouten, een leeg scherm,
+// draaien en in- en uitvouwen, terug-knop, extreme invoer, begroeting op elke breedte. Faalt bij JavaScript-fouten, een leeg scherm,
 // horizontaal scrollen, of meer dan één venster tegelijk.
 //   node tests/chaos-preview.mjs
 import { createRequire } from "node:module";
@@ -121,6 +121,25 @@ for (const [naam, waarde] of [
   await p.click("[data-act=psave]").catch(() => {});
   await p.click("[data-act=back]");
   await controleer(p, "extreme invoer");
+  await p.context().close();
+}
+
+// 6. Begroeting bij elke breedte en naam: nooit afgekapt, nooit kleiner dan 60%
+for (const naam of ["Sam", "Ian", "Maximiliaan-Alexander", "Wwwwwwwwwwwwwwwwwwwwwwwwwwwwww"]) for (const breed of [260, 320, 360, 412, 900]) {
+  const p = await nieuw(JSON.stringify({ onb: null, prof: { name: naam } }), { viewport: { width: breed, height: 800 } });
+  p._naam = `begroeting ${naam} ${breed}px`;
+  const r = await p.evaluate(() => {
+    const e = document.querySelector("#v-today .fit");
+    if (!e) return { geen: true };
+    const een = !e.classList.contains("two");
+    return { afgekapt: een ? e.scrollWidth > e.clientWidth + 1 : e.scrollHeight > e.clientHeight + 1, px: parseFloat(e.style.fontSize) };
+  });
+  if (r.geen) fouten.push(`${p._naam}: geen begroeting`);
+  else {
+    if (r.afgekapt && !naam.startsWith("Wwww")) fouten.push(`${p._naam}: begroeting afgekapt`);
+    if (!(r.px >= 17.9)) fouten.push(`${p._naam}: begroeting te klein (${r.px}px)`);
+  }
+  await controleer(p, p._naam);
   await p.context().close();
 }
 

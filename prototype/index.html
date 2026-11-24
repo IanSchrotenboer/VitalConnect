@@ -36,7 +36,7 @@ button,input,select{font:inherit;color:inherit}button{cursor:pointer}
 /* wijzerplaat */
 .dial{background:var(--dial);color:var(--dink);border-radius:0 0 28px 28px;padding:max(16px,env(safe-area-inset-top,0px)) 12px 22px 20px}
 .dtop{display:flex;align-items:flex-start;gap:4px}
-.dtop .t{flex:1}.dtop small{color:var(--dmut);font-size:14px}
+.dtop .t{flex:1;min-width:0}.fit{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fit.two{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.fit.two .gn{display:block}.fit.three{-webkit-line-clamp:3}.dtop small{color:var(--dmut);font-size:14px}
 .ib{width:44px;height:44px;border:0;border-radius:22px;background:transparent;display:grid;place-items:center;color:inherit}
 .ib svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .ib:hover{background:color-mix(in srgb,currentColor 10%,transparent)}
@@ -270,7 +270,7 @@ document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-current'
 
 // ---------- Vandaag ----------
 function renderToday(){
-  const h=NOW.getHours(),first=(S.prof.name||'').trim().split(/\s+/)[0],greet=(h<12?'Goedemorgen':h<18?'Goedemiddag':'Goedenavond')+(first&&S.lay.greetName?', '+esc(first):'');
+  const h=NOW.getHours(),first=(S.prof.name||'').trim().split(/\s+/)[0],greet=(h<12?'Goedemorgen':h<18?'Goedemiddag':'Goedenavond')+(first&&S.lay.greetName?',<span class="gn"> '+esc(first)+'</span>':'');
   const date=NOW.toLocaleDateString(NL,{weekday:'long',day:'numeric',month:'long'});
   const rings=S.rings.filter(id=>goal(id)&&!MI[id].lo).slice(0,3),R=[68,50,32];
   const fr=rings.map(id=>today(id)/goal(id)),avg=Math.round(mean(fr.map(f=>Math.min(f,1)))*100);
@@ -280,7 +280,7 @@ function renderToday(){
   const tiles=S.order.filter(id=>!rings.includes(id));
   const rows=[];let pair=[];for(const id of tiles){if(S.size[id]==='l'){if(pair.length){rows.push(pair);pair=[]}rows.push([id])}else{pair.push(id);if(pair.length===2){rows.push(pair);pair=[]}}}if(pair.length)rows.push(pair);
   $('#v-today').innerHTML=`<header class="dial">
-    <div class="dtop"><div class="t"><small>${date.charAt(0).toUpperCase()+date.slice(1)}</small><h1>${greet}</h1></div>
+    <div class="dtop"><div class="t"><small>${date.charAt(0).toUpperCase()+date.slice(1)}</small><h1 class="fit">${greet}</h1></div>
     <button class="ib${refreshing==='done'?' done':''}" id="syncBtn" data-act="sync" aria-label="${refreshing==='done'?'Bijgewerkt':'Bijwerken'}">${refreshing==='done'?I.check:I.sync}</button><button class="ib" data-act="settings" aria-label="Profiel en koppelingen">${I.person}</button></div>
     ${rings.length?`<div class="dmid"><svg class="rsvg" viewBox="0 0 150 150" role="img" aria-label="Dagdoelen ${avg}% gehaald">${rings.map((id,i)=>{const r=R[i],c=2*Math.PI*r;return`<circle cx="75" cy="75" r="${r}" class="rt" style="stroke:${RING[i]}"/><circle cx="75" cy="75" r="${r}" class="rp" style="stroke:${RING[i]}" stroke-dasharray="0 ${c}" data-d="${c*Math.min(fr[i],1)} ${c}" transform="rotate(-90 75 75)"/>`}).join('')}<text x="75" y="83">${avg}%</text></svg>
     <ul class="leg">${rings.map((id,i)=>`<li><b><i class="dot" style="background:${RING[i]}"></i>${MI[id].n}</b><span class="num">${fmt(id,today(id))}</span> <small>/ ${fmt(id,goal(id))}</small></li>`).join('')}</ul></div>
@@ -289,6 +289,7 @@ function renderToday(){
     <p class="demo">Preview met voorbeelddata</p></header>
   <div class="pad"><div class="sh"><h2>Jouw metrics</h2><button class="lnk" data-act="edit">${I.sliders}Aanpassen</button></div>
   <div class="grid">${rows.map(r=>r.map(tile).join('')).join('')}</div></div>`;
+  fitHeads();
   requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelectorAll('#v-today .rp').forEach(c=>c.setAttribute('stroke-dasharray',c.dataset.d))));
 }
 function tile(id){const m=MI[id],v=today(id),g=goal(id),wide=S.size[id]==='l';const f=g?(m.lo?g/v:v/g):null;
@@ -443,7 +444,7 @@ function profileHtml(){
   <div class="sh" style="margin-bottom:0"><h2>Account</h2></div>
   <div class="card"><span class="gl">Je data is van jou. Je kunt alles exporteren of je account met alle data verwijderen.</span>
   <div class="row"><button class="btn">Mijn data exporteren</button><button class="btn" data-act="logout">Uitloggen</button></div><a class="lnk" style="padding:0;text-decoration:none" href="https://app.vital-connect.nl/privacy.html">Privacyverklaring</a><button class="lnk" style="color:var(--bad);padding:0">Account verwijderen</button></div>
-  <p class="gl" style="margin:4px">Vital Connect 1.9.0 · preview</p>`;
+  <p class="gl" style="margin:4px">Vital Connect 1.9.1 · preview</p>`;
 }
 const SRCS={hc:['hc','H','var(--src-hc)','Health Connect','Data van apps op deze telefoon, zoals Google Fit, Samsung Health en de Suunto-app.','@sync'],
   google:['google','F','var(--src-gh)','Google Health','Data van Fitbit, Pixel Watch en de Google Health-app.','@sync'],
@@ -523,6 +524,18 @@ function renderEdit(){
   $('#v-edit').innerHTML=h+'</div></div>';
 }
 
+/* Kop die altijd past (zoals FitText in de app): eerst één regel tot 72%, dan twee regels (naam eronder) van 80% tot 60% */
+function fitHeads(){for(const el of document.querySelectorAll('.fit')){
+  const base=parseFloat(getComputedStyle(document.documentElement).fontSize)/16*30,fits=()=>el.scrollWidth<=el.clientWidth+1;
+  el.classList.remove('two','three');let s;
+  for(s=1;s>=.72-1e-3;s-=.04){el.style.fontSize=base*s+'px';if(fits())break}
+  if(s>=.72-1e-3)continue;
+  el.classList.add('two');const lines=[...el.childNodes].map(n=>n.textContent.trim());
+  const c=document.createElement('canvas').getContext('2d'),w=el.clientWidth,f=getComputedStyle(el);
+  for(s=.8;s>.6;s-=.04){c.font=`${f.fontWeight} ${base*s}px ${f.fontFamily}`;if(lines.every(t=>c.measureText(t).width<=w))break}
+  if(s<=.6){s=.6;el.classList.add('three')}
+  el.style.fontSize=base*s+'px'}}
+addEventListener('resize',()=>fitHeads());
 function renderAll(){renderToday();renderHealth();renderSleep();if(detail)renderDetail();if(settings)renderSettings();if(editing)renderEdit();if(S.onb)renderAuth()}
 const rr=()=>S.onb?renderAuth():renderSettings();
 const note=t=>{const n=$('#note');if(n)n.textContent=t};

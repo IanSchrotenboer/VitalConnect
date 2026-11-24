@@ -1,10 +1,19 @@
 package nl.vitaal.app
 
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
 
 /**
  * Schermbreedte-klassen, zodat de app past op elke telefoon en foldable:
@@ -40,6 +49,48 @@ val WidthClass.tileColumns: Int
         WidthClass.Medium -> 3
         WidthClass.Expanded -> 4
     }
+
+/**
+ * Kop die altijd past. Meet de echte ruimte, dus volgt lettergrootte, weergavegrootte, vet lettertype,
+ * schermbreedte, liggend en gesplitst scherm. Volgorde:
+ * 1. één regel, zo groot mogelijk, tot [minOneLine] van de stijlgrootte;
+ * 2. twee regels, afgebroken na [breakAfter] (bijvoorbeeld na de komma vóór de naam), van 80% tot [minTwoLines];
+ * 3. kleinste maat, afbreken toegestaan, hoogstens drie regels (heel lange naam op een heel smal scherm).
+ */
+@Composable
+fun FitText(
+    text: String,
+    style: TextStyle,
+    color: Color,
+    modifier: Modifier = Modifier,
+    breakAfter: String = ", ",
+    minOneLine: Float = 0.72f,
+    minTwoLines: Float = 0.6f,
+) {
+    val measurer = rememberTextMeasurer()
+    BoxWithConstraints(modifier) {
+        val maxW = constraints.maxWidth
+        val fit = remember(text, style, maxW, measurer) {
+            fun width(t: String, s: Float) = measurer.measure(t, style.scaled(s), softWrap = false, maxLines = 1).size.width
+            fun steps(from: Float, to: Float) = generateSequence(from) { it - 0.04f }.takeWhile { it >= to - 0.001f }
+            val one = steps(1f, minOneLine).firstOrNull { width(text, it) <= maxW }
+            if (one != null) return@remember Triple(text, one, 1)
+            val i = text.indexOf(breakAfter)
+            val lines = if (i > 0) listOf(text.substring(0, i + breakAfter.trimEnd().length), text.substring(i + breakAfter.length)) else listOf(text)
+            val two = steps(0.8f, minTwoLines).firstOrNull { s -> lines.all { width(it, s) <= maxW } }
+            if (two != null && lines.size == 2) return@remember Triple(lines.joinToString("\n"), two, 2)
+            // Laatste uitweg (heel lange naam op een heel smal scherm): kleinste maat, mag afbreken, hoogstens drie regels
+            Triple(lines.joinToString("\n"), minTwoLines, 3)
+        }
+        val (shown, scale, lines) = fit
+        Text(shown, style = style.scaled(scale), color = color, maxLines = lines, overflow = TextOverflow.Ellipsis, softWrap = lines > 1)
+    }
+}
+
+private fun TextStyle.scaled(s: Float) = copy(
+    fontSize = fontSize * s,
+    lineHeight = if (lineHeight.isSpecified) lineHeight * s else lineHeight,
+)
 
 /** Maximale breedte van lees- en invulschermen, zodat regels niet te lang worden. */
 val FormMaxWidth: Dp = 640.dp
