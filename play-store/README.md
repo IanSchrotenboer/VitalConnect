@@ -95,8 +95,9 @@ Bij **Gezondheidsapps**: kies **Activiteit en fitness** en **Slaap**. De app is 
 | Gegevenstype | Verzameld | Gedeeld | Verplicht | Doel |
 |---|---|---|---|---|
 | Persoonlijke info → E-mailadres | Ja | Nee | Ja | Accountbeheer |
-| Persoonlijke info → Naam | Ja (alleen bij inloggen met Google) | Nee | Nee | Accountbeheer |
-| Gezondheid en fitness → Gezondheidsinformatie (rusthartslag, HRV, SpO2, ademhaling, gewicht, VO2max, slaap) | Ja | Nee | Nee | App-functionaliteit |
+| Persoonlijke info → Naam | Ja (bij inloggen met Google of zelf ingevuld in het profiel) | Nee | Nee | Accountbeheer, App-functionaliteit |
+| Persoonlijke info → Andere info (geboortedatum, geslacht) | Ja, zelf ingevuld | Nee | Nee | App-functionaliteit |
+| Gezondheid en fitness → Gezondheidsinformatie (rusthartslag, HRV, SpO2, ademhaling, gewicht, lengte, VO2max, slaap) | Ja | Nee | Nee | App-functionaliteit |
 | Gezondheid en fitness → Fitnessinformatie (stappen, afstand, calorieën, verdiepingen, actieve minuten) | Ja | Nee | Nee | App-functionaliteit |
 
 Geen locatie, contacten, foto's, berichten, financiële gegevens, apparaat-ID's of app-activiteit voor analyse.

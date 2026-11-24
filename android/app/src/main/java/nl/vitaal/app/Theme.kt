@@ -111,9 +111,22 @@ private val Type = Typography(
     labelSmall = TextStyle(fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
 )
 
+/** Weergavekeuze in het profiel. */
+enum class ThemeMode(val id: String, val label: String) {
+    System("system", "Systeem"), Light("light", "Licht"), Dark("dark", "Donker");
+    companion object { fun of(id: String?) = entries.firstOrNull { it.id == id } ?: System }
+}
+
 @Composable
-fun VitaalTheme(content: @Composable () -> Unit) {
-    val p = if (isSystemInDarkTheme()) Dark else Light
+fun ThemeMode.isDark(): Boolean = when (this) {
+    ThemeMode.System -> isSystemInDarkTheme()
+    ThemeMode.Light -> false
+    ThemeMode.Dark -> true
+}
+
+@Composable
+fun VitaalTheme(mode: ThemeMode = ThemeMode.System, content: @Composable () -> Unit) {
+    val p = if (mode.isDark()) Dark else Light
     val scheme = if (p.dark) darkColorScheme(
         primary = p.primary, onPrimary = p.onPrimary, secondary = p.activity, onSecondary = p.bg,
         background = p.bg, onBackground = p.ink, surface = p.bg, onSurface = p.ink,

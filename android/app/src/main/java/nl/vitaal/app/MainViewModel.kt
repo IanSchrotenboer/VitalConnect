@@ -63,6 +63,18 @@ data class DayValue(val value: Double, val source: String)
 
 data class Connection(val status: String, val lastSync: String?, val lastError: String?)
 
+/** Persoonlijke gegevens uit het profiel. Alles behalve het e-mailadres is optioneel. */
+data class Profile(
+    val email: String = "",
+    val name: String = "",
+    val birthDate: LocalDate? = null,
+    val sex: String? = null,
+    val heightCm: Double? = null,
+    val weightKg: Double? = null,
+)
+
+enum class ProfileTab { Profile, Connections }
+
 enum class HcStatus { UNKNOWN, UNAVAILABLE, UPDATE_REQUIRED, NO_PERMISSION, FOREGROUND_ONLY, OK }
 
 /** Stappen in het inlogscherm. */
@@ -85,6 +97,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var editing by mutableStateOf(false)
     var tab by mutableStateOf(Tab.Today)
     var showSettings by mutableStateOf(false)
+    var profileTab by mutableStateOf(ProfileTab.Profile)
+    var profile by mutableStateOf(Profile()); private set
+
+    /** Weergave: lokaal bewaard (direct bij het opstarten) en in het profiel (gelijk op al je toestellen). */
+    private val ui = app.getSharedPreferences("vitaal_ui", android.content.Context.MODE_PRIVATE)
+    var themeMode by mutableStateOf(ThemeMode.of(ui.getString("theme", null))); private set
     /** Metric waarvan het detailscherm (grafiek) open staat. */
     var detailMetric by mutableStateOf<String?>(null); private set
     var stats by mutableStateOf<Map<String, MetricStats>>(emptyMap()); private set
@@ -192,6 +210,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         api.signOut(); hc.reset()
         signedIn = false; authStep = AuthStep.Login
         tab = Tab.Today; showSettings = false; detailMetric = null; editing = false
+        profile = Profile(); profileTab = ProfileTab.Profile
         prefs = emptyMap(); today = emptyMap(); connections = emptyMap()
     }
 
@@ -205,6 +224,36 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun exportData(share: (String) -> Unit) = task {
         val data = api.rpc("export_my_data", JsonObject(emptyMap()))
         share(Json { prettyPrint = true }.encodeToString(JsonElement.serializer(), data))
+    }
+
+    // ---------- Profiel ----------
+    fun saveProfile(p: Profile) = task {
+        api.patch("profiles?id=eq.${api.userId}", buildJsonObject {
+            put("display_name", p.name.trim().ifEmpty { null })
+            put("birth_date", p.birthDate?.toString())
+            put("sex", p.sex)
+            put("height_cm", p.heightCm)
+            put("weight_kg", p.weightKg)
+        })
+        profile = p.copy(name = p.name.trim())
+        message = "Je profiel is opgeslagen."
+    }
+
+    fun setTheme(mode: ThemeMode) {
+        applyTheme(mode)
+        if (signedIn) viewModelScope.launch {
+            try { api.patch("profiles?id=eq.${api.userId}", buildJsonObject { put("theme", mode.id) }) } catch (_: Exception) {}
+        }
+    }
+
+    private fun applyTheme(mode: ThemeMode) {
+        themeMode = mode
+        ui.edit().putString("theme", mode.id).apply()
+    }
+
+    fun openProfile(tab: ProfileTab = ProfileTab.Profile) {
+        profileTab = tab
+        showSettings = true
     }
 
     // ---------- Data ----------
@@ -230,8 +279,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             )
             p.metric to p
         }
-        needsConsent = api.select("profiles?select=consent_health_at")
-            .firstOrNull()?.jsonObject?.get("consent_health_at").let { it == null || it == JsonNull }
+        val prof = api.select("profiles?select=email,display_name,birth_date,sex,height_cm,weight_kg,theme,consent_health_at")
+            .firstOrNull()?.jsonObject
+        needsConsent = prof?.get("consent_health_at").let { it == null || it == JsonNull }
+        if (prof != null) {
+            fun d(k: String) = prof[k]?.takeIf { it != JsonNull }?.jsonPrimitive?.doubleOrNull
+            profile = Profile(
+                email = prof.str("email"),
+                name = prof.str("display_name"),
+                birthDate = prof.str("birth_date").ifEmpty { null }?.let(LocalDate::parse),
+                sex = prof.str("sex").ifEmpty { null },
+                heightCm = d("height_cm"),
+                weightKg = d("weight_kg"),
+            )
+            applyTheme(ThemeMode.of(prof.str("theme")))
+        }
         connections = api.select("connections?select=provider,status,last_sync_at,last_error").associate {
             val o = it.jsonObject
             o.str("provider") to Connection(o.str("status"), o.str("last_sync_at").ifEmpty { null }, o.str("last_error").ifEmpty { null })

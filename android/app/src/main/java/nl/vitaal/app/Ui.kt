@@ -81,7 +81,7 @@ fun VitaalRoot(
                 vm.needsConsent -> ConsentScreen(vm, onSignOut)
                 vm.editing -> EditScreen(vm)
                 vm.detailMetric != null -> DetailScreen(vm)
-                vm.showSettings -> SettingsScreen(vm, onRequestHc, onOpenUrl, onShare, onSignOut)
+                vm.showSettings -> ProfileScreen(vm, onRequestHc, onOpenUrl, onShare, onSignOut)
                 vm.tab == Tab.Health -> HealthScreen(vm)
                 vm.tab == Tab.Sleep -> SleepScreen(vm)
                 else -> TodayScreen(vm)

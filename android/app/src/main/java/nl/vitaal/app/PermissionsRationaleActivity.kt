@@ -26,7 +26,7 @@ class PermissionsRationaleActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
-            VitaalTheme {
+            VitaalTheme(ThemeMode.of(getSharedPreferences("vitaal_ui", MODE_PRIVATE).getString("theme", null))) {
                 Surface(Modifier.fillMaxSize()) {
                     Column(
                         Modifier.safeDrawingPadding().verticalScroll(rememberScrollState()).padding(24.dp),

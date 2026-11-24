@@ -76,7 +76,9 @@ fun TodayScreen(vm: MainViewModel) {
 private fun DialHeader(vm: MainViewModel) {
     val d = DialPalette
     val now = LocalTime.now()
-    val greeting = when { now.hour < 12 -> "Goedemorgen"; now.hour < 18 -> "Goedemiddag"; else -> "Goedenavond" }
+    val firstName = vm.profile.name.trim().substringBefore(' ')
+    val greeting = when { now.hour < 12 -> "Goedemorgen"; now.hour < 18 -> "Goedemiddag"; else -> "Goedenavond" } +
+        if (firstName.isNotEmpty()) ", $firstName" else ""
     val rings = vm.visible.filter { it.inRings && it.goal != null && !(vm.metrics[it.metric]?.lowerIsBetter ?: false) }.take(3)
     val fractions = rings.map { pref -> ((vm.today[pref.metric]?.value ?: 0.0) / pref.goal!!).toFloat() }
     // Kleur per positie, zodat twee doelen uit dezelfde categorie niet dezelfde ring krijgen
@@ -93,13 +95,13 @@ private fun DialHeader(vm: MainViewModel) {
             Column(Modifier.weight(1f)) {
                 Text(LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE d MMMM", NL)).replaceFirstChar { it.uppercase() },
                     style = MaterialTheme.typography.bodyMedium, color = d.dialMuted)
-                Text(greeting, style = MaterialTheme.typography.headlineLarge, color = d.dialInk)
+                Text(greeting, style = MaterialTheme.typography.headlineLarge, color = d.dialInk, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
             IconButton(onClick = vm::refreshAll, enabled = !vm.busy) {
                 Icon(VIcons.Sync, contentDescription = "Bijwerken", tint = d.dialInk)
             }
-            IconButton(onClick = { vm.showSettings = true }) {
-                Icon(VIcons.Person, contentDescription = "Koppelingen en account", tint = d.dialInk)
+            IconButton(onClick = { vm.openProfile() }) {
+                Icon(VIcons.Person, contentDescription = "Profiel en koppelingen", tint = d.dialInk)
             }
         }
 

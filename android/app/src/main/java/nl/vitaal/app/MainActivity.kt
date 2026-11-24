@@ -4,7 +4,10 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.graphics.Color
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.compose.runtime.DisposableEffect
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
@@ -26,7 +29,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         handleDeepLink(intent)
         setContent {
-            VitaalTheme {
+            val dark = vm.themeMode.isDark()
+            // Statusbalk- en navigatie-iconen volgen de gekozen weergave, niet alleen die van het toestel.
+            DisposableEffect(dark) {
+                val style = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark }
+                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+                onDispose {}
+            }
+            VitaalTheme(vm.themeMode) {
                 VitaalRoot(
                     vm,
                     onRequestHc = ::requestHealthConnect,

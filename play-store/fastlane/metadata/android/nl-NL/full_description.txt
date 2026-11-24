@@ -21,6 +21,11 @@ JOUW BRONNEN
 • Google Health: data van Fitbit, Pixel Watch en de Google Health-app
 • Garmin Connect: data van je Garmin-horloge
 • Meet je iets met meerdere apparaten, dan kies je per metric welke bron voorgaat
+• Alles wat gekoppeld is overzichtelijk bij elkaar, los van wat nog niet gekoppeld is
+
+JOUW PROFIEL
+• Naam, geboortedatum, lengte en gewicht op één plek
+• Licht, donker of automatisch, zoals jij dat prettig vindt
 
 PRIVACY
 • Je gegevens staan in een beveiligde database in de EU
