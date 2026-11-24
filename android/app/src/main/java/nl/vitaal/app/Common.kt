@@ -1,6 +1,5 @@
 package nl.vitaal.app
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -130,12 +129,11 @@ fun VCard(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val p = LocalPalette.current
+    // Geen rand: in licht (salie) en donker (OLED-zwart) steken de tegels af door hun kleur
     val shape = RoundedCornerShape(20.dp)
     Surface(
         color = color,
         shape = shape,
-        border = if (!p.dark && color == p.card) BorderStroke(1.dp, p.line) else null,
         modifier = modifier.clip(shape).then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)

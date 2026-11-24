@@ -55,8 +55,8 @@ data class Palette(
 
 private val Light = Palette(
     dark = false,
-    bg = Color(0xFFF5F7F4), card = Color(0xFFFFFFFF), ink = Color(0xFF0F1E1B), muted = Color(0xFF52615C),
-    line = Color(0xFFE1E6E2), outline = Color(0xFF7F8F89), primary = Color(0xFF1C4D46), onPrimary = Color(0xFFFFFFFF),
+    bg = Color(0xFFDCE6E1), card = Color(0xFFFFFFFF), ink = Color(0xFF0F1E1B), muted = Color(0xFF52615C),
+    line = Color(0xFFCCD7D2), outline = Color(0xFF6E7F79), primary = Color(0xFF1C4D46), onPrimary = Color(0xFFFFFFFF),
     dial = Color(0xFF123430), dialInk = Color(0xFFF3F7F5), dialMuted = Color(0xFFA9BDB7),
     // Abrikoos en oker iets donkerder dan in de wijzerplaat: grafieklijnen halen zo 3:1 op wit
     activity = Color(0xFFD86F31), heart = Color(0xFFD04E6A), sleep = Color(0xFF5865D6),
