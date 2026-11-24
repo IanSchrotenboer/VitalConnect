@@ -48,6 +48,6 @@ jobs:
       - uses: actions/upload-artifact@v5
         if: success()
         with:
-          name: vitaal-debug-apk
+          name: VitalConnect-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 14

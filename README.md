@@ -1,4 +1,4 @@
-# Vitaal Connect
+# Vital Connect
 
 Gezondheidsdata uit **Garmin Connect**, **Google Health** en **Health Connect** in één dashboard dat je zelf indeelt.
 
@@ -16,6 +16,7 @@ Android: Health Connect ─▶ Vitaal-app ─▶ ingest_health_connect() ──�
 | `supabase/config.toml` | Auth (Google, e-mail, Send Email Hook) en functie-instellingen |
 | `android/` | Android-app (Kotlin, Jetpack Compose) |
 | `prototype/` | Klikbaar HTML-prototype van het dashboard |
+| `.github/workflows` | Bouwt bij elke push de APK en controleert de edge functions |
 
 Supabase-project: **Vitaal** (`qtythirnpokfptchavgy`, Frankfurt).
 
@@ -84,9 +85,18 @@ Deze stappen vragen accounts en geheimen die alleen jij kunt aanmaken. Tot ze zi
 
 In plaats van het dashboard kun je `supabase/config.toml` ook pushen met `supabase config push`.
 
-### 3. Android-app bouwen
-Open `android/` in Android Studio, laat de Gradle-wrapper aanmaken en draai de app op Android 9 of hoger.
-Werk dependencies bij als Studio dat voorstelt.
+### 3. Android-app
+GitHub Actions bouwt bij elke push naar `main` een debug-APK (`VitalConnect-<versie>-debug.apk`).
+Download hem onder **Actions → Android-app bouwen → laatste run → Artifacts**.
+Zelf bouwen: open `android/` in Android Studio (compileSdk 36, AGP 8.11) en draai op Android 9 of hoger.
+
+De app heeft drie tabbladen: **Vandaag** (dagringen en je eigen tegels), **Gezondheid** (alle statistieken
+over je hele geschiedenis) en **Slaap**. Koppelingen en account zitten achter het persoon-icoon.
+
+### Automatisch uitrollen
+De Supabase GitHub-koppeling voert bij een push naar `main` nieuwe migraties uit en rolt de edge functions
+uit die in `supabase/config.toml` staan. Zet daarvoor in Supabase bij *Project Settings → Integrations → GitHub*
+**Deploy to production** aan, met `main` als productiebranch en `.` als working directory.
 
 ### 4. Garmin
 Vraag Starter-toegang aan via developer.garmin.com en stel in het portal in:
