@@ -11,14 +11,6 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.put
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -38,6 +30,10 @@ class DeviceSettings(ctx: Context) {
     var notifyStatus: Boolean
         get() = prefs.getBoolean(STATUS, false)
         set(v) = prefs.edit().putBoolean(STATUS, v).apply()
+    /** Google Health gekoppeld (bijgewerkt bij elke keer laden), zodat de achtergrondtaak geen extra verzoek nodig heeft. */
+    var googleConnected: Boolean
+        get() = prefs.getBoolean(GOOGLE, false)
+        set(v) = prefs.edit().putBoolean(GOOGLE, v).apply()
     /** Laatste keer dat de gegevens zijn bijgewerkt (achtergrond of app). */
     var lastRun: Long
         get() = prefs.getLong(LAST_RUN, 0)
@@ -59,6 +55,7 @@ class DeviceSettings(ctx: Context) {
         const val NOTIFIED = "notified_goals"
         const val NOTIFIED_DAY = "notified_day"
         const val LAST_RUN = "last_run"
+        const val GOOGLE = "google_connected"
     }
 }
 
@@ -158,27 +155,11 @@ object Notifier {
         settings.markNotified(reached.map { it.metric }.toSet())
     }
 
-    /** Voor de achtergrondtaak: haalt doelen en de waarden van vandaag op en meldt wat gehaald is. */
+    /** Voor de achtergrondtaak: één verzoek (app_state voor vandaag, zonder statistieken) en melden wat gehaald is. */
     suspend fun checkGoalsFromServer(ctx: Context, api: Api) {
-        val settings = DeviceSettings(ctx)
-        if (!settings.notifyGoals || !allowed(ctx)) return
-        val metrics = api.select("metrics?select=id,name_nl,unit,lower_is_better").associate {
-            val o = it.jsonObject
-            val id = o["id"]!!.jsonPrimitive.content
-            id to MetricInfo(id, o["name_nl"]!!.jsonPrimitive.content, o["unit"]?.jsonPrimitive?.content.orEmpty(),
-                o["lower_is_better"]?.jsonPrimitive?.booleanOrNull == true)
-        }
-        val prefs = api.select("metric_prefs?select=metric,visible,in_rings,goal&goal=not.is.null").map {
-            val o = it.jsonObject
-            Pref(metric = o["metric"]!!.jsonPrimitive.content, visible = o["visible"]?.jsonPrimitive?.booleanOrNull == true,
-                inRings = o["in_rings"]?.jsonPrimitive?.booleanOrNull == true,
-                goal = o["goal"]?.takeIf { g -> g != JsonNull }?.jsonPrimitive?.doubleOrNull)
-        }
-        val day = LocalDate.now().toString()
-        val today = (api.rpc("resolved_daily", buildJsonObject { put("p_from", day); put("p_to", day) }) as? JsonArray).orEmpty().associate {
-            val o = it.jsonObject
-            o["metric"]!!.jsonPrimitive.content to DayValue(o["value"]?.jsonPrimitive?.doubleOrNull ?: 0.0, o["source"]?.jsonPrimitive?.content.orEmpty())
-        }
-        checkGoals(ctx, prefs, today, metrics)
+        if (!DeviceSettings(ctx).notifyGoals || !allowed(ctx)) return
+        val day = LocalDate.now()
+        val st = api.appState(day, day, withStats = false)
+        checkGoals(ctx, st.prefs.values, st.daily.mapNotNull { (m, days) -> days[day]?.let { m to it } }.toMap(), st.metrics)
     }
 }

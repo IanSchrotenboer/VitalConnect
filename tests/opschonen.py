@@ -64,7 +64,7 @@ def typescript() -> None:
     for f in TS:
         code = zonder_commentaar(f.read_text())
         for groep in re.findall(r"^import\s*\{([^}]*)\}\s*from", code, flags=re.M):
-            for naam in [n.strip().split(" as ")[-1] for n in groep.split(",") if n.strip()]:
+            for naam in [re.sub(r"^type\s+", "", n.strip()).split(" as ")[-1] for n in groep.split(",") if n.strip()]:
                 if len(re.findall(rf"\b{re.escape(naam)}\b", code)) == 1:
                     meld("ongebruikte import", f"{f.relative_to(ROOT)}: {naam}")
     gedeeld = [f for f in TS if "_shared" in f.parts]
@@ -86,6 +86,44 @@ def preview() -> None:
     for naam in sorted(set(re.findall(r"(?:function\s+|const\s+|let\s+)(\w+)\s*[=(]", js))):
         if len(re.findall(rf"\b{re.escape(naam)}\b", js)) == 1:
             meld("niet gebruikt", f"prototype/index.html: {naam}")
+
+
+def dubbel() -> None:
+    """Gelijke blokken van 6 of meer betekenisvolle regels: kandidaat om samen te voegen."""
+    blokken: dict[tuple, list[str]] = {}
+    for f in KT + TS:
+        regels = [(i + 1, r.strip()) for i, r in enumerate(zonder_commentaar(f.read_text()).splitlines())]
+        regels = [(n, r) for n, r in regels if len(r) > 3 and not r.startswith(("import ", "}", ")"))]
+        for i in range(len(regels) - 5):
+            sleutel = tuple(r for _, r in regels[i:i + 6])
+            blokken.setdefault(sleutel, []).append(f"{f.relative_to(ROOT)}:{regels[i][0]}")
+    gemeld: set[str] = set()
+    for plekken in blokken.values():
+        if len(plekken) > 1 and not gemeld.intersection(plekken):
+            meld("dubbele code", " en ".join(plekken))
+            gemeld.update(plekken)
+
+
+def uitgecommentarieerd() -> None:
+    """Uitgeschakelde code (// val x = ...) hoort niet te blijven staan."""
+    for f in KT + TS:
+        for n, r in enumerate(f.read_text().splitlines(), 1):
+            if re.match(r"\s*//\s*(val|var|fun|const|let|return|if \(|await|import)\b.*[=;({]\s*$", r):
+                meld("uitgeschakelde code", f"{f.relative_to(ROOT)}:{n}")
+
+
+def sql_functies() -> None:
+    """Databasefuncties uit de migraties waar niets meer naar verwijst (app, edge functions, cron, andere SQL)."""
+    migraties = sorted((ROOT / "supabase/migrations").glob("*.sql"))
+    sql = "\n".join(re.sub(r"--[^\n]*", "", p.read_text()) for p in migraties)
+    weg = set(re.findall(r"drop function (?:if exists )?public\.(\w+)", sql))
+    namen = set(re.findall(r"create (?:or replace )?function public\.(\w+)", sql)) - weg
+    elders = "\n".join(f.read_text() for f in KT + TS)
+    for naam in sorted(namen):
+        # verwijzingen die geen definitie, grant, revoke of comment zijn
+        zonder = re.sub(rf"(?<!execute )(?:function|routine)\s+public\.{naam}\b", "", sql)
+        if not re.search(rf"\b{naam}\b", zonder) and not re.search(rf"[\"']{naam}[\"']", elders):
+            meld("niet gebruikt", f"databasefunctie public.{naam}")
 
 
 def supabase_config() -> None:
@@ -147,6 +185,9 @@ if __name__ == "__main__":
         kotlin()
         typescript()
         preview()
+        dubbel()
+        uitgecommentarieerd()
+        sql_functies()
         supabase_config()
     print("\n".join(meldingen) if meldingen else "Niets gevonden.")
     sys.exit(1 if meldingen else 0)

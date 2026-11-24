@@ -8,22 +8,16 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.time.Instant
 import java.time.LocalDate
@@ -90,12 +84,12 @@ data class Layout(
     companion object {
         fun from(o: JsonObject?): Layout {
             if (o == null) return Layout()
-            fun b(k: String, d: Boolean) = o[k]?.jsonPrimitive?.booleanOrNull ?: d
-            fun list(k: String) = (o[k] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+            fun b(k: String, d: Boolean) = o.bool(k) ?: d
+            fun list(k: String) = (o[k] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }?.distinct()
             return Layout(
                 greetName = b("greetName", true), motivation = b("motivation", true), healthTotals = b("healthTotals", true),
                 healthHidden = list("healthHidden")?.toSet() ?: emptySet(),
-                sleepTiles = list("sleepTiles") ?: Layout().sleepTiles,
+                sleepTiles = list("sleepTiles")?.takeIf { it.isNotEmpty() }?.take(6) ?: Layout().sleepTiles,
                 sleepAdvice = b("sleepAdvice", true),
             )
         }
@@ -282,7 +276,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         signedIn = false; authStep = AuthStep.Login
         tab = Tab.Today; showSettings = false; detailMetric = null; editing = null; layout = Layout()
         profile = Profile(); profileTab = ProfileTab.Profile; onboarding = null
-        prefs = emptyMap(); today = emptyMap(); connections = emptyMap()
+        // Niets van de vorige gebruiker laten staan op dit toestel
+        prefs = emptyMap(); today = emptyMap(); connections = emptyMap(); history = emptyMap(); stats = emptyMap()
+        trendSeries = emptyList(); lastLoaded = null; device.googleConnected = false
     }
 
     fun deleteAccount() = task {
@@ -298,14 +294,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---------- Profiel ----------
+    private fun JsonObjectBuilder.profileFields(p: Profile) {
+        put("display_name", p.name.trim().ifEmpty { null })
+        put("birth_date", p.birthDate?.toString())
+        put("sex", p.sex)
+        put("height_cm", p.heightCm)
+        put("weight_kg", p.weightKg)
+    }
+
     fun saveProfile(p: Profile) = task {
-        api.patch("profiles?id=eq.${api.userId}", buildJsonObject {
-            put("display_name", p.name.trim().ifEmpty { null })
-            put("birth_date", p.birthDate?.toString())
-            put("sex", p.sex)
-            put("height_cm", p.heightCm)
-            put("weight_kg", p.weightKg)
-        })
+        api.patch("profiles?id=eq.${api.userId}", buildJsonObject { profileFields(p) })
         profile = p.copy(name = p.name.trim())
         message = "Je profiel is opgeslagen."
     }
@@ -318,13 +316,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun finishOnboarding(p: Profile?) = task {
         api.patch("profiles?id=eq.${api.userId}", buildJsonObject {
             put("onboarded_at", Instant.now().toString())
-            if (p != null) {
-                put("display_name", p.name.trim().ifEmpty { null })
-                put("birth_date", p.birthDate?.toString())
-                put("sex", p.sex)
-                put("height_cm", p.heightCm)
-                put("weight_kg", p.weightKg)
-            }
+            if (p != null) profileFields(p)
         })
         if (p != null) profile = p.copy(name = p.name.trim())
         onboarding = null
@@ -376,76 +368,40 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     // ---------- Data ----------
     fun load() = task { loadNow() }
 
-    private suspend fun loadNow() = coroutineScope {
-        // Alle verzoeken tegelijk: Vandaag staat er zo na één rondje naar de server in plaats van zes
+    /** Bij terugkeren in de app: opnieuw laden als de gegevens ouder zijn dan 15 minuten of er een nieuwe dag is. */
+    fun refreshIfStale() {
+        val last = lastLoaded ?: return
+        val stale = java.time.Duration.between(last, Instant.now()).toMinutes() >= 15 ||
+            last.atZone(java.time.ZoneId.systemDefault()).toLocalDate() != LocalDate.now()
+        if (signedIn && stale && !busy) load()
+    }
+
+    private suspend fun loadNow() {
+        // Eén verzoek (app_state) in plaats van zes: profiel, dashboard, koppelingen, 14 dagen en statistieken
         val now = LocalDate.now()
-        val metricsQ = async { if (metrics.isEmpty()) api.select("metrics?select=id,name_nl,unit,lower_is_better,aggregation&order=id") else null }
-        val prefsQ = async { api.select("metric_prefs?select=*") }
-        val profQ = async { api.select("profiles?select=email,display_name,birth_date,sex,height_cm,weight_kg,theme,consent_health_at,onboarded_at,layout") }
-        val connQ = async { api.select("connections?select=provider,status,last_sync_at,last_error") }
-        val dailyQ = async {
-            api.rpc("resolved_daily", buildJsonObject { put("p_from", now.minusDays(13).toString()); put("p_to", now.toString()) })
-        }
-        val statsQ = async { api.rpc("metric_stats", JsonObject(emptyMap())) }
-        metricsQ.await()?.let { list -> metrics = list.associate {
-            val o = it.jsonObject
-            val id = o.str("id")
-            id to MetricInfo(id, o.str("name_nl"), o.str("unit"),
-                o["lower_is_better"]?.jsonPrimitive?.booleanOrNull == true, o.str("aggregation").ifEmpty { "avg" })
-        }
-        }
-        prefs = prefsQ.await().associate {
-            val o = it.jsonObject
-            val p = Pref(
-                metric = o.str("metric"),
-                visible = o["visible"]?.jsonPrimitive?.booleanOrNull == true,
-                position = o["position"]?.jsonPrimitive?.intOrNull ?: 0,
-                size = o.str("size").ifEmpty { "s" },
-                preferredSource = o.str("preferred_source").ifEmpty { null },
-                goal = o["goal"]?.takeIf { it != JsonNull }?.jsonPrimitive?.doubleOrNull,
-                inRings = o["in_rings"]?.jsonPrimitive?.booleanOrNull == true,
-                ringPosition = o["ring_position"]?.takeIf { it != JsonNull }?.jsonPrimitive?.intOrNull,
-            )
-            p.metric to p
-        }
-        val prof = profQ.await().firstOrNull()?.jsonObject
-        needsConsent = prof?.get("consent_health_at").let { it == null || it == JsonNull }
+        val st = api.appState(now.minusDays(13), now, withStats = true)
+        metrics = st.metrics
+        prefs = st.prefs
+        val prof = st.profile
+        needsConsent = prof?.str("consent_health_at").isNullOrEmpty()
         if (prof != null) {
-            fun d(k: String) = prof[k]?.takeIf { it != JsonNull }?.jsonPrimitive?.doubleOrNull
             profile = Profile(
                 email = prof.str("email"),
                 name = prof.str("display_name"),
-                birthDate = prof.str("birth_date").ifEmpty { null }?.let(LocalDate::parse),
+                birthDate = day(prof.str("birth_date")),
                 sex = prof.str("sex").ifEmpty { null },
-                heightCm = d("height_cm"),
-                weightKg = d("weight_kg"),
+                heightCm = prof.num("height_cm"),
+                weightKg = prof.num("weight_kg"),
             )
             applyTheme(ThemeMode.of(prof.str("theme")))
             layout = Layout.from(prof["layout"] as? JsonObject)
             if (!needsConsent && onboarding == null && prof.str("onboarded_at").isEmpty()) onboarding = Onboarding.Import
         }
-        connections = connQ.await().associate {
-            val o = it.jsonObject
-            o.str("provider") to Connection(o.str("status"), o.str("last_sync_at").ifEmpty { null }, o.str("last_error").ifEmpty { null })
-        }
-        val rows = (dailyQ.await() as? JsonArray).orEmpty().map { it.jsonObject }
-        history = rows.groupBy { it.str("metric") }.mapValues { (_, list) ->
-            list.associate { LocalDate.parse(it.str("day")) to (it["value"]?.jsonPrimitive?.doubleOrNull ?: 0.0) }
-        }
-        today = rows.filter { it.str("day") == now.toString() }.associate {
-            it.str("metric") to DayValue(it["value"]?.jsonPrimitive?.doubleOrNull ?: 0.0, it.str("source"))
-        }
-        stats = (statsQ.await() as? JsonArray).orEmpty().associate {
-            val o = it.jsonObject
-            fun d(k: String) = o[k]?.takeIf { v -> v != JsonNull }?.jsonPrimitive?.doubleOrNull
-            fun day(k: String) = o.str(k).takeIf { v -> v.isNotEmpty() }?.let(LocalDate::parse)
-            o.str("metric") to MetricStats(
-                days = o["days"]?.jsonPrimitive?.intOrNull ?: 0,
-                firstDay = day("first_day"), lastDay = day("last_day"), last = d("last_value"),
-                avgAll = d("avg_all"), minAll = d("min_all"), maxAll = d("max_all"),
-                totalAll = d("total_all"), avg30 = d("avg_30"),
-            )
-        }
+        connections = st.connections
+        device.googleConnected = isConnected("google_health")
+        history = st.daily.mapValues { (_, days) -> days.mapValues { it.value.value } }
+        today = st.daily.mapNotNull { (metric, days) -> days[now]?.let { metric to it } }.toMap()
+        stats = st.stats.orEmpty()
         lastLoaded = Instant.now()
         refreshHcStatusNow()
         Notifier.checkGoals(getApplication(), prefs.values, today, metrics)
@@ -472,8 +428,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val start = end.minusDays(2L * trendDays - 1)
         val res = (api.rpc("resolved_series", buildJsonObject {
             put("p_metric", trendMetric); put("p_from", start.toString()); put("p_to", end.toString())
-        }) as? JsonArray).orEmpty().map { it.jsonObject }
-        val byDay = res.associate { LocalDate.parse(it.str("day")) to it["value"]?.jsonPrimitive?.doubleOrNull }
+        }) as? JsonArray).orEmpty().filterIsInstance<JsonObject>()
+        val byDay = res.mapNotNull { r -> day(r.str("day"))?.let { it to r.num("value") } }.toMap()
         trendSource = res.lastOrNull()?.str("source")
         trendSeries = (0 until 2 * trendDays).map { i -> start.plusDays(i.toLong()).let { TrendPoint(it, byDay[it]) } }
     }
@@ -481,8 +437,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Knop in de wijzerplaat: Health Connect bijwerken (als dat kan) en alles opnieuw laden. */
     fun refreshAll() = task {
         refreshHcStatusNow()
-        if (hcStatus == HcStatus.OK || hcStatus == HcStatus.FOREGROUND_ONLY) {
-            try { hc.sync() } catch (e: Exception) { message = "Health Connect: ${e.message}" }
+        // Health Connect en Google Health tegelijk bijwerken; de server haalt Google hooguit eens per 10 minuten op
+        coroutineScope {
+            if (hcStatus == HcStatus.OK || hcStatus == HcStatus.FOREGROUND_ONLY) launch {
+                try { hc.sync() } catch (e: Exception) { message = "Health Connect: ${e.message}" }
+            }
+            if (isConnected("google_health")) launch { runCatching { api.function("google-health-sync") } }
         }
         loadNow()
         if (detailMetric != null) loadTrend()
@@ -527,7 +487,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun connect(provider: String, open: (String) -> Unit) = task {
         val fn = if (provider == "garmin") "garmin-auth-start" else "google-health-auth-start"
         val res = api.function(fn)
-        val url = res["url"]?.jsonPrimitive?.content
+        val url = res.str("url").ifEmpty { null }
         if (url == null) message = "Deze koppeling is nog niet ingericht op de server." else open(url)
     }
 
@@ -546,8 +506,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun googleHealthSyncNow() = task {
         val res = api.function("google-health-sync")
-        val rows = res["rows"]?.jsonPrimitive?.intOrNull ?: 0
-        message = "Google Health: $rows dagwaarden bijgewerkt."
+        val rows = res.int("rows") ?: 0
+        message = if (res.bool("skipped") == true) "Google Health is net al bijgewerkt."
+            else "Google Health: $rows dagwaarden bijgewerkt."
         loadNow()
     }
 
@@ -558,9 +519,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---------- Dashboard aanpassen ----------
     fun save(p: Pref) = task {
+        val sourceChanged = prefs[p.metric]?.preferredSource != p.preferredSource
         api.upsert("metric_prefs", prefJson(p))
         prefs = prefs + (p.metric to p)
-        loadNow()
+        // Alleen een andere bron verandert de getallen; tegels, doelen en volgorde zijn lokaal al bijgewerkt
+        if (sourceChanged) loadNow() else Notifier.checkGoals(getApplication(), prefs.values, today, metrics)
     }
 
     fun setVisible(metric: String, on: Boolean) {
@@ -627,6 +590,4 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         put("ring_position", if (p.inRings) p.ringPosition else null)
     }
 
-    private fun JsonObject.str(k: String) =
-        this[k]?.takeIf { it != JsonNull }?.jsonPrimitive?.content.orEmpty()
 }

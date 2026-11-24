@@ -1,5 +1,6 @@
 // Google Health API → dagwaarden in daily_metrics.
-// Pull-based: pg_cron roept google-health-sync elk uur aan; de app kan ook "nu ophalen".
+// Pull-based: pg_cron roept google-health-sync elk kwartier per shard aan voor wie 3 uur niet is bijgewerkt;
+// de app vraagt het ook bij vernieuwen (hooguit eens per 10 minuten).
 // Veldnamen volgen de Google Health API v4-referentie (dailyRollUp en list).
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { accessTokenFor, finishRun, GOOGLE, startRun, writeDaily } from "./shared.ts";
@@ -73,7 +74,8 @@ async function call(token: string, path: string, init: RequestInit = {}) {
 async function rollups(token: string, uid: string, days: number): Promise<Row[]> {
   const out: Row[] = [];
   const end = gdate(daysAgo(-1)); // morgen 00:00, exclusief
-  for (const r of ROLLUPS) {
+  // Alle datatypes tegelijk: een sync duurt zo één rondje naar Google in plaats van zes
+  await Promise.all(ROLLUPS.map(async (r) => {
     const span = Math.min(days, r.maxDays ?? 90);
     try {
       let pageToken: string | undefined;
@@ -99,14 +101,14 @@ async function rollups(token: string, uid: string, days: number): Promise<Row[]>
       // 403 = scope niet gegeven, 404/400 = type niet beschikbaar: de rest gaat gewoon door
       console.warn(`rollup ${r.type}`, String(e));
     }
-  }
+  }));
   return out;
 }
 
 async function lists(token: string, uid: string, days: number): Promise<Row[]> {
   const out: Row[] = [];
   const from = iso(gdate(daysAgo(days - 1)))!;
-  for (const l of LISTS) {
+  await Promise.all(LISTS.map(async (l) => {
     const acc = new Map<string, number>();
     try {
       let pageToken: string | undefined;
@@ -138,26 +140,30 @@ async function lists(token: string, uid: string, days: number): Promise<Row[]> {
       console.warn(`list ${l.type}`, String(e));
     }
     for (const [day, value] of acc) out.push({ user_id: uid, day, metric: l.metric, value });
-  }
+  }));
   return out;
 }
 
-/** Synchroniseert één gebruiker. Eerste keer 30 dagen, daarna de laatste 7 (Google werkt data soms later bij). */
-export async function syncUser(sb: SupabaseClient, uid: string, trigger: "cron" | "user"): Promise<{ rows: number; error?: string }> {
-  const run = await startRun(sb, uid, "google_health", trigger);
-  const { data: conn } = await sb.from("connections").select("last_data_at")
-    .eq("user_id", uid).eq("provider", "google_health").maybeSingle();
-  const days = conn?.last_data_at ? 7 : 30;
+/** Synchroniseert één gebruiker. Eerste keer 30 dagen, daarna 3 of 7 (Google werkt data soms later bij). */
+export type SyncState = { last_data_at: string | null; last_sync_at: string | null } | null;
+
+export async function syncUser(sb: SupabaseClient, uid: string, trigger: "cron" | "user", known?: SyncState): Promise<{ rows: number; error?: string }> {
+  const run = startRun(uid, "google_health", trigger);
+  const conn = known !== undefined ? known : (await sb.from("connections").select("last_data_at,last_sync_at")
+    .eq("user_id", uid).eq("provider", "google_health").maybeSingle()).data as SyncState;
+  // Eerste keer 30 dagen; daarna 3 dagen als de vorige ronde recent was (late metingen), anders 7
+  const recent = conn?.last_sync_at && Date.now() - Date.parse(conn.last_sync_at) < 2 * 86_400_000;
+  const days = !conn?.last_data_at ? 30 : recent ? 3 : 7;
   try {
     const token = await accessTokenFor(sb, uid, "google_health");
     if (!token) throw new Error("Geen geldig token; koppel Google Health opnieuw");
-    const rows = [...(await rollups(token, uid, days)), ...(await lists(token, uid, days))];
+    const [a, b] = await Promise.all([rollups(token, uid, days), lists(token, uid, days)]);
+    const rows = [...a, ...b];
     const n = await writeDaily(sb, rows, "google_health");
     const now = new Date().toISOString();
     await sb.from("connections").update({
       last_sync_at: now, ...(n ? { last_data_at: now } : {}), status: "active", last_error: null,
     }).eq("user_id", uid).eq("provider", "google_health");
-    await finishRun(sb, run, n);
     return { rows: n };
   } catch (e) {
     const msg = String(e instanceof Error ? e.message : e);

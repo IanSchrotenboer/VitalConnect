@@ -36,7 +36,7 @@ import kotlin.reflect.KClass
  * en stuurt die naar Supabase (RPC ingest_health_connect).
  *
  * Eerste keer: volledige synchronisatie (30 dagen, of 365 met de history-toestemming).
- * Daarna: alleen dagen die volgens de Changes API gewijzigd zijn.
+ * Daarna: alleen de dagen die volgens de Changes API gewijzigd zijn; zonder wijzigingen wordt niets verstuurd.
  */
 class HealthSync(context: Context, private val api: Api) {
     private val ctx = context.applicationContext
@@ -66,7 +66,7 @@ class HealthSync(context: Context, private val api: Api) {
             return fullSync(types, today.minusDays(if (history) 365 else 29), today, typesKey)
         }
 
-        val days = sortedSetOf(today)
+        val days = sortedSetOf<LocalDate>()
         var token: String = saved
         do {
             val resp = client.getChanges(token)
@@ -85,13 +85,24 @@ class HealthSync(context: Context, private val api: Api) {
         } while (resp.hasMore)
 
         val limit = today.minusDays(400)
-        val from = if (days.first().isBefore(limit)) limit else days.first()
-        val n = upload(types, from, today)
+        days.removeAll { it.isBefore(limit) || it.isAfter(today) }
+        // Aaneengesloten reeksen apart uitlezen: één gewijzigde dag van maanden terug haalt niet alles daartussen op
+        var n = 0
+        runs(days).forEach { (a, b) -> n += upload(types, a, b) }
         prefs.edit()
             .putString(CHANGES_TOKEN, token)
             .putLong(LAST_SYNC, System.currentTimeMillis())
             .apply()
         return n
+    }
+
+    private fun runs(days: Collection<LocalDate>): List<Pair<LocalDate, LocalDate>> {
+        val out = mutableListOf<Pair<LocalDate, LocalDate>>()
+        for (d in days.sorted()) {
+            val last = out.lastOrNull()
+            if (last != null && last.second.plusDays(1) == d) out[out.size - 1] = last.first to d else out += d to d
+        }
+        return out
     }
 
     private suspend fun fullSync(types: List<KClass<out Record>>, from: LocalDate, to: LocalDate, typesKey: String): Int {

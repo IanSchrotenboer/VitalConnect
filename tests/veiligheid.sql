@@ -61,6 +61,14 @@ select 'Profiel: alleen eigen gegevens wijzigbaar (kolomrechten)',
        and not has_column_privilege('authenticated', 'public.profiles', 'created_at', 'update'),
        'id, email en created_at mogen niet door de app gewijzigd worden'
 union all
+select 'Statistiekencache alleen via de server (niet zelf te schrijven of te lezen)',
+       not has_table_privilege('authenticated', 'public.metric_stats_cache', 'select,insert,update,delete'),
+       'de app leest statistieken via metric_stats() en app_state()'
+union all
+select 'Wijzigingsmoment (data_changed_at) niet door de app aan te passen',
+       not has_column_privilege('authenticated', 'public.profiles', 'data_changed_at', 'update'),
+       'anders kan een gebruiker de cache omzeilen'
+union all
 select 'Controles op invoer profiel (lengte, gewicht, geboortedatum, weergave)',
        count(*) >= 5,
        count(*)::text || ' controles'

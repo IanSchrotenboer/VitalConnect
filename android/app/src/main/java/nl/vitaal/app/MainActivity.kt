@@ -67,6 +67,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         vm.refreshHcStatus()
         vm.refreshNotificationPermission()
+        vm.refreshIfStale()
     }
 
     private var askedNotifications = false

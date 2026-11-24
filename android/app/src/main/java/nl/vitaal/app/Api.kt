@@ -6,12 +6,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
@@ -93,7 +91,6 @@ class Api(context: Context) {
 
     fun signOut() = prefs.edit().clear().apply()
 
-    suspend fun select(path: String): JsonArray = call("GET", "/rest/v1/$path", null).jsonArray
     suspend fun rpc(name: String, body: JsonObject): JsonElement = call("POST", "/rest/v1/rpc/$name", body)
     suspend fun patch(path: String, body: JsonObject) { call("PATCH", "/rest/v1/$path", body, prefer = "return=minimal") }
     suspend fun upsert(table: String, body: JsonElement) {

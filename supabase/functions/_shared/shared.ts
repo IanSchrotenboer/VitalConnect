@@ -68,6 +68,23 @@ export async function userFrom(req: Request, sb: SupabaseClient) {
   return error ? null : data.user;
 }
 
+type User = NonNullable<Awaited<ReturnType<typeof userFrom>>>;
+
+/** POST-endpoint voor een ingelogde gebruiker: methode, login en foutafhandeling op één plek. */
+export function authed(handler: (req: Request, sb: SupabaseClient, user: User) => Promise<Response>) {
+  return async (req: Request): Promise<Response> => {
+    if (req.method !== "POST") return json({ error: "method" }, 405);
+    try {
+      const sb = admin();
+      const user = await userFrom(req, sb);
+      if (!user) return json({ error: "unauthorized" }, 401);
+      return await handler(req, sb, user);
+    } catch (e) {
+      return fail(e);
+    }
+  };
+}
+
 export function safeEqual(a: string, b: string): boolean {
   if (!a || a.length !== b.length) return false;
   let r = 0;
@@ -216,19 +233,28 @@ export async function revokeAtProvider(sb: SupabaseClient, userId: string, provi
 }
 
 // ---------- Synchronisatielog ----------
-export async function startRun(sb: SupabaseClient, userId: string | null, provider: Provider, trigger: string) {
-  const { data } = await sb.from("sync_runs").insert({ user_id: userId, provider, trigger }).select("id").single();
-  return data?.id as number | undefined;
+/** Een synchronisatie; alleen bij een fout komt er een regel in sync_runs (geslaagde ronden staan in connections). */
+export type Run = { userId: string | null; provider: Provider; trigger: string; started: string };
+
+export function startRun(userId: string | null, provider: Provider, trigger: string): Run {
+  return { userId, provider, trigger, started: new Date().toISOString() };
 }
 
-export async function finishRun(sb: SupabaseClient, id: number | undefined, rows: number, error?: string) {
-  if (!id) return;
-  await sb.from("sync_runs").update({
-    finished_at: new Date().toISOString(),
-    status: error ? "error" : "ok",
-    rows_written: rows,
-    error: error ?? null,
-  }).eq("id", id);
+export async function finishRun(sb: SupabaseClient, run: Run, rows: number, error?: string) {
+  if (!error) return;
+  await sb.from("sync_runs").insert({
+    user_id: run.userId, provider: run.provider, trigger: run.trigger, started_at: run.started,
+    finished_at: new Date().toISOString(), status: "error", rows_written: rows, error: error.slice(0, 500),
+  });
+}
+
+// Catalogus van metrics met grenzen: verandert zelden, dus per warme functie-instantie 10 minuten bewaard
+let catalog: { at: number; lim: Map<string, number[]> } | null = null;
+async function limits(sb: SupabaseClient) {
+  if (catalog && Date.now() - catalog.at < 600_000) return catalog.lim;
+  const { data } = await sb.from("metrics").select("id,min_value,max_value");
+  catalog = { at: Date.now(), lim: new Map((data ?? []).map((m) => [m.id, [Number(m.min_value), Number(m.max_value)]])) };
+  return catalog.lim;
 }
 
 /** Valideert dagwaarden tegen de catalogus en schrijft ze weg. */
@@ -238,8 +264,7 @@ export async function writeDaily(
   provider: Provider,
 ): Promise<number> {
   if (!rows.length) return 0;
-  const { data: cat } = await sb.from("metrics").select("id,min_value,max_value");
-  const lim = new Map((cat ?? []).map((m) => [m.id, [Number(m.min_value), Number(m.max_value)]]));
+  const lim = await limits(sb);
   const now = new Date().toISOString();
   const dedup = new Map<string, Record<string, unknown>>();
   for (const r of rows) {

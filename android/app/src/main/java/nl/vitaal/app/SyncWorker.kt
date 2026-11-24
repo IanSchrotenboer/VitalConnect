@@ -11,8 +11,8 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
@@ -35,9 +35,10 @@ class SyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
             ) {
                 Log.i(TAG, "Health Connect: ${hc.sync()} dagwaarden")
             }
-            val googleActive = api.select("connections?select=status&provider=eq.google_health")
-                .any { it.jsonObject["status"]?.jsonPrimitive?.content == "active" }
-            if (googleActive) api.function("google-health-sync")
+            // De server haalt Google Health vanuit de achtergrond hooguit eens per 30 minuten op
+            if (DeviceSettings(ctx).googleConnected) runCatching {
+                api.function("google-health-sync", buildJsonObject { put("background", true) })
+            }
             Notifier.checkGoalsFromServer(ctx, api)
             Notifier.updateStatus(ctx, justSynced = true)
             Result.success()

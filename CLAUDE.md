@@ -14,12 +14,23 @@
 1. **Stresstest:** `node tests/stress-preview.mjs` (apenproef op de preview) en `tests/stress-db.sql` via Supabase
    (`execute_sql`; maakt een tijdelijke testgebruiker met jaren aan data, meet de RPC's en ruimt alles op).
    Grenzen: elke RPC onder 300 ms bij 5 jaar data, geen JavaScript-fouten in de preview.
-2. **Opschonen:** `python3 tests/opschonen.py` zoekt ongebruikte imports, functies, CSS-klassen en bestanden.
-   Verwijder wat echt overbodig is; functies van de app blijven behouden.
-3. **Veiligheidscheck:** `tests/veiligheid.sql` (RLS op elke tabel, geen rechten voor anon, isolatie tussen gebruikers)
+2. **Chaostest:** `node tests/chaos-preview.mjs` (kapotte opslag, snel tikken en vegen, herladen, draaien, extreme invoer)
+   en `tests/chaos-db.sql` via `execute_sql` (onzin en randgevallen op elke RPC die de app gebruikt). Alles moet ok zijn.
+3. **Belastingtest:** `tests/belasting.sql` via `execute_sql` (500 gebruikers + 1 zware, cron-selectie op de index,
+   app openen < 300 ms, dag van een gemiddelde gebruiker < 1 s, cache gelijk aan volledige berekening, 0 logregels bij succes).
+   Capaciteit en aannames: `docs/belasting-1-miljoen.md`.
+4. **Opschonen:** `python3 tests/opschonen.py` zoekt ongebruikte imports, functies, CSS-klassen, bestanden en databasefuncties,
+   dubbele code en uitgeschakelde code. Verwijder wat echt overbodig is; functies van de app blijven behouden.
+5. **Veiligheidscheck:** `tests/veiligheid.sql` (RLS op elke tabel, geen rechten voor anon, isolatie tussen gebruikers)
    plus `get_advisors` (security en performance) in Supabase, en `python3 tests/opschonen.py --veiligheid`
    (back-up uit, geen cleartext, geen geheimen in de code).
-4. Meld de uitkomst kort in de commit of release-notities. Een rode controle wordt eerst opgelost.
+6. Meld de uitkomst kort in de commit of release-notities. Een rode controle wordt eerst opgelost.
+
+## Schaal (afspraken die bij elke wijziging blijven gelden)
+- De app opent met één verzoek (`app_state`); nieuwe schermgegevens komen daar bij, niet in een extra verzoek.
+- Statistieken over de hele geschiedenis komen uit `metric_stats_cache`; grote queries joinen niet per rij met kleine tabellen.
+- Uploads schrijven alleen gewijzigde waarden; `sync_runs` krijgt alleen fouten.
+- Google Health: hooguit eens per 10 minuten (vernieuwen) of 30 minuten (achtergrond) per gebruiker, servertaak in porties (`google_sync_shards` in `app_secrets`).
 
 ## Vormgeving
 - Ontwerpskill: `.claude/skills/impeccable` (Impeccable 4.10, Apache 2.0; zonder de hooks). Gebruik `/impeccable critique`, `audit`, `polish` enz. voor ontwerpwerk aan de app en de preview.

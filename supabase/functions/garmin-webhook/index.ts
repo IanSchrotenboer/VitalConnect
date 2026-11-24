@@ -109,10 +109,9 @@ async function handlePush(sb: SupabaseClient, body: Record<string, Item[]>) {
   // Per gebruiker wegschrijven en loggen; de laatste waarde per dag wint
   const now = new Date().toISOString();
   for (const uid of touched) {
-    const run = await startRun(sb, uid, "garmin", "webhook");
+    const run = startRun(uid, "garmin", "webhook");
     try {
-      const n = await writeDaily(sb, rows.filter((r) => r.user_id === uid), "garmin");
-      await finishRun(sb, run, n);
+      await writeDaily(sb, rows.filter((r) => r.user_id === uid), "garmin");
       await sb.from("connections").update({ last_data_at: now, last_sync_at: now, status: "active", last_error: null })
         .eq("user_id", uid).eq("provider", "garmin");
     } catch (e) {
