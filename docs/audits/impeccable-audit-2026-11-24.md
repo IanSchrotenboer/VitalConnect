@@ -196,3 +196,24 @@ Minder goed:
 6. **`/impeccable polish`**: de Google-inlogknop volgens de richtlijnen en een laatste ronde.
 
 Draai `/impeccable audit` opnieuw na de aanpassingen om de score te zien stijgen.
+
+---
+
+# Herhaalde audit na versie 1.5.0
+
+Opnieuw beoordeeld vanuit de broncode na alle aanbevelingen hierboven. Ook nu zonder emulator of toestel: test TalkBack, lettergrootte 200% en het toetsenbord nog op een echte telefoon.
+
+| # | Onderdeel | Voor | Na | Wat er veranderde |
+|---|-----------|------|----|-------------------|
+| 1 | Toegankelijkheid | 2 | 3 | Schakelrijen met naam en rol, chips met geselecteerde stand, grafiek met samenvatting en acties, kopjes, voorgelezen ringen en verschillen; grote letters zonder afkappen |
+| 2 | Prestaties | 3 | 4 | Opstartverzoeken tegelijk (samen 182 ms op de database bij 5 jaar data); APK van 26,1 naar 4,0 MB met R8 |
+| 3 | Uiterlijk en thema | 3 | 4 | Bronkleuren in het thema met donkere variant; randen van bediening 3:1; abrikoos en oker 3,4 en 3,6:1 op wit |
+| 4 | Android-conformiteit | 2 | 3 | FilterChip, AssistChip, SegmentedButton en TopAppBar; tikvlakken 48 dp; Google-knop in de kleuren van Google |
+| 5 | Aanpasbaarheid aan schermen | 3 | 3 | Toetsenbord opgelost (adjustResize, imePadding) |
+| **Totaal** | | **13** | **17/20** | **Goed** |
+
+## Wat er nog openstaat
+
+- **[P2] G-logo op de Google-knop.** De knop heeft de kleuren en vorm uit de richtlijnen van Google, maar nog geen logo. Download het officiële pakket via developers.google.com/identity/branding-guidelines en zet het G-logo als `res/drawable/google_g.xml` in de app. De knop toont het dan vanzelf.
+- **[P2] Testen op een toestel.** Dit zijn de eerste builds met R8. Test daarom inloggen met Google, Health Connect en de achtergrondsynchronisatie op een echte telefoon. Controleer ook TalkBack en een lettergrootte van 200%.
+- **[P3] Foldable-houding.** De app reageert nog niet op half opengevouwen ("tafelstand"). Dat kan met Jetpack WindowManager: bijvoorbeeld de grafiek boven de vouw en de cijfers eronder.
