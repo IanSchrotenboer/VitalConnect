@@ -8,6 +8,7 @@
      (slug `e697eca5-9da6-4bd3-9333-549e7e9dbe05`, https://claude.ai/artifact/VUXmRLgxCuWe5GRVnUCQKn)
      met het label van de app-versie, bijvoorbeeld `v0.2.0`.
 3. Verhoog `versionName` in `android/app/build.gradle.kts` bij een zichtbare wijziging en schrijf `release-notities/v<versie>.md` (Nieuw / Verbeterd / Installeren). Met de vaste sleutel maakt GitHub dan een release met APK en AAB.
+   Een bestaande versie opnieuw uitbrengen: pas `release-notities/v<versie>.md` aan in dezelfde push; dan vervangt GitHub APK, AAB en tekst van die release.
 4. Raakt de wijziging de Play Store (rechten, gegevens, schermen), werk dan `play-store/` en `site/privacy.html` bij.
 
 ## Vaste controles bij elke update (verplicht, vóór de push)
@@ -34,7 +35,7 @@
 
 ## Vormgeving
 - Ontwerpskill: `.claude/skills/impeccable` (Impeccable 4.10, Apache 2.0; zonder de hooks). Gebruik `/impeccable critique`, `audit`, `polish` enz. voor ontwerpwerk aan de app en de preview.
-- Kleuren staan in `android/.../Theme.kt` en als CSS-variabelen bovenaan `prototype/index.html`; houd ze gelijk.
+- Kleuren staan in `android/.../Theme.kt`, `res/values(-night)/colors.xml` (opstartachtergrond), als CSS-variabelen bovenaan `prototype/index.html` en in `site/style.css`; houd ze gelijk. Donker = OLED-zwart: achtergrond #000000, tegels #1D2321, lijnen #333B38.
 - Tabbladen: Vandaag, Gezondheid (statistieken over de hele geschiedenis), Slaap. Koppelingen en account achter het persoon-icoon.
 - De dagringen kleuren per positie (abrikoos, zeegroen, indigo), niet per categorie.
 

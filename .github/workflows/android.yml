@@ -10,6 +10,8 @@ name: Android-app bouwen
 #
 # Bij een nieuw versienummer (versionName in android/app/build.gradle.kts) komt er een GitHub Release
 # met VitalConnect.apk en VitalConnect.aab en de tekst uit release-notities/v<versie>.md.
+# Een versie opnieuw uitbrengen: pas release-notities/v<versie>.md aan in dezelfde push; dan worden APK, AAB en
+# tekst van die release vervangen door de nieuwe build.
 
 on:
   push:
@@ -34,6 +36,8 @@ jobs:
       BUILD_NUMBER: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # om te zien welke bestanden deze push veranderde (release bijwerken)
 
       - uses: actions/setup-java@v5
         with:
@@ -113,10 +117,22 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.meta.outputs.version }}
+          BEFORE: ${{ github.event.before }}
         run: |
           tag="v$VERSION"
-          if gh release view "$tag" > /dev/null 2>&1; then echo "Release $tag bestaat al"; exit 0; fi
           notes="release-notities/$tag.md"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            # Een bestaande release alleen bijwerken als de release-notities van deze versie in deze push veranderden
+            # (bewust "opnieuw uitbrengen"); anders blijft hij zoals hij is.
+            if [ -n "$BEFORE" ] && git cat-file -e "$BEFORE" 2>/dev/null && git diff --name-only "$BEFORE" "$GITHUB_SHA" | grep -qx "$notes"; then
+              gh release upload "$tag" VitalConnect.apk VitalConnect.aab --clobber
+              gh release edit "$tag" --notes-file "$notes"
+              echo "::notice title=Release bijgewerkt::$tag met de build van ${GITHUB_SHA::7}"
+            else
+              echo "Release $tag bestaat al"
+            fi
+            exit 0
+          fi
           [ -f "$notes" ] || { printf '# Vital Connect %s\n\nNieuwe versie.\n' "$VERSION" > /tmp/notes.md; notes=/tmp/notes.md; }
           gh release create "$tag" VitalConnect.apk VitalConnect.aab \
             --title "Vital Connect $tag" --notes-file "$notes" --target "$GITHUB_SHA"

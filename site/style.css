@@ -1,5 +1,5 @@
 :root{color-scheme:light dark;--bg:#f5f7f4;--card:#fff;--ink:#0f1e1b;--mut:#52615c;--line:#e1e6e2;--pri:#1c4d46;--dial:#123430;--act:#e4793b}
-@media(prefers-color-scheme:dark){:root{--bg:#0c1614;--card:#15221f;--ink:#e9f1ee;--mut:#9db0aa;--line:#24332f;--pri:#7fd1c1;--dial:#0f2a26}}
+@media(prefers-color-scheme:dark){:root{--bg:#000000;--card:#1d2321;--ink:#e9f1ee;--mut:#9db0aa;--line:#333b38;--pri:#7fd1c1;--dial:#0f2a26}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 Figtree,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 header{background:var(--dial);color:#f3f7f5;padding:18px max(5vw,16px)}

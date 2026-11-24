@@ -67,8 +67,9 @@ private val Light = Palette(
 
 private val Dark = Palette(
     dark = true,
-    bg = Color(0xFF0C1614), card = Color(0xFF15221F), ink = Color(0xFFE9F1EE), muted = Color(0xFF9DB0AA),
-    line = Color(0xFF24332F), outline = Color(0xFF63776F), primary = Color(0xFF7FD1C1), onPrimary = Color(0xFF0C1614),
+    // OLED-zwart: zwarte achtergrond, neutraalgrijze tegels; de wijzerplaat blijft dennengroen en springt eruit
+    bg = Color(0xFF000000), card = Color(0xFF1D2321), ink = Color(0xFFE9F1EE), muted = Color(0xFF9DB0AA),
+    line = Color(0xFF333B38), outline = Color(0xFF63776F), primary = Color(0xFF7FD1C1), onPrimary = Color(0xFF0C1614),
     dial = Color(0xFF123430), dialInk = Color(0xFFF3F7F5), dialMuted = Color(0xFFA9BDB7),
     activity = Color(0xFFF5935A), heart = Color(0xFFEC7290), sleep = Color(0xFF8C97F2),
     body = Color(0xFFDDB15A), recovery = Color(0xFF4CC3B3),
@@ -172,16 +173,16 @@ fun VitaalTheme(mode: ThemeMode = ThemeMode.System, content: @Composable () -> U
 private fun schemeOf(p: Palette) = if (p.dark) darkColorScheme(
     primary = p.primary, onPrimary = p.onPrimary,
     primaryContainer = Color(0xFF1F3A35), onPrimaryContainer = p.ink, inversePrimary = Color(0xFF1C4D46),
-    secondary = p.activity, onSecondary = p.bg, secondaryContainer = Color(0xFF24332F), onSecondaryContainer = p.ink,
+    secondary = p.activity, onSecondary = p.bg, secondaryContainer = Color(0xFF2A3230), onSecondaryContainer = p.ink,
     tertiary = p.recovery, onTertiary = p.bg, tertiaryContainer = Color(0xFF173A35), onTertiaryContainer = p.ink,
     background = p.bg, onBackground = p.ink, surface = p.bg, onSurface = p.ink,
     surfaceVariant = p.card, onSurfaceVariant = p.muted, surfaceTint = p.primary,
     inverseSurface = p.ink, inverseOnSurface = p.card,
     error = p.bad, onError = p.bg, errorContainer = Color(0xFF4A2117), onErrorContainer = Color(0xFFFFDAD0),
     outline = p.outline, outlineVariant = p.line, scrim = Color.Black,
-    surfaceDim = p.bg, surfaceBright = Color(0xFF22322E),
-    surfaceContainerLowest = Color(0xFF091210), surfaceContainerLow = Color(0xFF111C1A), surfaceContainer = p.card,
-    surfaceContainerHigh = p.card, surfaceContainerHighest = Color(0xFF22322E),
+    surfaceDim = p.bg, surfaceBright = Color(0xFF2A3230),
+    surfaceContainerLowest = Color(0xFF000000), surfaceContainerLow = Color(0xFF121615), surfaceContainer = p.card,
+    surfaceContainerHigh = p.card, surfaceContainerHighest = Color(0xFF2A3230),
 ) else lightColorScheme(
     primary = p.primary, onPrimary = p.onPrimary,
     primaryContainer = Color(0xFFDCEBE6), onPrimaryContainer = p.ink, inversePrimary = Color(0xFF7FD1C1),
