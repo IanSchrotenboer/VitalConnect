@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "Vitaal"
+rootProject.name = "VitalConnect"
 include(":app")

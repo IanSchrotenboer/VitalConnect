@@ -26,10 +26,10 @@ class PermissionsRationaleActivity : ComponentActivity() {
                         Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        Text("Wat Vitaal met je gezondheidsdata doet", style = MaterialTheme.typography.headlineSmall)
-                        Text("Vitaal leest alleen de gegevens die je dashboard toont: stappen, afstand, actieve calorieën, verdiepingen, trainingen, rusthartslag, HRV, zuurstofsaturatie, ademhaling, slaap, gewicht en VO2max.")
-                        Text("Per dag en per bron-app wordt één waarde berekend en versleuteld naar je eigen Vitaal-account gestuurd (servers in de EU). Ruwe meetpunten verlaten je telefoon niet.")
-                        Text("Vitaal schrijft niets naar Health Connect, verkoopt geen data en deelt niets met derden.")
+                        Text("Wat $APP_NAME met je gezondheidsdata doet", style = MaterialTheme.typography.headlineSmall)
+                        Text("$APP_NAME leest alleen de gegevens die je dashboard toont: stappen, afstand, actieve calorieën, verdiepingen, trainingen, rusthartslag, HRV, zuurstofsaturatie, ademhaling, slaap, gewicht en VO2max.")
+                        Text("Per dag en per bron-app wordt één waarde berekend en versleuteld naar je eigen $APP_NAME-account gestuurd (servers in de EU). Ruwe meetpunten verlaten je telefoon niet.")
+                        Text("$APP_NAME schrijft niets naar Health Connect, verkoopt geen data en deelt niets met derden.")
                         Text("Je kunt de toegang altijd intrekken in Health Connect. In de app kun je je account en alle opgeslagen data verwijderen.")
                     }
                 }

@@ -24,7 +24,30 @@ import kotlinx.serialization.json.put
 import java.time.Instant
 import java.time.LocalDate
 
-data class MetricInfo(val id: String, val name: String, val unit: String, val lowerIsBetter: Boolean)
+data class MetricInfo(
+    val id: String,
+    val name: String,
+    val unit: String,
+    val lowerIsBetter: Boolean,
+    val aggregation: String = "avg",   // sum, avg of last
+)
+
+enum class Tab { Today, Health, Sleep }
+
+data class TrendPoint(val day: LocalDate, val value: Double?)
+
+/** Statistieken over de hele geschiedenis (metric_stats). */
+data class MetricStats(
+    val days: Int,
+    val firstDay: LocalDate?,
+    val lastDay: LocalDate?,
+    val last: Double?,
+    val avgAll: Double?,
+    val minAll: Double?,
+    val maxAll: Double?,
+    val totalAll: Double?,
+    val avg30: Double?,
+)
 
 data class Pref(
     val metric: String,
@@ -60,10 +83,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var busy by mutableStateOf(false); private set
     var message by mutableStateOf<String?>(null)
     var editing by mutableStateOf(false)
+    var tab by mutableStateOf(Tab.Today)
+    var showSettings by mutableStateOf(false)
+    /** Metric waarvan het detailscherm (grafiek) open staat. */
+    var detailMetric by mutableStateOf<String?>(null); private set
+    var stats by mutableStateOf<Map<String, MetricStats>>(emptyMap()); private set
 
     var metrics by mutableStateOf<Map<String, MetricInfo>>(emptyMap()); private set
     var prefs by mutableStateOf<Map<String, Pref>>(emptyMap()); private set
     var today by mutableStateOf<Map<String, DayValue>>(emptyMap()); private set
+    /** Laatste 14 dagen per metric, voor de minigrafiekjes en het verschil met het weekgemiddelde. */
+    var history by mutableStateOf<Map<String, Map<LocalDate, Double>>>(emptyMap()); private set
+    var lastLoaded by mutableStateOf<Instant?>(null); private set
+
+    // Detailgrafiek
+    var trendMetric by mutableStateOf("steps"); private set
+    var trendDays by mutableStateOf(30); private set
+    /** 2 × trendDays dagen: de tweede helft is de getoonde periode, de eerste de vorige. */
+    var trendSeries by mutableStateOf<List<TrendPoint>>(emptyList()); private set
+    var trendSource by mutableStateOf<String?>(null); private set
     var connections by mutableStateOf<Map<String, Connection>>(emptyMap()); private set
     var hcStatus by mutableStateOf(HcStatus.UNKNOWN); private set
     var lastSync by mutableStateOf(hc.lastSync); private set
@@ -153,6 +191,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun signOut() {
         api.signOut(); hc.reset()
         signedIn = false; authStep = AuthStep.Login
+        tab = Tab.Today; showSettings = false; detailMetric = null; editing = false
         prefs = emptyMap(); today = emptyMap(); connections = emptyMap()
     }
 
@@ -172,10 +211,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun load() = task { loadNow() }
 
     private suspend fun loadNow() {
-        metrics = api.select("metrics?select=id,name_nl,unit,lower_is_better").associate {
+        metrics = api.select("metrics?select=id,name_nl,unit,lower_is_better,aggregation&order=id").associate {
             val o = it.jsonObject
             val id = o.str("id")
-            id to MetricInfo(id, o.str("name_nl"), o.str("unit"), o["lower_is_better"]?.jsonPrimitive?.booleanOrNull == true)
+            id to MetricInfo(id, o.str("name_nl"), o.str("unit"),
+                o["lower_is_better"]?.jsonPrimitive?.booleanOrNull == true, o.str("aggregation").ifEmpty { "avg" })
         }
         prefs = api.select("metric_prefs?select=*").associate {
             val o = it.jsonObject
@@ -196,13 +236,65 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val o = it.jsonObject
             o.str("provider") to Connection(o.str("status"), o.str("last_sync_at").ifEmpty { null }, o.str("last_error").ifEmpty { null })
         }
-        val d = LocalDate.now().toString()
-        today = (api.rpc("resolved_daily", buildJsonObject { put("p_from", d); put("p_to", d) }) as? JsonArray)
-            .orEmpty().associate {
-                val o = it.jsonObject
-                o.str("metric") to DayValue(o["value"]?.jsonPrimitive?.doubleOrNull ?: 0.0, o.str("source"))
-            }
+        val now = LocalDate.now()
+        val rows = (api.rpc("resolved_daily", buildJsonObject {
+            put("p_from", now.minusDays(13).toString()); put("p_to", now.toString())
+        }) as? JsonArray).orEmpty().map { it.jsonObject }
+        history = rows.groupBy { it.str("metric") }.mapValues { (_, list) ->
+            list.associate { LocalDate.parse(it.str("day")) to (it["value"]?.jsonPrimitive?.doubleOrNull ?: 0.0) }
+        }
+        today = rows.filter { it.str("day") == now.toString() }.associate {
+            it.str("metric") to DayValue(it["value"]?.jsonPrimitive?.doubleOrNull ?: 0.0, it.str("source"))
+        }
+        stats = (api.rpc("metric_stats", JsonObject(emptyMap())) as? JsonArray).orEmpty().associate {
+            val o = it.jsonObject
+            fun d(k: String) = o[k]?.takeIf { v -> v != JsonNull }?.jsonPrimitive?.doubleOrNull
+            fun day(k: String) = o.str(k).takeIf { v -> v.isNotEmpty() }?.let(LocalDate::parse)
+            o.str("metric") to MetricStats(
+                days = o["days"]?.jsonPrimitive?.intOrNull ?: 0,
+                firstDay = day("first_day"), lastDay = day("last_day"), last = d("last_value"),
+                avgAll = d("avg_all"), minAll = d("min_all"), maxAll = d("max_all"),
+                totalAll = d("total_all"), avg30 = d("avg_30"),
+            )
+        }
+        lastLoaded = Instant.now()
         refreshHcStatusNow()
+    }
+
+    // ---------- Detailgrafiek ----------
+    fun openDetail(metric: String) {
+        trendMetric = metric
+        detailMetric = metric
+        trendSeries = emptyList()
+        loadTrend()
+    }
+
+    fun closeDetail() { detailMetric = null }
+
+    fun setTrendPeriod(days: Int) {
+        trendDays = days
+        loadTrend()
+    }
+
+    fun loadTrend() = task {
+        val end = LocalDate.now()
+        val start = end.minusDays(2L * trendDays - 1)
+        val res = (api.rpc("resolved_series", buildJsonObject {
+            put("p_metric", trendMetric); put("p_from", start.toString()); put("p_to", end.toString())
+        }) as? JsonArray).orEmpty().map { it.jsonObject }
+        val byDay = res.associate { LocalDate.parse(it.str("day")) to it["value"]?.jsonPrimitive?.doubleOrNull }
+        trendSource = res.lastOrNull()?.str("source")
+        trendSeries = (0 until 2 * trendDays).map { i -> start.plusDays(i.toLong()).let { TrendPoint(it, byDay[it]) } }
+    }
+
+    /** Knop in de wijzerplaat: Health Connect bijwerken (als dat kan) en alles opnieuw laden. */
+    fun refreshAll() = task {
+        refreshHcStatusNow()
+        if (hcStatus == HcStatus.OK || hcStatus == HcStatus.FOREGROUND_ONLY) {
+            try { hc.sync() } catch (e: Exception) { message = "Health Connect: ${e.message}" }
+        }
+        loadNow()
+        if (detailMetric != null) loadTrend()
     }
 
     // ---------- Health Connect ----------

@@ -95,7 +95,7 @@ class MainActivity : ComponentActivity() {
     private fun shareText(text: String) {
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "application/json"
-            putExtra(Intent.EXTRA_SUBJECT, "Mijn Vitaal-data")
+            putExtra(Intent.EXTRA_SUBJECT, "Mijn Vital Connect-data")
             putExtra(Intent.EXTRA_TEXT, text)
         }
         startActivity(Intent.createChooser(send, "Mijn data exporteren"))
