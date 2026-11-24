@@ -2,7 +2,12 @@ package nl.vitaal.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,12 +23,13 @@ import androidx.compose.ui.unit.dp
 /** Health Connect toont dit scherm als de gebruiker wil weten wat de app met de data doet. */
 class PermissionsRationaleActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
             VitaalTheme {
                 Surface(Modifier.fillMaxSize()) {
                     Column(
-                        Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
+                        Modifier.safeDrawingPadding().verticalScroll(rememberScrollState()).padding(24.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Text("Wat $APP_NAME met je gezondheidsdata doet", style = MaterialTheme.typography.headlineSmall)
@@ -31,6 +37,9 @@ class PermissionsRationaleActivity : ComponentActivity() {
                         Text("Per dag en per bron-app wordt één waarde berekend en versleuteld naar je eigen $APP_NAME-account gestuurd (servers in de EU). Ruwe meetpunten verlaten je telefoon niet.")
                         Text("$APP_NAME schrijft niets naar Health Connect, verkoopt geen data en deelt niets met derden.")
                         Text("Je kunt de toegang altijd intrekken in Health Connect. In de app kun je je account en alle opgeslagen data verwijderen.")
+                        TextButton(onClick = {
+                            runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_URL))) }
+                        }) { Text("Volledige privacyverklaring") }
                     }
                 }
             }

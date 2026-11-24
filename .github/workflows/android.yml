@@ -1,6 +1,16 @@
 name: Android-app bouwen
 
-# Bij elke update (elke push naar main) een nieuwe APK, ook als alleen de backend of documentatie wijzigt.
+# Bouwt bij elke update (elke push naar main) een ondertekende release-APK en een AAB voor de Play Store,
+# zoals bij BOA Paraat. Elke build krijgt een hoger versionCode (het buildnummer), zodat een nieuwe APK
+# over de vorige heen installeert.
+#
+# Geheimen (Settings → Secrets and variables → Actions): ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
+# ANDROID_KEY_ALIAS. Zonder die geheimen wordt met een tijdelijke sleutel ondertekend: dan kan een update
+# NIET over een eerdere versie heen, en is de AAB niet geschikt voor de Play Store.
+#
+# Bij een nieuw versienummer (versionName in android/app/build.gradle.kts) komt er een GitHub Release
+# met VitalConnect.apk en VitalConnect.aab en de tekst uit release-notities/v<versie>.md.
+
 on:
   push:
     branches: [main]
@@ -14,12 +24,14 @@ concurrency:
 
 jobs:
   build:
-    name: APK bouwen
+    name: APK en AAB bouwen
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    defaults:
-      run:
-        working-directory: android
+    permissions:
+      contents: write
+    env:
+      HEEFT_SLEUTEL: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+      BUILD_NUMBER: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v5
 
@@ -32,31 +44,79 @@ jobs:
         with:
           gradle-version: "8.14.3"
 
-      - name: Debug-APK bouwen
+      - name: Sleutel klaarzetten
         env:
-          BUILD_NUMBER: ${{ github.run_number }}
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          KS="$RUNNER_TEMP/release.keystore"
+          if [ "$HEEFT_SLEUTEL" = "true" ]; then
+            echo "$KS_B64" | base64 -d > "$KS" || { echo "::error title=Sleutel::ANDROID_KEYSTORE_BASE64 is geen geldige base64-tekst"; exit 1; }
+          else
+            echo "::warning title=Tijdelijke sleutel::Geen vaste sleutel ingesteld. Deze APK kan niet over een eerdere versie heen en de AAB is niet geschikt voor de Play Store. Zie play-store/README.md."
+            KS_PASS=$(openssl rand -hex 16); KS_ALIAS=tijdelijk
+            keytool -genkeypair -keystore "$KS" -storetype PKCS12 -alias "$KS_ALIAS" -keyalg RSA -keysize 2048 \
+              -validity 365 -dname "CN=Vital Connect test" -storepass "$KS_PASS" -keypass "$KS_PASS" > /dev/null
+          fi
+          echo "::add-mask::$KS_PASS"
+          {
+            echo "VC_KEYSTORE_FILE=$KS"
+            echo "VC_KEYSTORE_PASSWORD=$KS_PASS"
+            echo "VC_KEY_ALIAS=$KS_ALIAS"
+          } >> "$GITHUB_ENV"
+          # Vingerafdrukken: SHA-1 hoort bij de Android-client in Google Cloud (inloggen met Google)
+          SHA1=$(keytool -list -v -keystore "$KS" -storepass "$KS_PASS" -alias "$KS_ALIAS" | grep -m1 "SHA1:" | awk '{print $2}')
+          SHA256=$(keytool -list -v -keystore "$KS" -storepass "$KS_PASS" -alias "$KS_ALIAS" | grep -m1 "SHA256:" | awk '{print $2}')
+          echo "::notice title=Ondertekensleutel::SHA-1 $SHA1 · SHA-256 $SHA256"
+
+      - name: Release-APK en AAB bouwen
+        working-directory: android
         run: |
           set -o pipefail
-          gradle assembleDebug --no-daemon --console=plain 2>&1 | tee build.log
+          gradle assembleRelease bundleRelease --no-daemon --console=plain 2>&1 | tee build.log
 
       # Compileerfouten als annotatie, zodat ze zonder logbestanden zichtbaar zijn
       - name: Fouten samenvatten
         if: failure()
+        working-directory: android
         run: |
           msg=$( (grep -E '^e: ' build.log; grep -A12 'What went wrong' build.log) | head -60 \
                  | sed -e 's/%/%25/g' -e 's#file:///home/runner/work/VitalConnect/VitalConnect/##' | awk '{printf "%s%%0A", $0}')
           echo "::error title=Build mislukt::${msg}"
 
-      - name: Naam van het artefact
-        if: success()
+      - name: Bestanden verzamelen en controleren
         id: meta
         run: |
-          version=$(grep -m1 'versionName = ' app/build.gradle.kts | sed -E 's/.*"(.*)".*/\1/')
-          echo "name=VitalConnect-${version}-build${{ github.run_number }}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          APK=$(ls android/app/build/outputs/apk/release/*.apk | head -n 1)
+          AAB=$(ls android/app/build/outputs/bundle/release/*.aab | head -n 1)
+          cp "$APK" VitalConnect.apk
+          cp "$AAB" VitalConnect.aab
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
+          "$BT/apksigner" verify VitalConnect.apk
+          jarsigner -verify VitalConnect.aab > /dev/null
+          version=$(grep -m1 'versionName = ' android/app/build.gradle.kts | sed -E 's/.*"(.*)".*/\1/')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "name=VitalConnect-${version}-build${BUILD_NUMBER}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Gebouwd::Vital Connect ${version} (versionCode ${BUILD_NUMBER})"
 
       - uses: actions/upload-artifact@v5
-        if: success()
         with:
           name: ${{ steps.meta.outputs.name }}
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: |
+            VitalConnect.apk
+            VitalConnect.aab
           retention-days: 90
+
+      - name: GitHub Release (alleen bij een nieuw versienummer, met vaste sleutel)
+        if: github.ref == 'refs/heads/main' && env.HEEFT_SLEUTEL == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          tag="v$VERSION"
+          if gh release view "$tag" > /dev/null 2>&1; then echo "Release $tag bestaat al"; exit 0; fi
+          notes="release-notities/$tag.md"
+          [ -f "$notes" ] || { printf '# Vital Connect %s\n\nNieuwe versie.\n' "$VERSION" > /tmp/notes.md; notes=/tmp/notes.md; }
+          gh release create "$tag" VitalConnect.apk VitalConnect.aab \
+            --title "Vital Connect $tag" --notes-file "$notes" --target "$GITHUB_SHA"

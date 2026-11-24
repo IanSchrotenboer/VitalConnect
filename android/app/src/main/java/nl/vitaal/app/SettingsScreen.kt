@@ -70,6 +70,7 @@ fun SettingsScreen(
                     OutlinedButton(onClick = { vm.exportData(onShare) }, enabled = !vm.busy) { Text("Mijn data exporteren") }
                     OutlinedButton(onClick = onSignOut) { Text("Uitloggen") }
                 }
+                TextButton(onClick = { onOpenUrl(PRIVACY_URL) }) { Text("Privacyverklaring") }
                 TextButton(onClick = { confirmDelete = true }) { Text("Account verwijderen", color = p.bad) }
             }
         }

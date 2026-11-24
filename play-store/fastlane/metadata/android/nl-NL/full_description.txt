@@ -1,0 +1,30 @@
+Vital Connect brengt je gezondheidsdata samen in één rustig, overzichtelijk dashboard. Koppel Health Connect, Google Health en Garmin Connect, en zie in één oogopslag hoe je beweegt, hoe je hart het doet en hoe je slaapt.
+
+VANDAAG
+• Dagringen voor maximaal drie doelen, zoals stappen, actieve minuten en slaap
+• Eén duidelijke zin die laat zien wat er vandaag nog te halen valt
+• Tegels met je metrics, een minigrafiek van de afgelopen week en het verschil met je weekgemiddelde
+• Zelf indelen: kies welke metrics je ziet, in welke volgorde, groot of klein, met je eigen dagdoelen
+
+GEZONDHEID
+• Al je statistieken over je hele geschiedenis: gemiddelde, laatste 30 dagen, record en totaal
+• Ingedeeld in activiteit, hart, slaap, herstel en lichaam
+• Per metric een grafiek over 7 dagen, 30 dagen, 90 dagen of een jaar, met vergelijking met de periode ervoor
+
+SLAAP
+• Je afgelopen nacht naast je slaapdoel, met je slaapscore
+• De laatste 14 nachten en je slaaptekort deze week
+• Herstel tijdens je slaap: HRV, rusthartslag en ademhaling
+
+JOUW BRONNEN
+• Health Connect: data van apps op je telefoon, zoals Google Fit, Samsung Health en de Suunto-app
+• Google Health: data van Fitbit, Pixel Watch en de Google Health-app
+• Garmin Connect: data van je Garmin-horloge
+• Meet je iets met meerdere apparaten, dan kies je per metric welke bron voorgaat
+
+PRIVACY
+• Je gegevens staan in een beveiligde database in de EU
+• Geen advertenties, geen tracking, en we verkopen of delen niets
+• Exporteer al je data of verwijder je account met alles erin, direct vanuit de app
+
+Vital Connect is geen medisch hulpmiddel en geeft geen diagnoses of medisch advies.

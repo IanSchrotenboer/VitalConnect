@@ -11,15 +11,31 @@ android {
     defaultConfig {
         applicationId = "nl.vitaal.app"
         minSdk = 28            // Health Connect werkt vanaf Android 9
-        targetSdk = 35
+        targetSdk = 36
         // In GitHub Actions telt het buildnummer op, zodat elke APK over de vorige heen te installeren is
         versionCode = System.getenv("BUILD_NUMBER")?.toIntOrNull() ?: 2
-        versionName = "0.2.0"
+        versionName = "1.0.0"
+    }
+
+    // Release-ondertekening: GitHub Actions zet de sleutel klaar (vaste sleutel uit de geheimen,
+    // of een tijdelijke als die ontbreekt). Lokaal zonder deze variabelen wordt release niet ondertekend.
+    val keystore = System.getenv("VC_KEYSTORE_FILE")
+    signingConfigs {
+        create("release") {
+            if (keystore != null) {
+                storeFile = file(keystore)
+                storeType = "PKCS12"
+                storePassword = System.getenv("VC_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("VC_KEY_ALIAS")
+                keyPassword = System.getenv("VC_KEYSTORE_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = if (keystore != null) signingConfigs.getByName("release") else null
         }
     }
     compileOptions {

@@ -7,7 +7,8 @@
    - Publiceer een nieuwe versie van het Claude-artifact **Vital Connect**
      (slug `e697eca5-9da6-4bd3-9333-549e7e9dbe05`, https://claude.ai/artifact/VUXmRLgxCuWe5GRVnUCQKn)
      met het label van de app-versie, bijvoorbeeld `v0.2.0`.
-3. Verhoog `versionName` in `android/app/build.gradle.kts` bij een zichtbare wijziging.
+3. Verhoog `versionName` in `android/app/build.gradle.kts` bij een zichtbare wijziging en schrijf `release-notities/v<versie>.md` (Nieuw / Verbeterd / Installeren). Met de vaste sleutel maakt GitHub dan een release met APK en AAB.
+4. Raakt de wijziging de Play Store (rechten, gegevens, schermen), werk dan `play-store/` en `site/privacy.html` bij.
 
 ## Vormgeving
 - Kleuren staan in `android/.../Theme.kt` en als CSS-variabelen bovenaan `prototype/index.html`; houd ze gelijk.

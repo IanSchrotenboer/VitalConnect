@@ -1,0 +1,20 @@
+:root{color-scheme:light dark;--bg:#f5f7f4;--card:#fff;--ink:#0f1e1b;--mut:#52615c;--line:#e1e6e2;--pri:#1c4d46;--dial:#123430;--act:#e4793b}
+@media(prefers-color-scheme:dark){:root{--bg:#0c1614;--card:#15221f;--ink:#e9f1ee;--mut:#9db0aa;--line:#24332f;--pri:#7fd1c1;--dial:#0f2a26}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:var(--dial);color:#f3f7f5;padding:18px max(5vw,16px)}
+header a{color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:12px;font-weight:700;font-size:19px}
+header svg{width:36px;height:36px}
+main{max-width:760px;margin:0 auto;padding:32px max(5vw,16px) 64px}
+h1{font-size:34px;line-height:1.1;letter-spacing:-.02em;margin:0 0 8px}
+h2{font-size:21px;margin:32px 0 8px;letter-spacing:-.01em}
+p,li{max-width:68ch}
+a{color:var(--pri)}
+.klein{color:var(--mut);font-size:15px}
+.kaart{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 20px;margin:16px 0}
+ol li,ul li{margin:6px 0}
+footer{border-top:1px solid var(--line);color:var(--mut);font-size:15px;padding:24px max(5vw,16px);text-align:center}
+footer a{margin:0 8px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.scroll{overflow-x:auto}

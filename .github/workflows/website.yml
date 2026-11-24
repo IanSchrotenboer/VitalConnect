@@ -1,0 +1,41 @@
+name: Website publiceren
+
+# Publiceert de map site/ op GitHub Pages: https://ianschrotenboer.github.io/VitalConnect/
+# (privacyverklaring en accountverwijdering, nodig voor de Play Store en het Google-toestemmingsscherm).
+# Eenmalig: Settings → Pages → Source: GitHub Actions.
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", ".github/workflows/website.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+# Twee stappen, zoals GitHub het voorschrijft: eerst inpakken, daarna in een aparte taak publiceren.
+jobs:
+  inpakken:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  publiceren:
+    needs: inpakken
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
