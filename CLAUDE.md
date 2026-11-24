@@ -30,7 +30,7 @@
 - De app opent met één verzoek (`app_state`); nieuwe schermgegevens komen daar bij, niet in een extra verzoek.
 - Statistieken over de hele geschiedenis komen uit `metric_stats_cache`; grote queries joinen niet per rij met kleine tabellen.
 - Uploads schrijven alleen gewijzigde waarden; `sync_runs` krijgt alleen fouten.
-- Google Health: hooguit eens per 10 minuten (vernieuwen) of 30 minuten (achtergrond) per gebruiker, servertaak in porties (`google_sync_shards` in `app_secrets`).
+- Ophaal-bronnen (Google Health, Suunto): hooguit eens per 10 minuten (vernieuwen) of 30 minuten (achtergrond) per gebruiker en bron; servertaak `vitaal-sync` in porties (`sync_shards` in `app_secrets`).
 
 ## Vormgeving
 - Ontwerpskill: `.claude/skills/impeccable` (Impeccable 4.10, Apache 2.0; zonder de hooks). Gebruik `/impeccable critique`, `audit`, `polish` enz. voor ontwerpwerk aan de app en de preview.
@@ -39,5 +39,8 @@
 - De dagringen kleuren per positie (abrikoos, zeegroen, indigo), niet per categorie.
 
 ## Backend
+- Koppelingen: zie `docs/koppelingen.md`. Eén bestand per bron in `supabase/functions/_shared/providers/`; generieke functies
+  `connect`, `connect-callback`, `sync`, `disconnect`; terugkeer via `app.vital-connect.nl/koppelen/<slug>/`; register in de tabel
+  `providers` (`sync`, `available`). Nieuwe bron = providerbestand + rij in `providers` + terugkeerpagina + geheimen.
 - Supabase-project `qtythirnpokfptchavgy`. Nieuwe migraties krijgen als bestandsnaam de versie die Supabase toekent.
 - Elke edge function moet in `supabase/config.toml` staan, anders rolt de GitHub-koppeling hem niet uit.

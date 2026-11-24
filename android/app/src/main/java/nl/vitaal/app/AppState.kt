@@ -21,6 +21,8 @@ class AppState(
     val prefs: Map<String, Pref>,
     val profile: JsonObject?,
     val connections: Map<String, Connection>,
+    /** Bronnenregister (providers); leeg bij een oudere server. */
+    val sources: Map<String, SourceInfo>,
     /** Dagwaarden per metric per dag, met de gekozen bron. */
     val daily: Map<String, Map<LocalDate, DayValue>>,
     /** Null als niet gevraagd (achtergrondtaak). */
@@ -59,6 +61,9 @@ suspend fun Api.appState(from: LocalDate, to: LocalDate, withStats: Boolean): Ap
             )
         },
         profile = o["profile"] as? JsonObject,
+        sources = o.list("providers").associate { s ->
+            s.str("id") to SourceInfo(s.str("id"), s.str("name"), s.str("sync"), s.bool("available") == true)
+        },
         connections = o.list("connections").associate { c ->
             c.str("provider") to Connection(c.str("status"), c.str("last_sync_at").ifEmpty { null }, c.str("last_error").ifEmpty { null })
         },

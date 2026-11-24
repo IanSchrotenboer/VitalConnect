@@ -24,7 +24,7 @@ begin
 
   -- Servertaak: welke Google Health-gebruikers zijn aan de beurt (moet de index connections_due gebruiken)
   t0 := clock_timestamp();
-  perform public.google_health_due(0, 1, 200, '3 hours');
+  perform public.provider_due('google_health', 0, 1, 200, '3 hours');
   rep := rep || jsonb_build_object('c','cron-selectie (200 oudste, 3 uur oud)','d', round(extract(epoch from clock_timestamp()-t0)*1000,1)||' ms');
   plan := '';
   for r in execute 'explain select c.user_id from public.connections c where c.provider = ''google_health'' and c.status = ''active'' and (c.last_sync_at is null or c.last_sync_at < now() - interval ''3 hours'') order by c.last_sync_at nulls first limit 200' loop

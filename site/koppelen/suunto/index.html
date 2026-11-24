@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Geen verwijzer meesturen: de code in het adres hoort alleen bij de server van Vital Connect -->
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Suunto koppelen · Vital Connect</title>
+<link rel="stylesheet" href="../../style.css">
+<script>
+// Suunto stuurt je na toestemming hierheen (eigen domein). Deze pagina geeft de code en state ongewijzigd door
+// aan de server van Vital Connect, die de koppeling afmaakt en je terugstuurt naar de app.
+location.replace("https://qtythirnpokfptchavgy.supabase.co/functions/v1/connect-callback" + (location.search ? location.search + "&" : "?") + "provider=suunto");
+</script>
+</head>
+<body>
+<main>
+<h1>Suunto koppelen</h1>
+<p>Even geduld, je gaat terug naar Vital Connect.</p>
+<noscript><p>Zet JavaScript aan om de koppeling af te ronden, of probeer het opnieuw vanuit de app.</p></noscript>
+</main>
+</body>
+</html>

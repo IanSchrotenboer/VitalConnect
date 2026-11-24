@@ -93,6 +93,7 @@ fun sourceShort(source: String): String = sourceLabel(source).removeSuffix(" Con
 fun sourceLabel(source: String): String = when {
     source == "garmin" -> "Garmin Connect"
     source == "google_health" -> "Google Health"
+    source == "suunto" -> "Suunto"
     source.startsWith("health_connect:") -> source.removePrefix("health_connect:").let { APPS[it] ?: "Health Connect" }
     else -> source
 }
@@ -108,6 +109,7 @@ private val APPS = mapOf(
 fun providerName(p: String) = when (p) {
     "garmin" -> "Garmin Connect"
     "google_health" -> "Google Health"
+    "suunto" -> "Suunto"
     else -> "Health Connect"
 }
 

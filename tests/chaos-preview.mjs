@@ -89,7 +89,7 @@ for (const [naam, waarde] of [
   await controleer(p, "snel wisselen en vegen");
   await p.click("[data-tab=today]"); await p.click("#syncBtn", { clickCount: 3 }); await p.waitForTimeout(1100);
   await p.click("[data-act=settings]"); await p.click("[data-ptab=conn]");
-  await p.click("[data-conn=garmin]"); await p.click("[data-conn=garmin]").catch(() => {}); await p.click("[data-conn=google]").catch(() => {});
+  await p.click("[data-conn=google]"); await p.click("[data-conn=google]").catch(() => {}); await p.click("[data-conn=hc]").catch(() => {});
   await controleer(p, "dubbel koppelen");
   await p.keyboard.press("Escape");
   await p.context().close();

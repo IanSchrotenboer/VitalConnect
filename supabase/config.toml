@@ -56,12 +56,9 @@ policy = "per_worker"
 deno_version = 2
 
 # Alle edge functions staan hier: de Supabase GitHub-koppeling rolt alleen functies uit
-# die in dit bestand genoemd worden.
+# die in dit bestand genoemd worden. Bron-specifieke code staat in _shared/providers/.
 # Met gebruikers-JWT (aanroep vanuit de app):
-[functions.garmin-auth-start]
-verify_jwt = true
-
-[functions.google-health-auth-start]
+[functions.connect]
 verify_jwt = true
 
 [functions.disconnect]
@@ -70,18 +67,15 @@ verify_jwt = true
 [functions.delete-account]
 verify_jwt = true
 
-# Zonder gebruikers-JWT: browser-redirects, Garmin, cron, Auth-hook en beheer.
+# Zonder gebruikers-JWT: browser-terugkeer, cron, app (sync controleert zelf), Garmin, Auth-hook en beheer.
 # Deze functies doen hun eigen controle.
-[functions.garmin-auth-callback]
+[functions.connect-callback]
+verify_jwt = false
+
+[functions.sync]
 verify_jwt = false
 
 [functions.garmin-webhook]
-verify_jwt = false
-
-[functions.google-health-auth-callback]
-verify_jwt = false
-
-[functions.google-health-sync]
 verify_jwt = false
 
 [functions.send-email]

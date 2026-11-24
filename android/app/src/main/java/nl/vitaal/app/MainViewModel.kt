@@ -107,6 +107,12 @@ data class DayValue(val value: Double, val source: String)
 
 data class Connection(val status: String, val lastSync: String?, val lastError: String?)
 
+/** Bron uit het register op de server (tabel providers). available = de koppeling staat open in de app. */
+data class SourceInfo(val id: String, val name: String, val sync: String, val available: Boolean)
+
+/** Bronnen die deze versie van de app kan tonen, in deze volgorde. */
+val KNOWN_SOURCES = listOf("health_connect", "google_health", "garmin")
+
 /** Persoonlijke gegevens uit het profiel. Alles behalve het e-mailadres is optioneel. */
 data class Profile(
     val email: String = "",
@@ -182,6 +188,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var trendSeries by mutableStateOf<List<TrendPoint>>(emptyList()); private set
     var trendSource by mutableStateOf<String?>(null); private set
     var connections by mutableStateOf<Map<String, Connection>>(emptyMap()); private set
+    /** Register van de server; leeg (oude server) = alles wat de app kent staat open. */
+    var sources by mutableStateOf<Map<String, SourceInfo>>(emptyMap()); private set
     var hcStatus by mutableStateOf(HcStatus.UNKNOWN); private set
     var lastSync by mutableStateOf(hc.lastSync); private set
     var refresh by mutableStateOf(RefreshState.Idle); private set
@@ -199,6 +207,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         get() = tiles + metrics.keys.filter { prefs[it]?.visible != true || prefs[it]?.inRings == true }.map { prefs[it] ?: Pref(it) }
 
     fun isConnected(provider: String) = connections[provider]?.status == "active"
+
+    /** Een gekoppelde bron die de server ophaalt (Google Health, Suunto): dan moet sync aangeroepen worden. */
+    private fun hasPullSource() = connections.any { (id, c) ->
+        c.status == "active" && (sources[id]?.sync ?: if (id == "google_health") "pull" else "push") == "pull"
+    }
 
     /** Eerste keer laden na het openen is klaar (gelukt of niet): dan mag het beginscherm weg. */
     var firstLoadDone by mutableStateOf(!signedIn); private set
@@ -288,7 +301,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         profile = Profile(); profileTab = ProfileTab.Profile; onboarding = null
         // Niets van de vorige gebruiker laten staan op dit toestel
         prefs = emptyMap(); today = emptyMap(); connections = emptyMap(); history = emptyMap(); stats = emptyMap()
-        trendSeries = emptyList(); lastLoaded = null; device.googleConnected = false
+        trendSeries = emptyList(); lastLoaded = null; device.cloudConnected = false
     }
 
     fun deleteAccount() = task {
@@ -417,7 +430,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             if (!needsConsent && onboarding == null && prof.str("onboarded_at").isEmpty()) onboarding = Onboarding.Import
         }
         connections = st.connections
-        device.googleConnected = isConnected("google_health")
+        sources = st.sources
+        device.cloudConnected = hasPullSource()
         history = st.daily.mapValues { (_, days) -> days.mapValues { it.value.value } }
         today = st.daily.mapNotNull { (metric, days) -> days[now]?.let { metric to it } }.toMap()
         stats = st.stats.orEmpty()
@@ -470,8 +484,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     if (hcStatus == HcStatus.OK || hcStatus == HcStatus.FOREGROUND_ONLY) launch {
                         try { hc.sync() } catch (_: Exception) { failedSources += "Health Connect" }
                     }
-                    if (isConnected("google_health")) launch {
-                        try { api.function("google-health-sync") } catch (_: Exception) { failedSources += "Google Health" }
+                    // Alle gekoppelde ophaal-bronnen (Google Health, Suunto) in één verzoek
+                    if (hasPullSource()) launch {
+                        try {
+                            val res = api.function("sync")
+                            (res["results"] as? JsonObject)?.forEach { (id, r) ->
+                                if ((r as? JsonObject)?.str("error")?.isNotEmpty() == true) failedSources += providerName(id)
+                            }
+                        } catch (_: Exception) { failedSources += "de koppelingen" }
                     }
                 }
                 loadNow()
@@ -527,11 +547,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---------- Cloudkoppelingen (Garmin, Google Health) ----------
+    /** Staat de koppeling met deze bron open? (Health Connect altijd; cloudbronnen volgens het register.) */
+    fun isAvailable(provider: String) = provider == "health_connect" || sources[provider]?.available ?: sources.isEmpty()
+
     fun connect(provider: String, open: (String) -> Unit) = task {
-        val fn = if (provider == "garmin") "garmin-auth-start" else "google-health-auth-start"
-        val res = api.function(fn)
-        val url = res.str("url").ifEmpty { null }
-        if (url == null) message = "Deze koppeling is nog niet ingericht op de server." else open(url)
+        val url = try {
+            api.function("connect", buildJsonObject { put("provider", provider) }).str("url").ifEmpty { null }
+        } catch (e: ApiException) {
+            if (e.code != 409 && e.code != 503) throw e
+            null
+        }
+        if (url == null) message = "Koppelen met ${providerName(provider)} kan nog niet. We wachten op toegang van ${providerName(provider)}; zodra die er is, staat de koppeling hier open."
+        else open(url)
     }
 
     fun onConnectReturn(provider: String, status: String?) {
@@ -547,11 +574,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         load()
     }
 
-    fun googleHealthSyncNow() = task {
-        val res = api.function("google-health-sync")
-        val rows = res.int("rows") ?: 0
-        message = if (res.bool("skipped") == true) "Google Health is net al bijgewerkt."
-            else "Google Health: $rows dagwaarden bijgewerkt."
+    /** "Nu ophalen" bij één bron (Google Health, Suunto). */
+    fun syncSourceNow(provider: String) = task {
+        val res = api.function("sync", buildJsonObject { put("provider", provider) })
+        val name = providerName(provider)
+        val r = res["results"] as? JsonObject
+        val error = (r?.get(provider) as? JsonObject)?.str("error").orEmpty()
+        message = when {
+            error.isNotEmpty() -> "$name kon niet worden bijgewerkt: ${error.take(120)}"
+            res.bool("skipped") == true -> "$name is net al bijgewerkt."
+            else -> "$name: ${res.int("rows") ?: 0} dagwaarden bijgewerkt."
+        }
         loadNow()
     }
 

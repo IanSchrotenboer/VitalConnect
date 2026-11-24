@@ -1,25 +1,30 @@
 // POST /health-check  (header x-cron-secret, alleen voor beheer)
-// Controleert de configuratie zonder geheimen te tonen: welke secrets er staan,
-// of TOKEN_ENC_KEY werkt en of de Google-clientgegevens door Google worden geaccepteerd.
-import { admin, decrypt, encrypt, GOOGLE, googleRedirectUri, isCron, json } from "../_shared/shared.ts";
+// Controleert de configuratie zonder geheimen te tonen: per bron of hij open staat, welke geheimen ontbreken en welk
+// terugkeeradres bij de bron geregistreerd moet zijn; of TOKEN_ENC_KEY werkt en of Google de clientgegevens accepteert.
+import { redirectUri, tokenRequest } from "../_shared/oauth.ts";
+import { configured, PROVIDERS } from "../_shared/providers/index.ts";
+import { admin, decrypt, encrypt, isCron, json } from "../_shared/shared.ts";
 
-const SECRETS = [
-  "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "TOKEN_ENC_KEY",
-  "RESEND_API_KEY", "EMAIL_FROM", "SEND_EMAIL_HOOK_SECRET",
-  "GARMIN_CLIENT_ID", "GARMIN_CLIENT_SECRET", "GARMIN_WEBHOOK_KEY",
-];
+const GENERAL = ["TOKEN_ENC_KEY", "RESEND_API_KEY", "EMAIL_FROM", "SEND_EMAIL_HOOK_SECRET"];
 
 Deno.serve(async (req) => {
   const sb = admin();
   if (!(await isCron(req, sb))) return json({ error: "unauthorized" }, 401);
 
-  const present = Object.fromEntries(SECRETS.map((s) => [s, !!Deno.env.get(s)]));
-  const out: Record<string, unknown> = { secrets_present: present };
-
-  // Google client-ID is niet geheim: tonen zodat je hem kunt vergelijken
-  out.google_client_id = Deno.env.get("GOOGLE_CLIENT_ID") ?? null;
-  // Terugkeeradres na Google-toestemming: moet exact zo in Google Cloud staan (Clients → Authorized redirect URIs)
-  out.google_redirect_uri = googleRedirectUri();
+  const { data: rows } = await sb.from("providers").select("id,available");
+  const open = new Map((rows ?? []).map((r) => [r.id, r.available]));
+  const providers = Object.fromEntries(Object.values(PROVIDERS).map((p) => [p.id, {
+    available: open.get(p.id) ?? false,
+    configured: configured(p),
+    missing_secrets: p.secrets.filter((s) => !Deno.env.get(s)),
+    redirect_uri: redirectUri(p),
+    // Client-ID is niet geheim: tonen zodat je hem kunt vergelijken met het portaal van de bron
+    client_id: Deno.env.get(p.clientIdEnv) ?? null,
+  }]));
+  const out: Record<string, unknown> = {
+    providers,
+    secrets_present: Object.fromEntries(GENERAL.map((s) => [s, !!Deno.env.get(s)])),
+  };
 
   // TOKEN_ENC_KEY: 32 bytes en een versleutel/ontsleutel-rondje
   try {
@@ -29,25 +34,19 @@ Deno.serve(async (req) => {
   }
 
   // Google-client: een nep-code inwisselen. invalid_grant = client-ID en secret kloppen.
-  if (present.GOOGLE_CLIENT_ID && present.GOOGLE_CLIENT_SECRET) {
-    const r = await fetch(GOOGLE.token, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        code: "vitaal-health-check",
-        client_id: Deno.env.get("GOOGLE_CLIENT_ID")!,
-        client_secret: Deno.env.get("GOOGLE_CLIENT_SECRET")!,
-        redirect_uri: googleRedirectUri(),
-      }),
-    });
-    const body = await r.json().catch(() => ({}));
-    const err = String(body.error ?? "");
-    out.google_client = err === "invalid_grant" ? "ok (client-ID en secret geaccepteerd)"
-      : err === "invalid_client" || err === "unauthorized_client" ? "FOUT: client-ID of secret klopt niet"
-      : `onverwacht: ${r.status} ${err} ${body.error_description ?? ""}`.trim();
+  const google = PROVIDERS.google_health;
+  if (configured(google)) {
+    try {
+      await tokenRequest(google, { grant_type: "authorization_code", code: "vitaal-health-check", redirect_uri: redirectUri(google) });
+      out.google_client = "onverwacht: nep-code geaccepteerd";
+    } catch (e) {
+      const msg = String(e instanceof Error ? e.message : e);
+      out.google_client = msg.includes("invalid_grant") ? "ok (client-ID en secret geaccepteerd)"
+        : msg.includes("invalid_client") || msg.includes("unauthorized_client") ? "FOUT: client-ID of secret klopt niet"
+        : `onverwacht: ${msg.slice(0, 200)}`;
+    }
   } else {
-    out.google_client = "niet te controleren: secret ontbreekt";
+    out.google_client = "niet te controleren: geheim ontbreekt";
   }
 
   return json(out);

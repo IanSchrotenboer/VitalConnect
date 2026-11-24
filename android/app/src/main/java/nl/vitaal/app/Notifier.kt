@@ -30,8 +30,8 @@ class DeviceSettings(ctx: Context) {
     var notifyStatus: Boolean
         get() = prefs.getBoolean(STATUS, false)
         set(v) = prefs.edit().putBoolean(STATUS, v).apply()
-    /** Google Health gekoppeld (bijgewerkt bij elke keer laden), zodat de achtergrondtaak geen extra verzoek nodig heeft. */
-    var googleConnected: Boolean
+    /** Een cloudbron die de server ophaalt is gekoppeld (bijgewerkt bij elke keer laden); dan roept de achtergrondtaak sync aan. */
+    var cloudConnected: Boolean
         get() = prefs.getBoolean(GOOGLE, false)
         set(v) = prefs.edit().putBoolean(GOOGLE, v).apply()
     /** Laatste keer dat de gegevens zijn bijgewerkt (achtergrond of app). */

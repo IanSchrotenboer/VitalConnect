@@ -9,9 +9,9 @@
 <title>Google Health koppelen · Vital Connect</title>
 <link rel="stylesheet" href="../../style.css">
 <script>
-// Google stuurt je na toestemming hierheen (eigen domein). Deze pagina geeft de code en state ongewijzigd door
+// Google Health stuurt je na toestemming hierheen (eigen domein). Deze pagina geeft de code en state ongewijzigd door
 // aan de server van Vital Connect, die de koppeling afmaakt en je terugstuurt naar de app.
-location.replace("https://qtythirnpokfptchavgy.supabase.co/functions/v1/google-health-auth-callback" + location.search);
+location.replace("https://qtythirnpokfptchavgy.supabase.co/functions/v1/connect-callback" + (location.search ? location.search + "&" : "?") + "provider=google_health");
 </script>
 </head>
 <body>

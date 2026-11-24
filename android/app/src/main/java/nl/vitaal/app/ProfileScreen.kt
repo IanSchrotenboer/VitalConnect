@@ -92,9 +92,10 @@ fun ProfileScreen(
             }
             ProfileTab.Connections -> {
                 val hcOn = vm.hcStatus == HcStatus.OK || vm.hcStatus == HcStatus.FOREGROUND_ONLY
-                val sources = listOf("health_connect", "google_health", "garmin")
+                val sources = KNOWN_SOURCES
                 val on = sources.filter { if (it == "health_connect") hcOn else vm.isConnected(it) }
-                val off = sources - on.toSet()
+                // Eerst wat je nu kunt koppelen, daarna wat binnenkort open gaat
+                val off = (sources - on.toSet()).sortedBy { !vm.isAvailable(it) }
                 item {
                     Text("Kies welke bronnen je data leveren. Per metric stel je de voorkeursbron in onder Vandaag → Aanpassen.",
                         style = MaterialTheme.typography.bodyMedium, color = p.muted, modifier = Modifier.padding(horizontal = 4.dp))
@@ -379,6 +380,18 @@ private fun HealthConnectCard(vm: MainViewModel, onRequestHc: () -> Unit) {
     }
 }
 
+/** Hoe een cloudbron eruitziet in Koppelingen: letter, kleur en wat hij levert. */
+private class SourceLook(val letter: String, val color: Color, val about: String)
+
+@Composable
+private fun sourceLook(provider: String): SourceLook {
+    val p = LocalPalette.current
+    return when (provider) {
+        "garmin" -> SourceLook("G", p.srcGarmin, "Data van je Garmin-horloge via Garmin Connect.")
+        else -> SourceLook("F", p.srcGoogle, "Data van Fitbit, Pixel Watch en de Google Health-app.")
+    }
+}
+
 @Composable
 private fun CloudCard(vm: MainViewModel, provider: String, onOpenUrl: (String) -> Unit, onDisconnect: (String) -> Unit) {
     val p = LocalPalette.current
@@ -401,25 +414,31 @@ private fun CloudCard(vm: MainViewModel, provider: String, onOpenUrl: (String) -
         confirmButton = { TextButton(onClick = { disclose = false; vm.connect(provider, onOpenUrl) }) { Text("Doorgaan") } },
         dismissButton = { TextButton(onClick = { disclose = false }) { Text("Annuleren") } },
     )
+    val available = vm.isAvailable(provider)
+    val pull = (vm.sources[provider]?.sync ?: if (provider == "garmin") "push" else "pull") == "pull"
+    val look = sourceLook(provider)
     val status = when {
+        !available && !connected -> "Binnenkort beschikbaar"
         c == null || c.status == "revoked" -> "Niet gekoppeld"
         c.status == "error" -> "Werkt niet meer · koppel opnieuw"
-        provider == "garmin" -> "Na elke sync van je horloge" + (synced?.let { " · $it" } ?: "")
+        !pull -> "Na elke sync van je horloge" + (synced?.let { " · $it" } ?: "")
         else -> "Bijwerken: ${syncLabel(vm.syncMinutes)}" + (synced?.let { " · $it" } ?: "")
     }
     VCard(Modifier.fillMaxWidth()) {
-        SourceHeader(if (provider == "garmin") "G" else "F", if (provider == "garmin") p.srcGarmin else p.srcGoogle,
-            providerName(provider), status, connected)
-        Text(if (provider == "garmin") "Data van je Garmin-horloge via Garmin Connect." else "Data van Fitbit, Pixel Watch en de Google Health-app.",
-            style = MaterialTheme.typography.bodySmall, color = p.muted)
+        SourceHeader(look.letter, look.color, providerName(provider), status, connected)
+        Text(look.about, style = MaterialTheme.typography.bodySmall, color = p.muted)
+        if (!available && !connected) {
+            Text("We wachten op toegang van ${providerName(provider)}. Zodra die er is, kun je hier koppelen.",
+                style = MaterialTheme.typography.bodySmall, color = p.muted)
+        }
         c?.takeIf { it.status != "revoked" }?.lastError?.let {
             Text("Laatste fout: ${it.take(140)}", style = MaterialTheme.typography.bodySmall, color = p.bad)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (connected) {
-                if (provider == "google_health") Button(onClick = vm::googleHealthSyncNow, enabled = !vm.busy) { Text("Nu ophalen") }
+                if (pull) Button(onClick = { vm.syncSourceNow(provider) }, enabled = !vm.busy) { Text("Nu ophalen") }
                 OutlinedButton(onClick = { onDisconnect(provider) }, enabled = !vm.busy) { Text("Ontkoppelen") }
-            } else {
+            } else if (available) {
                 Button(onClick = { disclose = true }, enabled = !vm.busy) {
                     Text(if (c?.status == "error") "Opnieuw koppelen" else "Koppelen")
                 }

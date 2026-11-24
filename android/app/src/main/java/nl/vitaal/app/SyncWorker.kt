@@ -35,9 +35,9 @@ class SyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
             ) {
                 Log.i(TAG, "Health Connect: ${hc.sync()} dagwaarden")
             }
-            // De server haalt Google Health vanuit de achtergrond hooguit eens per 30 minuten op
-            if (DeviceSettings(ctx).googleConnected) runCatching {
-                api.function("google-health-sync", buildJsonObject { put("background", true) })
+            // De server haalt de cloudbronnen (Google Health, Suunto) vanuit de achtergrond hooguit eens per 30 minuten op
+            if (DeviceSettings(ctx).cloudConnected) runCatching {
+                api.function("sync", buildJsonObject { put("background", true) })
             }
             Notifier.checkGoalsFromServer(ctx, api)
             Notifier.updateStatus(ctx, justSynced = true)

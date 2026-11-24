@@ -1,26 +1,9 @@
-// Gedeelde helpers voor de Vitaal edge functions.
+// Basis voor alle edge functions: omgeving, antwoorden, inloggen, versleuteling en wegschrijven van dagwaarden.
+// Bron-specifieke code staat in providers/, het koppelen (OAuth) in oauth.ts.
 import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2";
 
-export type Provider = "garmin" | "google_health";
-
-export const GARMIN = {
-  authorize: "https://connect.garmin.com/oauth2Confirm",
-  token: "https://connectapi.garmin.com/di-oauth2-service/oauth/token",
-  userId: "https://apis.garmin.com/wellness-api/rest/user/id",
-  registration: "https://apis.garmin.com/wellness-api/rest/user/registration",
-};
-
-export const GOOGLE = {
-  authorize: "https://accounts.google.com/o/oauth2/v2/auth",
-  token: "https://oauth2.googleapis.com/token",
-  revoke: "https://oauth2.googleapis.com/revoke",
-  api: "https://health.googleapis.com/v4",
-  scopes: [
-    "https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly",
-    "https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly",
-    "https://www.googleapis.com/auth/googlehealth.sleep.readonly",
-  ],
-};
+/** Bronnen die via de cloud koppelen. Health Connect staat op de telefoon en loopt via de RPC ingest_health_connect. */
+export type ProviderId = "garmin" | "google_health" | "suunto";
 
 // ---------- Basis ----------
 export class ConfigError extends Error {
@@ -39,14 +22,6 @@ export function admin(): SupabaseClient {
   });
 }
 
-export const fnUrl = (name: string) => `${env("SUPABASE_URL")}/functions/v1/${name}`;
-
-/**
- * Terugkeeradres na de Google-toestemming. Met het geheim GOOGLE_REDIRECT_URI (https://app.vital-connect.nl/koppelen/google/)
- * staat alleen het eigen domein in Google Cloud; die pagina stuurt door naar google-health-auth-callback.
- * Zonder geheim: het oude adres op supabase.co. Het moet exact gelijk zijn in het verzoek en bij het inwisselen.
- */
-export const googleRedirectUri = () => Deno.env.get("GOOGLE_REDIRECT_URI") || fnUrl("google-health-auth-callback");
 
 export function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -61,7 +36,7 @@ export function fail(e: unknown): Response {
   return json({ error: "internal" }, 500);
 }
 
-/** Terug naar de app via deep link, bijvoorbeeld vitaal://google?status=ok */
+/** Terug naar de app via deep link, bijvoorbeeld vitaal://google?status=ok (host = slug van de bron) */
 export function toApp(host: string, status: string): Response {
   const base = Deno.env.get("APP_REDIRECT_BASE") ?? "vitaal://";
   return new Response(null, { status: 302, headers: { Location: `${base}${host}?status=${encodeURIComponent(status)}` } });
@@ -139,111 +114,11 @@ export async function challenge(verifier: string): Promise<string> {
   return urlSafe(b64(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)))));
 }
 
-/** Slaat een nieuwe OAuth-poging op en geeft state en code_challenge terug. */
-export async function newOAuthState(sb: SupabaseClient, userId: string, provider: Provider) {
-  const verifier = randomString(48);
-  const state = randomString(24);
-  await sb.from("oauth_states").delete().eq("user_id", userId).eq("provider", provider);
-  const { error } = await sb.from("oauth_states").insert({ state, user_id: userId, provider, code_verifier: verifier });
-  if (error) throw error;
-  return { state, codeChallenge: await challenge(verifier) };
-}
-
-/** Haalt een OAuth-poging op (eenmalig bruikbaar, maximaal 15 minuten oud). */
-export async function takeOAuthState(sb: SupabaseClient, state: string, provider: Provider) {
-  const { data } = await sb.from("oauth_states").select("*").eq("state", state).eq("provider", provider).maybeSingle();
-  if (!data) return null;
-  await sb.from("oauth_states").delete().eq("state", state);
-  if (Date.now() - new Date(data.created_at).getTime() > 15 * 60_000) return null;
-  return data as { user_id: string; code_verifier: string };
-}
-
-// ---------- Tokens ----------
-export type TokenResponse = {
-  access_token: string;
-  refresh_token?: string;
-  expires_in: number;
-  refresh_token_expires_in?: number;
-  scope?: string;
-};
-
-export async function tokenRequest(provider: Provider, form: Record<string, string>): Promise<TokenResponse> {
-  const cfg = provider === "garmin"
-    ? { url: GARMIN.token, id: "GARMIN_CLIENT_ID", secret: "GARMIN_CLIENT_SECRET" }
-    : { url: GOOGLE.token, id: "GOOGLE_CLIENT_ID", secret: "GOOGLE_CLIENT_SECRET" };
-  const res = await fetch(cfg.url, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ client_id: env(cfg.id), client_secret: env(cfg.secret), ...form }),
-  });
-  if (!res.ok) throw new Error(`${provider} token ${res.status}: ${await res.text()}`);
-  return await res.json();
-}
-
-export async function storeTokens(sb: SupabaseClient, userId: string, provider: Provider, t: TokenResponse) {
-  const now = Date.now();
-  const row: Record<string, unknown> = {
-    user_id: userId,
-    provider,
-    access_token_enc: await encrypt(t.access_token),
-    // 5 minuten marge zodat een token niet halverwege een call verloopt
-    access_expires_at: new Date(now + Math.max(t.expires_in - 300, 60) * 1000).toISOString(),
-    scope: t.scope ?? null,
-    updated_at: new Date(now).toISOString(),
-  };
-  if (t.refresh_token) {
-    row.refresh_token_enc = await encrypt(t.refresh_token);
-    row.refresh_expires_at = t.refresh_token_expires_in
-      ? new Date(now + t.refresh_token_expires_in * 1000).toISOString()
-      : null;
-  }
-  // Google stuurt bij verversen geen nieuw refresh token: dan het bestaande houden
-  const { error } = t.refresh_token
-    ? await sb.from("oauth_tokens").upsert(row)
-    : await sb.from("oauth_tokens").update(row).eq("user_id", userId).eq("provider", provider);
-  if (error) throw error;
-}
-
-/** Geldig access token; ververst het zo nodig. Geeft null als er geen (bruikbaar) token is. */
-export async function accessTokenFor(sb: SupabaseClient, userId: string, provider: Provider): Promise<string | null> {
-  const { data } = await sb.from("oauth_tokens").select("*").eq("user_id", userId).eq("provider", provider).maybeSingle();
-  if (!data) return null;
-  if (new Date(data.access_expires_at).getTime() > Date.now()) return decrypt(data.access_token_enc);
-  if (!data.refresh_token_enc) return null;
-  const t = await tokenRequest(provider, { grant_type: "refresh_token", refresh_token: await decrypt(data.refresh_token_enc) });
-  await storeTokens(sb, userId, provider, t);
-  return t.access_token;
-}
-
-/** Trekt de toestemming bij de provider in. Fouten blokkeren niets. */
-export async function revokeAtProvider(sb: SupabaseClient, userId: string, provider: Provider): Promise<string> {
-  try {
-    if (provider === "garmin") {
-      const token = await accessTokenFor(sb, userId, "garmin");
-      if (!token) return "no_token";
-      const r = await fetch(GARMIN.registration, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
-      return r.ok || r.status === 404 ? "revoked" : `failed_${r.status}`;
-    }
-    const { data } = await sb.from("oauth_tokens").select("refresh_token_enc,access_token_enc")
-      .eq("user_id", userId).eq("provider", provider).maybeSingle();
-    if (!data) return "no_token";
-    const token = await decrypt(data.refresh_token_enc ?? data.access_token_enc);
-    const r = await fetch(`${GOOGLE.revoke}?token=${encodeURIComponent(token)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    });
-    return r.ok ? "revoked" : `failed_${r.status}`;
-  } catch (e) {
-    console.error("revoke", provider, e);
-    return "failed";
-  }
-}
-
 // ---------- Synchronisatielog ----------
 /** Een synchronisatie; alleen bij een fout komt er een regel in sync_runs (geslaagde ronden staan in connections). */
-export type Run = { userId: string | null; provider: Provider; trigger: string; started: string };
+export type Run = { userId: string | null; provider: ProviderId; trigger: string; started: string };
 
-export function startRun(userId: string | null, provider: Provider, trigger: string): Run {
+export function startRun(userId: string | null, provider: ProviderId, trigger: string): Run {
   return { userId, provider, trigger, started: new Date().toISOString() };
 }
 
@@ -268,7 +143,7 @@ async function limits(sb: SupabaseClient) {
 export async function writeDaily(
   sb: SupabaseClient,
   rows: { user_id: string; day: string; metric: string; value: number }[],
-  provider: Provider,
+  provider: ProviderId,
 ): Promise<number> {
   if (!rows.length) return 0;
   const lim = await limits(sb);

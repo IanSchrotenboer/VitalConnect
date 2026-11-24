@@ -1,11 +1,8 @@
-// Google Health API → dagwaarden in daily_metrics.
-// Pull-based: pg_cron roept google-health-sync elk kwartier per shard aan voor wie 3 uur niet is bijgewerkt;
-// de app vraagt het ook bij vernieuwen (hooguit eens per 10 minuten).
+// Google Health (Fitbit, Pixel Watch, Google Health-app): koppelen met OAuth + PKCE, ophalen (pull).
 // Veldnamen volgen de Google Health API v4-referentie (dailyRollUp en list).
-import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
-import { accessTokenFor, finishRun, GOOGLE, startRun, writeDaily } from "./shared.ts";
+import { ConnectError, type CloudProvider, type Row } from "./types.ts";
 
-type Row = { user_id: string; day: string; metric: string; value: number };
+const API = "https://health.googleapis.com/v4";
 type GDate = { year: number; month: number; day: number };
 
 const num = (v: unknown): number | undefined => {
@@ -63,7 +60,7 @@ class ApiError extends Error {
 }
 
 async function call(token: string, path: string, init: RequestInit = {}) {
-  const r = await fetch(`${GOOGLE.api}${path}`, {
+  const r = await fetch(`${API}${path}`, {
     ...init,
     headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "Content-Type": "application/json", ...(init.headers ?? {}) },
   });
@@ -144,33 +141,49 @@ async function lists(token: string, uid: string, days: number): Promise<Row[]> {
   return out;
 }
 
-/** Synchroniseert één gebruiker. Eerste keer 30 dagen, daarna 3 of 7 (Google werkt data soms later bij). */
-export type SyncState = { last_data_at: string | null; last_sync_at: string | null } | null;
-
-export async function syncUser(sb: SupabaseClient, uid: string, trigger: "cron" | "user", known?: SyncState): Promise<{ rows: number; error?: string }> {
-  const run = startRun(uid, "google_health", trigger);
-  const conn = known !== undefined ? known : (await sb.from("connections").select("last_data_at,last_sync_at")
-    .eq("user_id", uid).eq("provider", "google_health").maybeSingle()).data as SyncState;
-  // Eerste keer 30 dagen; daarna 3 dagen als de vorige ronde recent was (late metingen), anders 7
-  const recent = conn?.last_sync_at && Date.now() - Date.parse(conn.last_sync_at) < 2 * 86_400_000;
-  const days = !conn?.last_data_at ? 30 : recent ? 3 : 7;
-  try {
-    const token = await accessTokenFor(sb, uid, "google_health");
-    if (!token) throw new Error("Geen geldig token; koppel Google Health opnieuw");
+export const google: CloudProvider = {
+  id: "google_health",
+  slug: "google",
+  name: "Google Health",
+  sync: "pull",
+  secrets: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+  clientIdEnv: "GOOGLE_CLIENT_ID",
+  clientSecretEnv: "GOOGLE_CLIENT_SECRET",
+  authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+  tokenUrl: "https://oauth2.googleapis.com/token",
+  pkce: true,
+  authorizeParams: (user) => ({
+    scope: [
+      "https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly",
+      "https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly",
+      "https://www.googleapis.com/auth/googlehealth.sleep.readonly",
+    ].join(" "),
+    access_type: "offline", // refresh token voor ophalen op de achtergrond
+    prompt: "consent",
+    include_granted_scopes: "true",
+    ...(user.email ? { login_hint: user.email } : {}),
+  }),
+  async identify(token) {
+    // Het tokenantwoord bevat geen gebruikers-ID: de identiteit direct na het inwisselen ophalen
+    const r = await fetch(`${API}/users/me/identity`, { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } });
+    if (!r.ok) {
+      const body = await r.text();
+      console.error("identity", r.status, body);
+      throw new ConnectError(body.includes("ACCOUNT_NOT_LINKED") ? "not_linked" : "error");
+    }
+    const id = await r.json();
+    return String(id.healthUserId ?? id.legacyUserId ?? "") || null;
+  },
+  async fetchDays(token, uid, days) {
     const [a, b] = await Promise.all([rollups(token, uid, days), lists(token, uid, days)]);
-    const rows = [...a, ...b];
-    const n = await writeDaily(sb, rows, "google_health");
-    const now = new Date().toISOString();
-    await sb.from("connections").update({
-      last_sync_at: now, ...(n ? { last_data_at: now } : {}), status: "active", last_error: null,
-    }).eq("user_id", uid).eq("provider", "google_health");
-    return { rows: n };
-  } catch (e) {
-    const msg = String(e instanceof Error ? e.message : e);
-    const revoked = msg.includes(" 401") || msg.includes("invalid_grant") || msg.includes("Geen geldig token");
-    await sb.from("connections").update({ last_error: msg.slice(0, 500), ...(revoked ? { status: "error" } : {}) })
-      .eq("user_id", uid).eq("provider", "google_health");
-    await finishRun(sb, run, 0, msg.slice(0, 500));
-    return { rows: 0, error: msg };
-  }
-}
+    return [...a, ...b];
+  },
+  async revoke({ access, refresh }) {
+    const token = refresh ?? access;
+    if (!token) return "no_token";
+    const r = await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token)}`, {
+      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    });
+    return r.ok ? "revoked" : `failed_${r.status}`;
+  },
+};
