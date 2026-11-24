@@ -45,15 +45,17 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
             VitaalTheme(vm.themeMode) {
-                VitaalRoot(
-                    vm,
-                    onRequestHc = ::requestHealthConnect,
-                    onOpenUrl = ::openUrl,
-                    onGoogleSignIn = ::googleSignIn,
-                    onShare = ::shareText,
-                    onSignOut = ::signOut,
-                    onRequestNotifications = ::requestNotifications,
-                )
+                SplashHost(ready = vm.firstLoadDone) {
+                    VitaalRoot(
+                        vm,
+                        onRequestHc = ::requestHealthConnect,
+                        onOpenUrl = ::openUrl,
+                        onGoogleSignIn = ::googleSignIn,
+                        onShare = ::shareText,
+                        onSignOut = ::signOut,
+                        onRequestNotifications = ::requestNotifications,
+                    )
+                }
             }
         }
     }

@@ -193,7 +193,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun isConnected(provider: String) = connections[provider]?.status == "active"
 
-    init { if (signedIn) load() }
+    /** Eerste keer laden na het openen is klaar (gelukt of niet): dan mag het beginscherm weg. */
+    var firstLoadDone by mutableStateOf(!signedIn); private set
+
+    init { if (signedIn) task { try { loadNow() } finally { firstLoadDone = true } } }
 
     private fun task(block: suspend () -> Unit) = viewModelScope.launch {
         busy = true
@@ -358,6 +361,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun applyTheme(mode: ThemeMode) {
         themeMode = mode
         ui.edit().putString("theme", mode.id).apply()
+        // Android 12+: het beginscherm van het systeem volgt dan ook de gekozen weergave (geen lichte flits in donker)
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            val night = when (mode) {
+                ThemeMode.Light -> android.app.UiModeManager.MODE_NIGHT_NO
+                ThemeMode.Dark -> android.app.UiModeManager.MODE_NIGHT_YES
+                ThemeMode.System -> android.app.UiModeManager.MODE_NIGHT_AUTO
+            }
+            getApplication<Application>().getSystemService(android.app.UiModeManager::class.java)?.setApplicationNightMode(night)
+        }
     }
 
     fun openProfile(tab: ProfileTab = ProfileTab.Profile) {
