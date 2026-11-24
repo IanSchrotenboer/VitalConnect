@@ -29,7 +29,7 @@ object Config {
     const val SUPABASE_KEY = "sb_publishable_rjGuOZAOLKJ99uwAkP3S8A_aHkkyzGh"
     // Web client-ID uit Google Cloud (OAuth-client van het type "Webapplicatie").
     // Leeg = knop "Inloggen met Google" meldt dat het nog niet is ingesteld.
-    const val GOOGLE_WEB_CLIENT_ID = ""
+    const val GOOGLE_WEB_CLIENT_ID = "972563994932-1vuetru38odbjgq7gsp0qdfl5kgjbbkp.apps.googleusercontent.com"
 }
 
 class ApiException(val code: Int, message: String) : IOException(message)
