@@ -65,8 +65,9 @@ Daarna **Audience → Publish app**. Met een logo vraagt Google om merkverificat
 
 **Redirect-URI (Clients → de webclient → Authorized redirect URIs):** `https://app.vital-connect.nl/koppelen/google/`.
 Die pagina (`site/koppelen/google/index.html`) stuurt de code en state door naar de edge function
-`google-health-auth-callback`. De functies gebruiken dit adres zodra het geheim `GOOGLE_REDIRECT_URI` in Supabase
-op deze waarde staat; zonder dat geheim gebruiken ze nog het oude adres op supabase.co.
+`google-health-auth-callback`. Het geheim `GOOGLE_REDIRECT_URI` in Supabase staat op dit adres (sinds 24 nov 2026,
+getest met een echte koppeling); de functie `health-check` toont welk adres in gebruik is. Het oude adres op
+supabase.co en het domein `supabase.co` zijn uit Google Cloud gehaald.
 
 ## Stap 3. Inloggen met Google voor de release-versie
 
