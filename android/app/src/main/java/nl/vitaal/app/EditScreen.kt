@@ -200,6 +200,7 @@ private fun ToggleRow(title: String, subtitle: String?, checked: Boolean, onChan
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EditRow(vm: MainViewModel, pref: Pref, expanded: Boolean, onToggle: () -> Unit) {
     val p = LocalPalette.current
