@@ -1,6 +1,6 @@
-// POST /delete-account  (met de JWT van de ingelogde gebruiker)
-// AVG: ontkoppelt Garmin bij Garmin zelf en verwijdert daarna het account met alle data (cascade).
-import { accessTokenFor, admin, fail, GARMIN, json, userFrom } from "./shared.ts";
+// POST /delete-account  (JWT)
+// AVG: trekt toestemmingen in bij Garmin en Google en verwijdert daarna het account met alle data (cascade).
+import { admin, fail, json, revokeAtProvider, userFrom } from "../_shared/shared.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "method" }, 405);
@@ -9,22 +9,12 @@ Deno.serve(async (req) => {
     const user = await userFrom(req, sb);
     if (!user) return json({ error: "unauthorized" }, 401);
 
-    let garmin = "not_connected";
-    try {
-      const token = await accessTokenFor(sb, user.id);
-      if (token) {
-        const r = await fetch(GARMIN.registration, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
-        garmin = r.ok || r.status === 404 ? "deregistered" : `failed_${r.status}`;
-      }
-    } catch (e) {
-      // Ontkoppelen bij Garmin mag het verwijderen niet blokkeren
-      console.error("garmin deregistration", e);
-      garmin = "failed";
-    }
+    const garmin = await revokeAtProvider(sb, user.id, "garmin");
+    const google_health = await revokeAtProvider(sb, user.id, "google_health");
 
     const { error } = await sb.auth.admin.deleteUser(user.id);
     if (error) throw error;
-    return json({ deleted: true, garmin });
+    return json({ deleted: true, revoked: { garmin, google_health } });
   } catch (e) {
     return fail(e);
   }
