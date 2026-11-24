@@ -1,0 +1,53 @@
+name: Android-app bouwen
+
+on:
+  push:
+    branches: [main]
+    paths: ["android/**", ".github/workflows/android.yml"]
+  pull_request:
+    paths: ["android/**", ".github/workflows/android.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: APK bouwen
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Debug-APK bouwen
+        run: |
+          set -o pipefail
+          gradle assembleDebug --no-daemon --console=plain 2>&1 | tee build.log
+
+      # Compileerfouten als annotatie, zodat ze zonder logbestanden zichtbaar zijn
+      - name: Fouten samenvatten
+        if: failure()
+        run: |
+          msg=$( (grep -E '^e: ' build.log; grep -A12 'What went wrong' build.log) | head -60 \
+                 | sed -e 's/%/%25/g' -e 's#file:///home/runner/work/VitalConnect/VitalConnect/##' | awk '{printf "%s%%0A", $0}')
+          echo "::error title=Build mislukt::${msg}"
+
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: vitaal-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 14

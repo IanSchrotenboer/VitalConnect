@@ -1,0 +1,32 @@
+name: Edge functions controleren
+
+on:
+  push:
+    branches: [main]
+    paths: ["supabase/functions/**", ".github/workflows/edge-functions.yml"]
+  pull_request:
+    paths: ["supabase/functions/**"]
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: deno check
+        run: |
+          set -o pipefail
+          deno check supabase/functions/*/index.ts 2>&1 | tee check.log
+
+      - name: Fouten samenvatten
+        if: failure()
+        run: |
+          msg=$(grep -E 'error|ERROR|TS[0-9]+' -A4 check.log | head -60 | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+          echo "::error title=Typecheck mislukt::${msg}"

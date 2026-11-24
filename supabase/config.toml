@@ -35,26 +35,43 @@ otp_expiry = 3600
 max_frequency = "1m0s"
 
 # Inloggen met Google (Android via Credential Manager → signInWithIdToken).
-# client_id = de Web-client uit Google Cloud; het ID-token van de app heeft die als audience.
+# client_id = de Web-client uit Google Cloud (niet geheim); het secret komt uit de omgeving.
 [auth.external.google]
 enabled = true
-client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+client_id = "972563994932-1vuetru38odbjgq7gsp0qdfl5kgjbbkp.apps.googleusercontent.com"
 secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
 skip_nonce_check = false
 
 # Alle account-mails via de edge function send-email (Nederlands, via Resend).
+# Staat uit tot Resend is ingericht; de hook zelf zet je aan in het dashboard
+# (Authentication → Hooks). Lokaal aanzetten: enabled = true en
+# secrets = "env(SEND_EMAIL_HOOK_SECRET)" in de vorm v1,whsec_<base64>.
 [auth.hook.send_email]
-enabled = true
+enabled = false
 uri = "https://qtythirnpokfptchavgy.supabase.co/functions/v1/send-email"
-secrets = "env(SEND_EMAIL_HOOK_SECRET)"
 
 [edge_runtime]
 enabled = true
 policy = "per_worker"
 deno_version = 2
 
-# Functies die van buiten worden aangeroepen (browser-redirects, Garmin, cron, Auth-hook)
-# doen hun eigen controle en hebben geen gebruikers-JWT.
+# Alle edge functions staan hier: de Supabase GitHub-koppeling rolt alleen functies uit
+# die in dit bestand genoemd worden.
+# Met gebruikers-JWT (aanroep vanuit de app):
+[functions.garmin-auth-start]
+verify_jwt = true
+
+[functions.google-health-auth-start]
+verify_jwt = true
+
+[functions.disconnect]
+verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true
+
+# Zonder gebruikers-JWT: browser-redirects, Garmin, cron, Auth-hook en beheer.
+# Deze functies doen hun eigen controle.
 [functions.garmin-auth-callback]
 verify_jwt = false
 
@@ -68,4 +85,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-email]
+verify_jwt = false
+
+[functions.health-check]
 verify_jwt = false
