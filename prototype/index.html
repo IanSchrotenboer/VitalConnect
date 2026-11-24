@@ -61,7 +61,7 @@ button,input,select{font:inherit;color:inherit}button{cursor:pointer}
 .sh{display:flex;align-items:center;gap:10px;margin:20px 0 12px;padding:0 4px}.sh h2{flex:1}
 .lnk{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;border:0;border-radius:22px;background:transparent;color:var(--pri);font-weight:600}
 .lnk svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:row dense;gap:12px}
 .tile.l{grid-column:span 2}
 .tn{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tv{display:flex;align-items:baseline;gap:4px}.tv .num{font-size:28px;line-height:1.1}.tile.l .tv .num{font-size:36px}.tv small{color:var(--mut);font-size:14px}
@@ -122,6 +122,26 @@ button,input,select{font:inherit;color:inherit}button{cursor:pointer}
 .note{color:var(--bad);font-size:14px;min-height:1.2em;margin:0 4px}
 [hidden]{display:none!important}
 @media(max-width:380px){.dmid{grid-template-columns:120px minmax(0,1fr);gap:14px}.tv .num{font-size:24px}}
+/* heel smal: buitenscherm van een klaptelefoon */
+@media(max-width:339px){.grid{grid-template-columns:minmax(0,1fr)}.tile.l{grid-column:auto}.trio{grid-template-columns:minmax(0,1fr)}.dmid{grid-template-columns:108px minmax(0,1fr);gap:12px}}
+/* breed: opengevouwen foldable of tablet; tabbladen aan de zijkant, meer kolommen */
+@media(min-width:600px){
+  .app{max-width:none;margin:0;padding:0 0 24px 88px}
+  .app>section{max-width:1200px;margin:0 auto}
+  #v-settings,#v-edit,#v-detail,#v-auth{max-width:640px}
+  .tabs{top:0;right:auto;width:88px;border-top:0;border-right:1px solid var(--line);padding:max(16px,env(safe-area-inset-top,0px)) 0 0}
+  .tabs div{grid-template-columns:88px;gap:12px}
+  .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .hl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .app.auth{padding-left:0}
+}
+@media(min-width:840px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+/* inloggen en kennismaking */
+.ah{background:var(--dial);color:var(--dink);border-radius:0 0 28px 28px;padding:max(40px,env(safe-area-inset-top,0px)) 24px 28px;display:grid;gap:8px}
+.ah h1{font-size:34px}.ah p{margin:0;color:var(--dmut)}.ah small{color:var(--dmut);font-weight:500}
+.btn.big{min-height:56px;width:100%;font-size:17px;display:flex;align-items:center;justify-content:center}
+.ul{list-style:none;margin:0;padding:0;display:grid;gap:8px;color:var(--mut);font-size:15px}.ul li{display:flex;gap:10px;align-items:center}
+.chk{display:flex;gap:12px;align-items:flex-start;font-size:15px}.chk input{width:22px;height:22px;margin:2px 0 0;accent-color:var(--pri);flex:none}
 @media(prefers-reduced-motion:reduce){.rp,.sw::before{transition:none}.ib.spin svg{animation:none}}
 </style>
 </head>
@@ -133,6 +153,7 @@ button,input,select{font:inherit;color:inherit}button{cursor:pointer}
   <section id="v-detail" hidden></section>
   <section id="v-settings" hidden></section>
   <section id="v-edit" hidden></section>
+  <section id="v-auth" hidden></section>
 </div>
 <nav class="tabs" id="tabs" aria-label="Hoofdmenu"><div>
   <button data-tab="today"><span><svg viewBox="0 0 24 24"><path d="M4 3h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM15 3h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM4 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1zM15 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1z"/></svg></span>Vandaag</button>
@@ -174,7 +195,7 @@ for(let i=0;i<N;i++){const n=(r()+r()+r()-1.5)/.75;w=.5*w+.5*n;const wk=Math.sin
 const dd=i=>new Date(NOW.getTime()-(N-1-i)*DAY);
 
 const KEY='vitalconnect.preview.v1';
-const fresh=()=>({order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},goal:{},rings:['steps','active','sleep'],conn:{hc:true,google:true,garmin:false},theme:'system',prof:{name:'Sam de Vries',birth:'1991-04-18',sex:null,h:178,w:74}});
+const fresh=()=>({order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},goal:{},rings:['steps','active','sleep'],conn:{hc:true,google:true,garmin:false},theme:'system',onb:'login',prof:{name:'Sam de Vries',birth:'1991-04-18',sex:null,h:null,w:null}});
 let S;try{S=Object.assign(fresh(),JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S=fresh()}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const applyTheme=()=>{const r=document.documentElement;if(S.theme==='light'||S.theme==='dark')r.dataset.theme=S.theme;else delete r.dataset.theme};applyTheme();
@@ -201,8 +222,8 @@ sliders:'<svg viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M15 4v4M4 12h3M11 12h9M9
 chev:'<svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>'};
 
 let tab='today',detail=null,period=30,sel=null,settings=false,ptab='profile',editing=false,busy=null,syncedAt=new Date(NOW.getTime()-6e5);
-const views=['today','health','sleep','detail','settings','edit'];
-function show(){const v=editing?'edit':detail?'detail':settings?'settings':tab;views.forEach(n=>$('#v-'+n).hidden=n!==v);$('#tabs').hidden=v!==tab;
+const views=['today','health','sleep','detail','settings','edit','auth'];
+function show(){const v=S.onb?'auth':editing?'edit':detail?'detail':settings?'settings':tab;views.forEach(n=>$('#v-'+n).hidden=n!==v);$('#tabs').hidden=v!==tab;$('.app').classList.toggle('auth',v==='auth');
 document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false'));window.scrollTo(0,0)}
 
 // ---------- Vandaag ----------
@@ -241,7 +262,7 @@ function renderHealth(){
   <div class="pad stack"><div class="card hero"><small style="opacity:.8;font-weight:500">Tot nu toe</small><div class="st" style="grid-template-columns:repeat(3,minmax(0,1fr))">
   <div><small>Stappen</small><b>${compact(s.total)}</b></div><div><small>Kilometer</small><b>${compact(k.total)}</b></div><div><small>Gem. slaap</small><b>${fmtH(sl.avg)}</b></div></div></div>
   ${Object.keys(CAT).map(c=>`<div class="cat"><i class="dot" style="background:var(--${c});width:10px;height:10px"></i><h2>${CAT[c]}</h2></div>
-  <div class="stack">${M.filter(m=>m.cat===c).map(m=>statCard(m.id)).join('')}</div>`).join('')}</div>`;
+  <div class="stack hl">${M.filter(m=>m.cat===c).map(m=>statCard(m.id)).join('')}</div>`).join('')}</div>`;
 }
 function statCard(id){const m=MI[id],s=stats(id),sum=m.agg==='sum'&&id!=='sleep',f=v=>fmt(id,v);
   return`<button class="card tap" data-open="${id}"><span style="display:flex;align-items:center;gap:8px"><i class="dot" style="background:${col(id)}"></i><h3>${m.n}</h3>${I.chev}</span>
@@ -304,6 +325,43 @@ function renderDetail(){
   drawChart($('#dfig'),shown.map((v,i)=>({d:dd(N-period+i),v})),{bars:sum,goal:goal(id),color:col(id),sel,axis:v=>id==='sleep'?Math.round(v)+'u':compact(v),onSel:i=>{sel=i;renderDetail()}});
 }
 
+// ---------- Inloggen en kennismaking ----------
+const RINGS_SVG=`<svg viewBox="0 0 108 108" width="72" height="72" aria-hidden="true"><g fill="none" stroke-width="8" stroke-linecap="round"><circle cx="54" cy="54" r="40" stroke="#f5935a" stroke-opacity=".28"/><path d="M54 14 A40 40 0 1 1 21.6 77.5" stroke="#f5935a"/><circle cx="54" cy="54" r="27" stroke="#4cc3b3" stroke-opacity=".28"/><path d="M54 27 A27 27 0 1 1 28.3 62.3" stroke="#4cc3b3"/><circle cx="54" cy="54" r="14" stroke="#8c97f2" stroke-opacity=".28"/><path d="M54 40 A14 14 0 1 1 48.8 67" stroke="#8c97f2"/></g></svg>`;
+const ah=(t,sub,step)=>`<header class="ah">${RINGS_SVG}${step?`<small>Stap ${step} van 3</small>`:''}<h1>${t}</h1><p>${sub}</p></header>`;
+let showEmail=false,agreed=false;
+function renderAuth(){
+  let h='';
+  if(S.onb==='login'){
+    h=ah('Vital Connect','Je gezondheid op één plek: beweging, hart en slaap.')+`<div class="pad stack" style="margin-top:20px">
+    <h3 style="font-size:18px;line-height:1.3">Log in met je Google-account en importeer direct je gezondheidsgegevens.</h3>
+    <button class="btn pri big" data-act="google" ${busy==='login'?'disabled':''}>${busy==='login'?'Inloggen…':'Doorgaan met Google'}</button>
+    <ul class="ul">${['Geen nieuw wachtwoord nodig','Koppel Google Health, Health Connect of Garmin in de volgende stap','Vul daarna je profiel aan; je naam staat er al in'].map(t=>`<li><i class="dot" style="background:var(--good)"></i>${t}</li>`).join('')}</ul>
+    ${showEmail?`<div class="card"><h3>Met je e-mailadres</h3><label class="fld" for="a-mail">E-mailadres<input id="a-mail" type="email" autocomplete="email" style="width:14em;text-align:left"></label><label class="fld" for="a-pw">Wachtwoord<input id="a-pw" type="password" autocomplete="current-password" style="width:14em;text-align:left"></label>
+    <div class="row"><button class="btn pri" data-act="google">Inloggen</button><button class="btn" data-act="google">Account maken</button></div><span class="gl">In de preview werkt elk adres.</span></div>`
+    :`<button class="btn big" data-act="email">Inloggen met e-mail</button>`}
+    <a class="lnk" href="https://ianschrotenboer.github.io/VitalConnect/privacy.html" style="color:var(--mut);text-decoration:none">Privacyverklaring</a></div>`;
+  } else if(S.onb==='consent'){
+    h=ah('Toestemming','Voordat we beginnen.',1)+`<div class="pad stack" style="margin-top:20px">
+    <p style="margin:0">Vital Connect verwerkt gezondheidsgegevens: stappen, hartslag, slaap, gewicht en vergelijkbare metingen. Dat zijn bijzondere persoonsgegevens volgens de AVG.</p>
+    <p class="mut" style="margin:0">We gebruiken ze alleen om jouw dashboard te tonen. Ze staan op servers in de EU, worden niet gedeeld of verkocht, en je kunt je account met alle data op elk moment verwijderen.</p>
+    <label class="chk"><input type="checkbox" id="agree" ${agreed?'checked':''}>Ik geef uitdrukkelijk toestemming voor het verwerken van mijn gezondheidsgegevens.</label>
+    <button class="btn pri big" data-act="consent" ${agreed?'':'disabled'}>Doorgaan</button><button class="lnk" data-act="logout" style="color:var(--mut)">Niet nu, uitloggen</button></div>`;
+  } else if(S.onb==='import'){
+    const n=['hc','google','garmin'].filter(k=>S.conn[k]).length;
+    h=ah('Gegevens importeren','Haal je stappen, hartslag en slaap direct binnen.',2)+`<div class="pad stack" style="margin-top:16px">
+    <p class="mut" style="margin:0 4px">Kies een of meer bronnen. Je kunt dit later altijd aanpassen via het persoon-icoon → Koppelingen.</p>
+    ${['google','hc','garmin'].map(k=>srcCard(SRCS[k])).join('')}
+    ${n?`<p class="ok" style="margin:0 4px;font-weight:500">Gekoppeld: ${n} ${n===1?'bron':'bronnen'}. Je gegevens zijn binnen.</p>`:''}
+    <button class="btn pri big" data-act="toProfile">${n?'Volgende':'Overslaan en verder'}</button></div>`;
+  } else {
+    if(!draft)draft={...S.prof,w:S.prof.w??(S.conn.google||S.conn.hc||S.conn.garmin?series('weight')[N-1]:null)};
+    h=ah('Over jou','Vul je profiel aan. Alles is optioneel.',3)+`<div class="pad stack" style="margin-top:16px">
+    ${S.prof.w==null&&draft.w!=null?'<p class="mut" style="margin:0 4px">Je gewicht hebben we ingevuld met je laatste meting. Klopt het niet, pas het dan aan.</p>':''}
+    ${personalCard('Klaar',true)}<button class="lnk" data-act="toImport" style="color:var(--mut)">Terug naar importeren</button></div>`;
+  }
+  $('#v-auth').innerHTML=h;
+}
+
 // ---------- Profiel ----------
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const age=b=>{if(!b)return null;const d=new Date(b);let a=NOW.getFullYear()-d.getFullYear();if(NOW<new Date(NOW.getFullYear(),d.getMonth(),d.getDate()))a--;return a};
@@ -314,11 +372,10 @@ function renderSettings(){
   <div class="pad stack" style="margin-top:8px"><div class="row">${pt('profile','Profiel')}${pt('conn','Koppelingen')}</div>
   ${ptab==='profile'?profileHtml():connHtml()}</div>`;
 }
-function profileHtml(){
+function personalCard(label,onboarding){
   const p=draft||(draft={...S.prof}),a=age(p.birth);
   const sx=(k,l)=>`<button class="pill" style="flex:1" data-sex="${k}" aria-pressed="${p.sex===k}">${l}</button>`;
-  const th=(k,l)=>`<button class="pill" style="flex:1" data-theme-set="${k}" aria-pressed="${S.theme===k}">${l}</button>`;
-  const changed=JSON.stringify(p)!==JSON.stringify(S.prof);
+  const changed=onboarding||JSON.stringify(p)!==JSON.stringify(S.prof);
   return`<div class="card"><h3>Persoonlijke gegevens</h3><span class="gl">sam@voorbeeld.nl</span>
   <label class="fld" for="p-name">Naam<input id="p-name" data-prof="name" value="${esc(p.name||'')}" maxlength="60" autocomplete="name" style="width:12em;text-align:left"></label>
   <label class="fld" for="p-birth">Geboortedatum${a!=null?` <span class="gl">(${a} jaar)</span>`:''}<input id="p-birth" type="date" data-prof="birth" value="${p.birth||''}" max="${NOW.toISOString().slice(0,10)}" style="width:11em"></label>
@@ -327,27 +384,33 @@ function profileHtml(){
   <label class="fld" for="p-w">Gewicht<span><input id="p-w" type="number" inputmode="decimal" min="20" max="400" step="0.1" data-prof="w" value="${p.w??''}"> kg</span></label>
   <span class="gl">Alle velden zijn optioneel. Alleen jij ziet deze gegevens.</span>
   <p class="note" id="pnote" aria-live="polite" style="margin:0"></p>
-  <div class="row"><button class="btn pri" data-act="psave" ${changed?'':'disabled'}>Opslaan</button></div></div>
+  <div class="row"><button class="btn pri" data-act="${onboarding?'finish':'psave'}" ${changed?'':'disabled'}>${label}</button>${onboarding?'<button class="lnk" data-act="skip" style="color:var(--mut)">Later</button>':''}</div></div>`;
+}
+function profileHtml(){
+  const th=(k,l)=>`<button class="pill" style="flex:1" data-theme-set="${k}" aria-pressed="${S.theme===k}">${l}</button>`;
+  return personalCard('Opslaan',false)+`
   <div class="sh" style="margin-bottom:0"><h2>Weergave</h2></div>
   <div class="card"><span class="gl">Kies licht of donker, of laat het je telefoon volgen.</span><div class="row">${th('system','Systeem')}${th('light','Licht')}${th('dark','Donker')}</div></div>
   <div class="sh" style="margin-bottom:0"><h2>Account</h2></div>
   <div class="card"><span class="gl">Je data is van jou. Je kunt alles exporteren of je account met alle data verwijderen.</span>
-  <div class="row"><button class="btn">Mijn data exporteren</button><button class="btn">Uitloggen</button></div><a class="lnk" style="padding:0;text-decoration:none" href="https://ianschrotenboer.github.io/VitalConnect/privacy.html">Privacyverklaring</a><button class="lnk" style="color:var(--bad);padding:0">Account verwijderen</button></div>
-  <p class="gl" style="margin:4px">Vital Connect 1.1.0 · preview</p>`;
+  <div class="row"><button class="btn">Mijn data exporteren</button><button class="btn" data-act="logout">Uitloggen</button></div><a class="lnk" style="padding:0;text-decoration:none" href="https://ianschrotenboer.github.io/VitalConnect/privacy.html">Privacyverklaring</a><button class="lnk" style="color:var(--bad);padding:0">Account verwijderen</button></div>
+  <p class="gl" style="margin:4px">Vital Connect 1.2.0 · preview</p>`;
 }
+const SRCS={hc:['hc','H','#2f7d6e','Health Connect','Data van apps op deze telefoon, zoals Google Fit, Samsung Health en de Suunto-app.','Elk uur op de achtergrond'],
+  google:['google','F','#3f7f4a','Google Health','Data van Fitbit, Pixel Watch en de Google Health-app.','Elk uur opgehaald'],
+  garmin:['garmin','G','#2b5fa8','Garmin Connect','Data van je Garmin-horloge via Garmin Connect.','Na elke sync van je horloge']};
+function srcCard([k,l,c,name,desc,okText]){
+  const on=S.conn[k],b=busy===k,t=syncedAt.toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'});
+  return`<div class="card"><div class="src"><span class="mk" style="background:${c}">${l}</span><div><h3>${name}</h3><span class="${on?'ok':'mut'}" style="font-size:14px">${on?`${okText} · bijgewerkt om ${t}`:'Niet gekoppeld'}</span></div></div>
+  <span class="gl">${desc}</span><div class="row">${on?`<button class="btn pri" data-act="sync">${k==='hc'?'Nu synchroniseren':'Nu ophalen'}</button>${k==='hc'?'':`<button class="btn" data-conn="${k}">Ontkoppelen</button>`}`:`<button class="btn pri" data-conn="${k}" ${b?'disabled':''}>${b?'Verbinden…':'Koppelen'}</button>`}</div>
+  ${on&&k==='hc'?`<span class="gl">Ontkoppelen doe je in de Health Connect-instellingen van je telefoon. <button class="lnk" style="min-height:0;padding:0;font-size:13px" data-conn="hc">Demo: ontkoppel</button></span>`:''}</div>`}
 function connHtml(){
-  const t=syncedAt.toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'});
-  const src=[['hc','H','#2f7d6e','Health Connect','Data van apps op deze telefoon, zoals Google Fit, Samsung Health en de Suunto-app.',`Elk uur op de achtergrond · bijgewerkt om ${t}`],
-    ['google','F','#3f7f4a','Google Health','Data van Fitbit, Pixel Watch en de Google Health-app.',`Elk uur opgehaald · bijgewerkt om ${t}`],
-    ['garmin','G','#2b5fa8','Garmin Connect','Data van je Garmin-horloge via Garmin Connect.',`Na elke sync van je horloge · bijgewerkt om ${t}`]];
-  const card=([k,l,c,name,desc,okText])=>{const on=S.conn[k],b=busy===k;return`<div class="card"><div class="src"><span class="mk" style="background:${c}">${l}</span><div><h3>${name}</h3><span class="${on?'ok':'mut'}" style="font-size:14px">${on?okText:'Niet gekoppeld'}</span></div></div>
-  <span class="gl">${desc}</span><div class="row">${on?`${k==='hc'?'':''}<button class="btn pri" data-act="sync">${k==='hc'?'Nu synchroniseren':'Nu ophalen'}</button>${k==='hc'?'':`<button class="btn" data-conn="${k}">Ontkoppelen</button>`}`:`<button class="btn pri" data-conn="${k}" ${b?'disabled':''}>${b?'Verbinden…':'Koppelen'}</button>`}</div>
-  ${on&&k==='hc'?`<span class="gl">Ontkoppelen doe je in de Health Connect-instellingen van je telefoon. <button class="lnk" style="min-height:0;padding:0;font-size:13px" data-conn="hc">Demo: ontkoppel</button></span>`:''}</div>`};
+  const src=['hc','google','garmin'].map(k=>SRCS[k]);
   const on=src.filter(x=>S.conn[x[0]]),off=src.filter(x=>!S.conn[x[0]]);
   const head=(t,n,c)=>`<div class="sh" style="margin-bottom:0"><h2 style="display:flex;align-items:center;gap:10px"><i class="dot" style="background:${c}"></i>${t} · ${n}</h2></div>`;
   return`<p class="mut" style="margin:0 4px">Kies welke bronnen je data leveren. Per metric stel je de voorkeursbron in onder Vandaag → Aanpassen.</p>
-  ${head('Gekoppeld',on.length,'var(--good)')}${on.length?on.map(card).join(''):'<p class="mut" style="margin:0 4px">Nog niets gekoppeld. Kies hieronder een bron om je dashboard te vullen.</p>'}
-  ${off.length?head('Niet gekoppeld',off.length,'var(--mut)')+off.map(card).join(''):''}`;
+  ${head('Gekoppeld',on.length,'var(--good)')}${on.length?on.map(srcCard).join(''):'<p class="mut" style="margin:0 4px">Nog niets gekoppeld. Kies hieronder een bron om je dashboard te vullen.</p>'}
+  ${off.length?head('Niet gekoppeld',off.length,'var(--mut)')+off.map(srcCard).join(''):''}`;
 }
 
 // ---------- Aanpassen ----------
@@ -365,7 +428,8 @@ function renderEdit(){
   ${!m.lo&&goal(id)?`<label class="fld" style="justify-content:flex-start"><input type="checkbox" id="r-${id}" data-ring="${id}" ${S.rings.includes(id)?'checked':''} style="width:22px;height:22px;min-height:0;accent-color:var(--pri)">Tonen in de dagringen</label>`:''}`:''}</div>`}).join('')}</div></div>`;
 }
 
-function renderAll(){renderToday();renderHealth();renderSleep();if(detail)renderDetail();if(settings)renderSettings();if(editing)renderEdit()}
+function renderAll(){renderToday();renderHealth();renderSleep();if(detail)renderDetail();if(settings)renderSettings();if(editing)renderEdit();if(S.onb)renderAuth()}
+const rr=()=>S.onb?renderAuth():renderSettings();
 const note=t=>{const n=$('#note');if(n)n.textContent=t};
 
 document.addEventListener('click',e=>{
@@ -376,13 +440,21 @@ document.addEventListener('click',e=>{
   else if(d.act==='back'){detail=null;settings=false;draft=null;show()}
   else if(d.act==='settings'){settings=true;ptab='profile';draft=null;renderSettings();show()}
   else if(d.ptab){ptab=d.ptab;renderSettings()}
-  else if(d.sex){draft.sex=draft.sex===d.sex?null:d.sex;renderSettings()}
+  else if(d.sex){draft.sex=draft.sex===d.sex?null:d.sex;rr()}
   else if(d.themeSet){S.theme=d.themeSet;save();applyTheme();renderSettings()}
-  else if(d.act==='psave'){const okH=draft.h==null||(draft.h>=50&&draft.h<=260),okW=draft.w==null||(draft.w>=20&&draft.w<=400);if(!okH||!okW){$('#pnote').textContent='Vul een lengte tussen 50 en 260 cm en een gewicht tussen 20 en 400 kg in.';return}draft.name=(draft.name||'').trim();S.prof={...draft};save();renderToday();renderSettings();$('#pnote').style.color='var(--good)';$('#pnote').textContent='Je profiel is opgeslagen.'}
+  else if(d.act==='psave'||d.act==='finish'){if(!checkProf())return;draft.name=(draft.name||'').trim();S.prof={...draft};
+    if(d.act==='finish'){S.onb=null;draft=null;save();renderAll();show();return}save();renderToday();renderSettings();$('#pnote').style.color='var(--good)';$('#pnote').textContent='Je profiel is opgeslagen.'}
+  else if(d.act==='skip'){S.onb=null;draft=null;save();renderAll();show()}
+  else if(d.act==='google'){busy='login';renderAuth();setTimeout(()=>{busy=null;S.onb='consent';agreed=false;save();renderAuth();show()},700)}
+  else if(d.act==='email'){showEmail=true;renderAuth()}
+  else if(d.act==='consent'){S.onb='import';save();renderAuth();show()}
+  else if(d.act==='toProfile'){S.onb='profile';draft=null;save();renderAuth();show()}
+  else if(d.act==='toImport'){S.onb='import';save();renderAuth();show()}
+  else if(d.act==='logout'){S=fresh();S.conn={hc:false,google:false,garmin:false};save();applyTheme();tab='today';detail=null;settings=false;editing=false;draft=null;showEmail=false;renderAll();show()}
   else if(d.act==='edit'){editing=true;renderEdit();show()}
   else if(d.act==='done'){editing=false;save();renderAll();show()}
-  else if(d.act==='sync'){const b=$('#syncBtn');b&&b.classList.add('spin');setTimeout(()=>{syncedAt=new Date();renderToday();renderSettings()},900)}
-  else if(d.conn){const k=d.conn;if(S.conn[k]){S.conn[k]=false;save();renderSettings()}else{busy=k;renderSettings();setTimeout(()=>{S.conn[k]=true;busy=null;save();renderSettings()},1100)}}
+  else if(d.act==='sync'){const b=$('#syncBtn');b&&b.classList.add('spin');setTimeout(()=>{syncedAt=new Date();renderToday();rr()},900)}
+  else if(d.conn){const k=d.conn;if(S.conn[k]){S.conn[k]=false;save();rr()}else{busy=k;rr();setTimeout(()=>{S.conn[k]=true;busy=null;save();rr()},1100)}}
   else if(d.exp){openEdit=openEdit===d.exp?null:d.exp;renderEdit()}
   else if(d.size){const[id,v]=d.size.split(':');S.size[id]=v;renderEdit()}
   else if(d.mv){const[id,dir]=d.mv.split(':'),i=S.order.indexOf(id),j=i+Number(dir);if(i>=0&&j>=0&&j<S.order.length){[S.order[i],S.order[j]]=[S.order[j],S.order[i]];renderEdit()}}
@@ -393,11 +465,13 @@ const later=f=>setTimeout(f,0);
 document.addEventListener('change',e=>{
   const t=e.target,d=t.dataset;
   if(d.tog){const id=d.tog;if(t.checked){if(!S.order.includes(id))S.order.push(id)}else{S.order=S.order.filter(x=>x!==id);S.rings=S.rings.filter(x=>x!==id)}later(renderEdit)}
-  else if(d.prof){setProf(t);if(d.prof==='birth')later(renderSettings)}
+  else if(d.prof){setProf(t);if(d.prof==='birth')later(rr)}
+  else if(t.id==='agree'){agreed=t.checked;const b=document.querySelector('[data-act=consent]');if(b)b.disabled=!agreed}
   else if(d.goal){const v=parseFloat(String(t.value).replace(',','.'));S.goal[d.goal]=isFinite(v)&&v>0?v:null;if(!S.goal[d.goal])S.rings=S.rings.filter(x=>x!==d.goal);later(renderEdit)}
   else if(d.ring){const id=d.ring;if(t.checked){if(S.rings.length>=3){t.checked=false;note('Er passen drie doelen in de ringen. Zet er eerst één uit.');return}S.rings.push(id)}else S.rings=S.rings.filter(x=>x!==id)}
 });
 document.addEventListener('input',e=>{if(e.target.dataset.prof)setProf(e.target)});
+function checkProf(){const okH=draft.h==null||(draft.h>=50&&draft.h<=260),okW=draft.w==null||(draft.w>=20&&draft.w<=400);if(!okH||!okW){$('#pnote').textContent='Vul een lengte tussen 50 en 260 cm en een gewicht tussen 20 en 400 kg in.'}return okH&&okW}
 function setProf(t){const k=t.dataset.prof;let v=t.value;if(k==='h'||k==='w'){v=parseFloat(String(v).replace(',','.'));v=isFinite(v)?v:null}else if(k==='birth')v=v||null;draft[k]=v;
   const b=document.querySelector('[data-act=psave]');if(b)b.disabled=JSON.stringify(draft)===JSON.stringify(S.prof);const n=$('#pnote');if(n){n.textContent='';n.style.color=''}}
 renderAll();show();

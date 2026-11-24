@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -125,24 +126,35 @@ private fun parseNumber(s: String): Double? = s.trim().replace(',', '.').toDoubl
 private fun fmtNumber(v: Double?): String =
     v?.let { if (it % 1.0 == 0.0) it.toLong().toString() else String.format(NL, "%.1f", it) }.orEmpty()
 
+/**
+ * Persoonlijke gegevens invullen. Ook gebruikt in de kennismaking na het eerste inloggen:
+ * dan met voorgestelde waarden, een eigen knoptekst en een knop om over te slaan.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PersonalCard(vm: MainViewModel) {
+fun PersonalCard(
+    vm: MainViewModel,
+    saved: Profile = vm.profile,
+    saveLabel: String = "Opslaan",
+    requireChange: Boolean = true,
+    secondary: (@Composable () -> Unit)? = null,
+    onSave: (Profile) -> Unit = { vm.saveProfile(it) },
+) {
     val p = LocalPalette.current
-    val saved = vm.profile
-    var name by remember(saved) { mutableStateOf(saved.name) }
-    var birth by remember(saved) { mutableStateOf(saved.birthDate) }
-    var sex by remember(saved) { mutableStateOf(saved.sex) }
-    var height by remember(saved) { mutableStateOf(fmtNumber(saved.heightCm)) }
-    var weight by remember(saved) { mutableStateOf(fmtNumber(saved.weightKg)) }
-    var pickDate by remember { mutableStateOf(false) }
+    // rememberSaveable: ingevulde waarden blijven staan bij draaien, in- en uitvouwen van een foldable
+    var name by rememberSaveable(saved) { mutableStateOf(saved.name) }
+    var birth by rememberSaveable(saved) { mutableStateOf(saved.birthDate) }
+    var sex by rememberSaveable(saved) { mutableStateOf(saved.sex) }
+    var height by rememberSaveable(saved) { mutableStateOf(fmtNumber(saved.heightCm)) }
+    var weight by rememberSaveable(saved) { mutableStateOf(fmtNumber(saved.weightKg)) }
+    var pickDate by rememberSaveable { mutableStateOf(false) }
 
     val h = parseNumber(height)
     val w = parseNumber(weight)
     val heightOk = height.isBlank() || (h != null && h in 50.0..260.0)
     val weightOk = weight.isBlank() || (w != null && w in 20.0..400.0)
     val edited = Profile(saved.email, name, birth, sex, h, w)
-    val changed = edited.copy(name = edited.name.trim()) != saved
+    val changed = !requireChange || edited.copy(name = edited.name.trim()) != saved
 
     VCard(Modifier.fillMaxWidth()) {
         Text("Persoonlijke gegevens", style = MaterialTheme.typography.titleMedium, color = p.ink)
@@ -180,7 +192,10 @@ private fun PersonalCard(vm: MainViewModel) {
         if (!heightOk || !weightOk) Text("Vul een lengte tussen 50 en 260 cm en een gewicht tussen 20 en 400 kg in.",
             style = MaterialTheme.typography.bodySmall, color = p.bad)
         Text("Alle velden zijn optioneel. Alleen jij ziet deze gegevens.", style = MaterialTheme.typography.bodySmall, color = p.muted)
-        Button(onClick = { vm.saveProfile(edited) }, enabled = changed && heightOk && weightOk && !vm.busy) { Text("Opslaan") }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Button(onClick = { onSave(edited) }, enabled = changed && heightOk && weightOk && !vm.busy) { Text(saveLabel) }
+            secondary?.invoke()
+        }
     }
 
     if (pickDate) {
@@ -267,7 +282,7 @@ private fun SourceHeader(letter: String, color: Color, name: String, status: Str
 }
 
 @Composable
-private fun SourceCard(vm: MainViewModel, source: String, onRequestHc: () -> Unit, onOpenUrl: (String) -> Unit, onDisconnect: (String) -> Unit) {
+fun SourceCard(vm: MainViewModel, source: String, onRequestHc: () -> Unit, onOpenUrl: (String) -> Unit, onDisconnect: (String) -> Unit) {
     if (source == "health_connect") HealthConnectCard(vm, onRequestHc) else CloudCard(vm, source, onOpenUrl, onDisconnect)
 }
 

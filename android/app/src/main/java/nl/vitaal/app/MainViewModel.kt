@@ -75,6 +75,9 @@ data class Profile(
 
 enum class ProfileTab { Profile, Connections }
 
+/** Kennismaking na de eerste keer inloggen (na de toestemming). */
+enum class Onboarding { Import, Profile }
+
 enum class HcStatus { UNKNOWN, UNAVAILABLE, UPDATE_REQUIRED, NO_PERMISSION, FOREGROUND_ONLY, OK }
 
 /** Stappen in het inlogscherm. */
@@ -99,6 +102,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var showSettings by mutableStateOf(false)
     var profileTab by mutableStateOf(ProfileTab.Profile)
     var profile by mutableStateOf(Profile()); private set
+    var onboarding by mutableStateOf<Onboarding?>(null)
+    /** Ingelogd met Google in deze sessie: dan staat Google Health bovenaan bij importeren. */
+    var signedInWithGoogle by mutableStateOf(false); private set
 
     /** Weergave: lokaal bewaard (direct bij het opstarten) en in het profiel (gelijk op al je toestellen). */
     private val ui = app.getSharedPreferences("vitaal_ui", android.content.Context.MODE_PRIVATE)
@@ -195,6 +201,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun signInWithGoogle(idToken: String, rawNonce: String) = task {
         api.signInWithGoogle(idToken, rawNonce)
+        signedInWithGoogle = true
         afterSignIn()
     }
 
@@ -204,13 +211,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             put("consent_version", "2026-11")
         })
         needsConsent = false
+        onboarding = Onboarding.Import
     }
 
     fun signOut() {
         api.signOut(); hc.reset()
         signedIn = false; authStep = AuthStep.Login
         tab = Tab.Today; showSettings = false; detailMetric = null; editing = false
-        profile = Profile(); profileTab = ProfileTab.Profile
+        profile = Profile(); profileTab = ProfileTab.Profile; onboarding = null
         prefs = emptyMap(); today = emptyMap(); connections = emptyMap()
     }
 
@@ -237,6 +245,27 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         })
         profile = p.copy(name = p.name.trim())
         message = "Je profiel is opgeslagen."
+    }
+
+    /** Profiel zoals de kennismaking het voorstelt: aangevuld met het laatst gemeten gewicht. */
+    val suggestedProfile: Profile
+        get() = profile.copy(weightKg = profile.weightKg ?: stats["weight"]?.last?.let { Math.round(it * 10) / 10.0 })
+
+    /** Kennismaking afronden; p = null betekent overslaan. */
+    fun finishOnboarding(p: Profile?) = task {
+        api.patch("profiles?id=eq.${api.userId}", buildJsonObject {
+            put("onboarded_at", Instant.now().toString())
+            if (p != null) {
+                put("display_name", p.name.trim().ifEmpty { null })
+                put("birth_date", p.birthDate?.toString())
+                put("sex", p.sex)
+                put("height_cm", p.heightCm)
+                put("weight_kg", p.weightKg)
+            }
+        })
+        if (p != null) profile = p.copy(name = p.name.trim())
+        onboarding = null
+        tab = Tab.Today
     }
 
     fun setTheme(mode: ThemeMode) {
@@ -279,7 +308,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             )
             p.metric to p
         }
-        val prof = api.select("profiles?select=email,display_name,birth_date,sex,height_cm,weight_kg,theme,consent_health_at")
+        val prof = api.select("profiles?select=email,display_name,birth_date,sex,height_cm,weight_kg,theme,consent_health_at,onboarded_at")
             .firstOrNull()?.jsonObject
         needsConsent = prof?.get("consent_health_at").let { it == null || it == JsonNull }
         if (prof != null) {
@@ -293,6 +322,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 weightKg = d("weight_kg"),
             )
             applyTheme(ThemeMode.of(prof.str("theme")))
+            if (!needsConsent && onboarding == null && prof.str("onboarded_at").isEmpty()) onboarding = Onboarding.Import
         }
         connections = api.select("connections?select=provider,status,last_sync_at,last_error").associate {
             val o = it.jsonObject

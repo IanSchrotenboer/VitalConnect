@@ -2,6 +2,8 @@ package nl.vitaal.app
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -116,8 +118,11 @@ fun SleepScreen(vm: MainViewModel) {
         // Herstel tijdens de slaap
         item { SectionTitle("Herstel tijdens je slaap", Modifier.padding(start = 4.dp, top = 8.dp)) }
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                listOf("hrv", "rhr", "resp").forEach { id -> RecoveryTile(vm, id, Modifier.weight(1f)) }
+            // Op heel smalle schermen (buitenscherm klaptelefoon) onder elkaar, anders naast elkaar
+            if (LocalWidthClass.current == WidthClass.Tiny) Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                listOf("hrv", "rhr", "resp").forEach { id -> RecoveryTile(vm, id, Modifier.fillMaxWidth()) }
+            } else Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                listOf("hrv", "rhr", "resp").forEach { id -> RecoveryTile(vm, id, Modifier.weight(1f).fillMaxHeight()) }
             }
         }
     }

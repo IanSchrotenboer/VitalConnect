@@ -127,7 +127,7 @@ begin
     exception when insufficient_privilege then
       rep := rep || jsonb_build_object('c', 'E-mailadres niet via de app te wijzigen', 'ok', true, 'd', 'geweigerd');
     end;
-    update public.profiles set display_name = 'Stresstest', birth_date = '1990-01-01', sex = 'other', height_cm = 180.5, weight_kg = 75.2, theme = 'dark' where id = a;
+    update public.profiles set display_name = 'Stresstest', birth_date = '1990-01-01', sex = 'other', height_cm = 180.5, weight_kg = 75.2, theme = 'dark', onboarded_at = now() where id = a;
     get diagnostics n = row_count;
     rep := rep || jsonb_build_object('c', 'Geldig profiel opslaan', 'ok', n = 1, 'd', n || ' rij');
     n := public.ingest_health_connect(('[{"day":"2020-01-01","metric":"steps","origin":"x","value":1},{"day":"' || current_date || '","metric":"steps","origin":"x","value":-5},{"day":"' || current_date || '","metric":"bestaat_niet","origin":"x","value":1},{"day":"' || current_date || '","metric":"steps","origin":"x;--","value":1}]')::jsonb);

@@ -2,6 +2,9 @@ package nl.vitaal.app
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +30,7 @@ fun HealthScreen(vm: MainViewModel) {
     val groups = Category.values().map { c -> c to vm.metrics.keys.filter { categoryOf(it) == c }.sorted() }
         .filter { it.second.isNotEmpty() }
 
+    val perRow = if (LocalWidthClass.current.wide) 2 else 1
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Column(Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp)) {
@@ -40,7 +44,13 @@ fun HealthScreen(vm: MainViewModel) {
             item {
                 SectionTitle(cat.label, Modifier.padding(start = 4.dp, top = 12.dp), dot = p.colorOf(cat))
             }
-            items(ids) { id -> StatCard(vm, id) }
+            // Op brede schermen twee kaarten naast elkaar
+            items(ids.chunked(perRow)) { row ->
+                Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    row.forEach { id -> StatCard(vm, id, Modifier.weight(1f).fillMaxHeight()) }
+                    repeat(perRow - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
         }
     }
 }
@@ -64,7 +74,7 @@ private fun Highlights(vm: MainViewModel) {
 }
 
 @Composable
-private fun StatCard(vm: MainViewModel, id: String) {
+private fun StatCard(vm: MainViewModel, id: String, modifier: Modifier = Modifier) {
     val p = LocalPalette.current
     val m = vm.metrics[id] ?: return
     val s = vm.stats[id]
@@ -72,7 +82,7 @@ private fun StatCard(vm: MainViewModel, id: String) {
     val unit = unitOf(id, m.unit)
     fun f(v: Double?) = v?.let { fmt(id, it) } ?: "–"
 
-    VCard(Modifier.fillMaxWidth(), onClick = { vm.openDetail(id) }) {
+    VCard(modifier.fillMaxWidth(), onClick = { vm.openDetail(id) }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Dot(color, 9.dp)
             Spacer(Modifier.width(8.dp))

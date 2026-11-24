@@ -3,6 +3,8 @@ package nl.vitaal.app
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,22 +36,9 @@ import kotlin.math.roundToInt
 @Composable
 fun TodayScreen(vm: MainViewModel) {
     val p = LocalPalette.current
-    val rows = remember(vm.prefs) {
-        // Brede tegels krijgen een eigen rij, kleine tegels gaan per twee
-        val out = mutableListOf<List<Pref>>()
-        var pair = mutableListOf<Pref>()
-        for (pref in vm.visible) {
-            if (pref.size == "l") {
-                if (pair.isNotEmpty()) { out += pair; pair = mutableListOf() }
-                out += listOf(pref)
-            } else {
-                pair += pref
-                if (pair.size == 2) { out += pair; pair = mutableListOf() }
-            }
-        }
-        if (pair.isNotEmpty()) out += pair
-        out.toList()
-    }
+    val columns = LocalWidthClass.current.tileColumns
+    // Kleine tegels nemen één kolom, brede twee (op telefoons de hele rij); op brede schermen meer kolommen
+    val rows = remember(vm.prefs, columns) { packRows(vm.visible, columns) { it.size == "l" } }
 
     LazyColumn(contentPadding = PaddingValues(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { DialHeader(vm) }
@@ -62,9 +51,10 @@ fun TodayScreen(vm: MainViewModel) {
             Text("Je dashboard is leeg. Kies metrics via Aanpassen.", color = p.muted, modifier = Modifier.padding(horizontal = 20.dp))
         }
         items(rows) { row ->
-            Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                row.forEach { pref -> Tile(vm, pref, Modifier.weight(1f)) }
-                if (row.size == 1 && row[0].size != "l") Spacer(Modifier.weight(1f))
+            Row(Modifier.padding(horizontal = 16.dp).height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                row.forEach { (pref, span) -> Tile(vm, pref, Modifier.weight(span.toFloat()).fillMaxHeight()) }
+                val free = columns - row.sumOf { it.second }
+                if (free > 0) Spacer(Modifier.weight(free.toFloat()))
             }
         }
     }
@@ -110,19 +100,20 @@ private fun DialHeader(vm: MainViewModel) {
         } else {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp)) {
                 val avg = (fractions.map { it.coerceAtMost(1f) }.average() * 100).roundToInt()
-                Rings(rings.indices.map { i -> fractions[i] to ringColors[i] }, "$avg%", Modifier.size(150.dp))
-                Spacer(Modifier.width(20.dp))
+                val tiny = LocalWidthClass.current == WidthClass.Tiny
+                Rings(rings.indices.map { i -> fractions[i] to ringColors[i] }, "$avg%", Modifier.size(if (tiny) 108.dp else 150.dp))
+                Spacer(Modifier.width(if (tiny) 12.dp else 20.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     rings.forEachIndexed { i, pref ->
                         val m = vm.metrics[pref.metric]
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Dot(ringColors[i], 9.dp)
                             Spacer(Modifier.width(8.dp))
-                            Text(m?.name ?: pref.metric, style = MaterialTheme.typography.labelMedium, color = d.dialMuted, maxLines = 1)
+                            Text(m?.name ?: pref.metric, style = MaterialTheme.typography.labelMedium, color = d.dialMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         Row(verticalAlignment = Alignment.Bottom) {
                             Text(vm.today[pref.metric]?.let { fmt(pref.metric, it.value) } ?: "–",
-                                style = MaterialTheme.typography.headlineSmall, color = d.dialInk)
+                                style = MaterialTheme.typography.headlineSmall, color = d.dialInk, maxLines = 1)
                             Text("  / ${fmt(pref.metric, pref.goal!!)}", style = MaterialTheme.typography.bodySmall, color = d.dialMuted)
                         }
                     }

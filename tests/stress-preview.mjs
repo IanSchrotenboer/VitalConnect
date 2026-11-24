@@ -1,5 +1,5 @@
 // Stresstest van de preview (prototype/index.html): een "apenproef" die duizenden willekeurige tikken en
-// invoer doet op drie schermbreedtes, in licht en donker. Faalt bij JavaScript-fouten, bij een pagina die
+// invoer doet op vier schermbreedtes (300 tot 1100 px), in licht en donker. Faalt bij JavaScript-fouten, bij een pagina die
 // horizontaal gaat scrollen of bij knoppen kleiner dan 44 px.
 //   node tests/stress-preview.mjs [acties per ronde, standaard 1500]
 import { createRequire } from "node:module";
@@ -10,7 +10,7 @@ import path from "node:path";
 const require = createRequire(import.meta.url);
 const { chromium } = require(path.join(execSync("npm root -g").toString().trim(), "playwright"));
 const page_url = "file://" + path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../prototype/index.html");
-const ACTIES = Number(process.argv[2] ?? 1500);
+const ACTIES = Number(process.argv[2] ?? 1200);
 const RAAR = ["", "0", "-5", "999999", "abc", "1e309", "12,5", "<img src=x onerror=alert(1)>", "💥".repeat(40), " ", "NaN"];
 
 let seed = 20261124;
@@ -20,7 +20,8 @@ const browser = await chromium.launch();
 const fouten = [];
 let totaal = 0;
 
-for (const [breedte, schema] of [[320, "light"], [400, "dark"], [560, "light"]]) {
+// Buitenscherm klaptelefoon, gewone telefoon, opengevouwen foldable staand en liggend
+for (const [breedte, schema] of [[300, "light"], [400, "dark"], [673, "light"], [1100, "dark"]]) {
   const ctx = await browser.newContext({ viewport: { width: breedte, height: 800 }, colorScheme: schema });
   const page = await ctx.newPage();
   page.on("pageerror", (e) => fouten.push(`${breedte}px ${schema}: ${e.message}`));
