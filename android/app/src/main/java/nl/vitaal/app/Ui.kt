@@ -20,6 +20,9 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -66,6 +69,15 @@ fun VitaalRoot(
         }
     }
     BackHandler(enabled = showTabs && vm.tab != Tab.Today) { vm.tab = Tab.Today }
+
+    // Swipen tussen Vandaag, Gezondheid en Slaap; de tabbalk en het vegen blijven gelijk lopen
+    val pager = rememberPagerState(initialPage = vm.tab.ordinal) { Tab.entries.size }
+    LaunchedEffect(vm.tab) {
+        if (pager.currentPage != vm.tab.ordinal) pager.animateScrollToPage(vm.tab.ordinal)
+    }
+    LaunchedEffect(pager) {
+        snapshotFlow { pager.settledPage }.collect { vm.tab = Tab.entries[it] }
+    }
     BackHandler(enabled = vm.onboarding == Onboarding.Profile) { vm.onboarding = Onboarding.Import }
 
     CompositionLocalProvider(LocalWidthClass provides width) {
@@ -120,9 +132,13 @@ fun VitaalRoot(
                             vm.editing != null -> EditScreen(vm, vm.editing!!)
                             vm.detailMetric != null -> DetailScreen(vm)
                             vm.showSettings -> ProfileScreen(vm, onRequestHc, onOpenUrl, onShare, onSignOut, onRequestNotifications)
-                            vm.tab == Tab.Health -> HealthScreen(vm)
-                            vm.tab == Tab.Sleep -> SleepScreen(vm)
-                            else -> TodayScreen(vm)
+                            else -> HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 1) { page ->
+                                when (Tab.entries[page]) {
+                                    Tab.Today -> TodayScreen(vm)
+                                    Tab.Health -> HealthScreen(vm)
+                                    Tab.Sleep -> SleepScreen(vm)
+                                }
+                            }
                         }
                     }
                 }

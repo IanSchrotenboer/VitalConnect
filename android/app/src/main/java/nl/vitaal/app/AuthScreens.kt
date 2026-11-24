@@ -48,7 +48,7 @@ import androidx.compose.ui.unit.dp
 /** Donkere kop met de naam van de app, boven alle inlogschermen. step = (huidige, totaal) in de kennismaking. */
 @Composable
 private fun AuthHeader(title: String, subtitle: String, step: Pair<Int, Int>? = null) {
-    val d = DialPalette
+    val d = dialPalette()
     Column(
         Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))

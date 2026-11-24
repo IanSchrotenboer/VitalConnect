@@ -245,7 +245,7 @@ fun Delta(pc: Double?, lowerIsBetter: Boolean, short: Boolean = false) {
 fun SectionTitle(text: String, modifier: Modifier = Modifier, dot: Color? = null, action: (@Composable () -> Unit)? = null) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         if (dot != null) { Dot(dot); Spacer(Modifier.width(10.dp)) }
-        Text(text, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).semantics { heading() })
+        Text(text, style = MaterialTheme.typography.titleLarge, color = LocalPalette.current.ink, modifier = Modifier.weight(1f).semantics { heading() })
         action?.invoke()
     }
 }

@@ -2,6 +2,7 @@ package nl.vitaal.app
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -68,7 +69,7 @@ private val Dark = Palette(
     dark = true,
     bg = Color(0xFF0C1614), card = Color(0xFF15221F), ink = Color(0xFFE9F1EE), muted = Color(0xFF9DB0AA),
     line = Color(0xFF24332F), outline = Color(0xFF63776F), primary = Color(0xFF7FD1C1), onPrimary = Color(0xFF0C1614),
-    dial = Color(0xFF0F2A26), dialInk = Color(0xFFF3F7F5), dialMuted = Color(0xFFA9BDB7),
+    dial = Color(0xFF123430), dialInk = Color(0xFFF3F7F5), dialMuted = Color(0xFFA9BDB7),
     activity = Color(0xFFF5935A), heart = Color(0xFFEC7290), sleep = Color(0xFF8C97F2),
     body = Color(0xFFDDB15A), recovery = Color(0xFF4CC3B3),
     good = Color(0xFF4CC79A), bad = Color(0xFFF07D5F), warn = Color(0xFF2E2717),
@@ -79,6 +80,13 @@ val LocalPalette = staticCompositionLocalOf { Light }
 
 /** De wijzerplaat is altijd donker: daar gebruiken we de heldere kleurvarianten. */
 val DialPalette = Dark
+
+/**
+ * Wijzerplaat voor het huidige thema: de heldere accentkleuren van Dark, met de achtergrond van het thema
+ * (dennengroen #123430, gelijk aan het logo en het app-icoon, in licht en donker).
+ */
+@Composable
+fun dialPalette(): Palette = DialPalette.copy(dial = LocalPalette.current.dial)
 
 enum class Category(val label: String) {
     Activity("Activiteit"), Heart("Hart"), Sleep("Slaap"), Recovery("Herstel"), Body("Lichaam")
@@ -149,20 +157,42 @@ fun ThemeMode.isDark(): Boolean = when (this) {
 @Composable
 fun VitaalTheme(mode: ThemeMode = ThemeMode.System, content: @Composable () -> Unit) {
     val p = if (mode.isDark()) Dark else Light
-    val scheme = if (p.dark) darkColorScheme(
-        primary = p.primary, onPrimary = p.onPrimary, secondary = p.activity, onSecondary = p.bg,
-        background = p.bg, onBackground = p.ink, surface = p.bg, onSurface = p.ink,
-        surfaceVariant = p.card, onSurfaceVariant = p.muted, outline = p.outline, outlineVariant = p.line,
-        error = p.bad, surfaceContainer = p.bg, surfaceContainerHigh = p.card,
-        secondaryContainer = p.line, onSecondaryContainer = p.ink,
-    ) else lightColorScheme(
-        primary = p.primary, onPrimary = p.onPrimary, secondary = p.activity, onSecondary = Color.White,
-        background = p.bg, onBackground = p.ink, surface = p.bg, onSurface = p.ink,
-        surfaceVariant = p.card, onSurfaceVariant = p.muted, outline = p.outline, outlineVariant = p.line,
-        error = p.bad, surfaceContainer = p.card, surfaceContainerHigh = p.card,
-        secondaryContainer = Color(0xFFDCEBE6), onSecondaryContainer = p.ink,
-    )
     CompositionLocalProvider(LocalPalette provides p) {
-        MaterialTheme(colorScheme = scheme, typography = Type, content = content)
+        MaterialTheme(colorScheme = schemeOf(p), typography = Type) {
+            // Standaardletter voor tekst zonder eigen stijl: Figtree, nooit de systeemletter
+            ProvideTextStyle(Type.bodyMedium, content)
+        }
     }
 }
+
+/**
+ * Alle Material-kleurrollen uit het palet, zodat geen enkel onderdeel (schakelaar, datumkiezer, snackbar,
+ * dialoog, invulveld) terugvalt op de paarse standaardkleuren van Material.
+ */
+private fun schemeOf(p: Palette) = if (p.dark) darkColorScheme(
+    primary = p.primary, onPrimary = p.onPrimary,
+    primaryContainer = Color(0xFF1F3A35), onPrimaryContainer = p.ink, inversePrimary = Color(0xFF1C4D46),
+    secondary = p.activity, onSecondary = p.bg, secondaryContainer = Color(0xFF24332F), onSecondaryContainer = p.ink,
+    tertiary = p.recovery, onTertiary = p.bg, tertiaryContainer = Color(0xFF173A35), onTertiaryContainer = p.ink,
+    background = p.bg, onBackground = p.ink, surface = p.bg, onSurface = p.ink,
+    surfaceVariant = p.card, onSurfaceVariant = p.muted, surfaceTint = p.primary,
+    inverseSurface = p.ink, inverseOnSurface = p.card,
+    error = p.bad, onError = p.bg, errorContainer = Color(0xFF4A2117), onErrorContainer = Color(0xFFFFDAD0),
+    outline = p.outline, outlineVariant = p.line, scrim = Color.Black,
+    surfaceDim = p.bg, surfaceBright = Color(0xFF22322E),
+    surfaceContainerLowest = Color(0xFF091210), surfaceContainerLow = Color(0xFF111C1A), surfaceContainer = p.card,
+    surfaceContainerHigh = p.card, surfaceContainerHighest = Color(0xFF22322E),
+) else lightColorScheme(
+    primary = p.primary, onPrimary = p.onPrimary,
+    primaryContainer = Color(0xFFDCEBE6), onPrimaryContainer = p.ink, inversePrimary = Color(0xFF7FD1C1),
+    secondary = p.activity, onSecondary = Color.White, secondaryContainer = Color(0xFFDCEBE6), onSecondaryContainer = p.ink,
+    tertiary = p.recovery, onTertiary = Color.White, tertiaryContainer = Color(0xFFD5EFEA), onTertiaryContainer = p.ink,
+    background = p.bg, onBackground = p.ink, surface = p.bg, onSurface = p.ink,
+    surfaceVariant = p.card, onSurfaceVariant = p.muted, surfaceTint = p.primary,
+    inverseSurface = Color(0xFF24332F), inverseOnSurface = Color(0xFFF3F7F5),
+    error = p.bad, onError = Color.White, errorContainer = Color(0xFFFBE3DC), onErrorContainer = Color(0xFF5C1D0E),
+    outline = p.outline, outlineVariant = p.line, scrim = Color.Black,
+    surfaceDim = Color(0xFFE9EEEA), surfaceBright = p.card,
+    surfaceContainerLowest = Color.White, surfaceContainerLow = Color(0xFFF9FBF9), surfaceContainer = p.card,
+    surfaceContainerHigh = p.card, surfaceContainerHighest = Color(0xFFE9EEEA),
+)

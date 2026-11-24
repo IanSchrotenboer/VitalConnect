@@ -1,3 +1,5 @@
 <resources>
     <color name="ic_launcher_background">#123430</color>
+    <!-- Achtergrond tijdens het opstarten, gelijk aan bg in Theme.kt -->
+    <color name="window_bg">#F5F7F4</color>
 </resources>

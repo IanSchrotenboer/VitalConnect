@@ -55,8 +55,8 @@ fun SleepScreen(vm: MainViewModel) {
 
         // Afgelopen nacht
         item {
-            VCard(Modifier.fillMaxWidth(), color = DialPalette.dial, onClick = { vm.openDetail("sleep") }) {
-                val d = DialPalette
+            VCard(Modifier.fillMaxWidth(), color = dialPalette().dial, onClick = { vm.openDetail("sleep") }) {
+                val d = dialPalette()
                 Text(lastNight?.let { if (it.day == today) "Afgelopen nacht" else "Laatste nacht · ${it.day.format(DateTimeFormatter.ofPattern("EEEE d MMM", NL))}" }
                     ?: "Nog geen slaapdata", style = MaterialTheme.typography.labelMedium, color = d.dialMuted)
                 if (lastNight != null) {

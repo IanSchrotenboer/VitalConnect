@@ -50,7 +50,7 @@ fun TodayScreen(vm: MainViewModel) {
             }
         }
         if (rows.isEmpty()) item {
-            Text("Je dashboard is leeg. Kies metrics via Aanpassen.", color = p.muted, modifier = Modifier.padding(horizontal = 20.dp))
+            Text("Je dashboard is leeg. Kies metrics via Aanpassen.", style = MaterialTheme.typography.bodyMedium, color = p.muted, modifier = Modifier.padding(horizontal = 20.dp))
         }
         items(rows) { row ->
             Row(Modifier.padding(horizontal = 16.dp).height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -65,7 +65,7 @@ fun TodayScreen(vm: MainViewModel) {
 /** Donkere wijzerplaat met datum, dagringen en een motiverende regel. */
 @Composable
 private fun DialHeader(vm: MainViewModel) {
-    val d = DialPalette
+    val d = dialPalette()
     val now = LocalTime.now()
     val firstName = vm.profile.name.trim().substringBefore(' ')
     val greeting = when { now.hour < 12 -> "Goedemorgen"; now.hour < 18 -> "Goedemiddag"; else -> "Goedenavond" } +
@@ -97,7 +97,7 @@ private fun DialHeader(vm: MainViewModel) {
         }
 
         if (rings.isEmpty()) {
-            Text("Kies tot drie dagdoelen via Aanpassen om hier je voortgang te zien.", color = d.dialMuted,
+            Text("Kies tot drie dagdoelen via Aanpassen om hier je voortgang te zien.", style = MaterialTheme.typography.bodyMedium, color = d.dialMuted,
                 modifier = Modifier.padding(end = 12.dp))
         } else {
             val avg = (fractions.map { it.coerceAtMost(1f) }.average() * 100).roundToInt()
@@ -151,7 +151,7 @@ private fun DialHeader(vm: MainViewModel) {
 /** Eén zin die laat zien wat er vandaag nog te halen valt. */
 @Composable
 private fun Motivation(vm: MainViewModel, rings: List<Pref>, fractions: List<Float>) {
-    val d = DialPalette
+    val d = dialPalette()
     val open = rings.indices.filter { fractions[it] < 1f }.minByOrNull { 1f - fractions[it] }
     val text = if (open == null) {
         "Alle dagdoelen gehaald. Mooi werk!"
