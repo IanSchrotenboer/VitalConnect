@@ -5,7 +5,7 @@ declare
   a uuid := gen_random_uuid();
   b uuid := gen_random_uuid();
   rep jsonb := '[]';
-  n bigint; v numeric; j jsonb; ok boolean;
+  n bigint; v numeric; j jsonb; ok boolean; t1 timestamptz; t2 timestamptz;
 begin
   insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
   values ('00000000-0000-0000-0000-000000000000', a, 'authenticated', 'authenticated', 'chaos-a@vitalconnect.invalid', '{}', '{}', now(), now()),
@@ -87,6 +87,19 @@ begin
   update public.metric_prefs set preferred_source = 'garmin' where user_id = a and metric = 'steps';
   select min_all into v from public.metric_stats() where metric = 'steps';
   rep := rep || jsonb_build_object('c','andere voorkeursbron verandert statistieken direct','ok', v = 7, 'd', v);
+
+  -- Garmin en Google schrijven dezelfde dagen steeds opnieuw: dezelfde waarde mag de cache niet laten vervallen
+  perform set_config('role', 'postgres', true);
+  insert into public.daily_metrics (user_id, day, metric, source, provider, value, updated_at)
+  values (a, current_date - 6, 'kcal', 'google_health', 'google_health', 321, now())
+  on conflict (user_id, day, metric, source) do update set value = excluded.value, updated_at = excluded.updated_at;
+  select data_changed_at into t1 from public.profiles where id = a;
+  insert into public.daily_metrics (user_id, day, metric, source, provider, value, updated_at)
+  values (a, current_date - 6, 'kcal', 'google_health', 'google_health', 321, now())
+  on conflict (user_id, day, metric, source) do update set value = excluded.value, updated_at = excluded.updated_at;
+  select data_changed_at into t2 from public.profiles where id = a;
+  rep := rep || jsonb_build_object('c','zelfde waarde opnieuw van Google of Garmin: cache blijft geldig','ok', t1 is not distinct from t2);
+  perform set_config('role', 'authenticated', true);
 
   -- Een andere gebruiker blijft onaangeroerd
   perform set_config('request.jwt.claims', jsonb_build_object('sub', b, 'role', 'authenticated')::text, true);

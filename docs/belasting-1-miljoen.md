@@ -46,7 +46,11 @@ Piekuren (ochtend en avond) liggen naar verwachting 3 à 4 keer boven het gemidd
    - De servertaak werkt in porties (`google_sync_shards` in `app_secrets`) en kiest alleen gebruikers die 3 uur niet zijn bijgewerkt.
    - De app vraagt een sync hooguit eens per 10 minuten (vernieuwen) of 30 minuten (achtergrond).
    - De 12 aanroepen per sync gaan tegelijk.
-5. **Opruimen:**
+5. **Ongewijzigde dagwaarden worden niet herschreven** (trigger `daily_metrics_skip_unchanged`, 24 nov 2026):
+   - Garmin en Google sturen bij elke sync de laatste 3 à 7 dagen opnieuw, meestal met dezelfde waarden.
+   - Zo'n rij wordt overgeslagen: er wordt niets geschreven en de statistiekencache blijft geldig.
+   - Zonder deze trigger verviel de cache bij elke Google-sync (tot elk half uur per gebruiker).
+6. **Opruimen:**
    - `provider_raw` wordt 30 dagen bewaard, `sync_runs` 14 dagen, de cache 30 dagen.
    - Geslaagde syncs worden niet meer gelogd.
 
