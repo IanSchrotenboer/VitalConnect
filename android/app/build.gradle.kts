@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "nl.vitaal.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "nl.vitaal.app"
