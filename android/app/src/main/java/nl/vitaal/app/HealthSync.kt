@@ -10,8 +10,6 @@ import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
-import androidx.health.connect.client.records.InstantRecord
-import androidx.health.connect.client.records.IntervalRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
@@ -153,14 +151,26 @@ class HealthSync(context: Context, private val api: Api) {
         return out
     }
 
-    private fun recordDays(r: Record): List<LocalDate> = when (r) {
-        is IntervalRecord -> {
-            val a = r.startTime.atZone(zone).toLocalDate()
-            val b = r.endTime.atZone(zone).toLocalDate()
-            if (a == b) listOf(a) else listOf(a, b)
+    /** Dagen waarop een gewijzigd record valt (begin- en einddag). */
+    private fun recordDays(r: Record): List<LocalDate> {
+        val (start, end) = when (r) {
+            is StepsRecord -> r.startTime to r.endTime
+            is DistanceRecord -> r.startTime to r.endTime
+            is ActiveCaloriesBurnedRecord -> r.startTime to r.endTime
+            is FloorsClimbedRecord -> r.startTime to r.endTime
+            is ExerciseSessionRecord -> r.startTime to r.endTime
+            is SleepSessionRecord -> r.startTime to r.endTime
+            is RestingHeartRateRecord -> r.time to r.time
+            is HeartRateVariabilityRmssdRecord -> r.time to r.time
+            is OxygenSaturationRecord -> r.time to r.time
+            is RespiratoryRateRecord -> r.time to r.time
+            is WeightRecord -> r.time to r.time
+            is Vo2MaxRecord -> r.time to r.time
+            else -> return emptyList()
         }
-        is InstantRecord -> listOf(r.time.atZone(zone).toLocalDate())
-        else -> emptyList()
+        val a = start.atZone(zone).toLocalDate()
+        val b = end.atZone(zone).toLocalDate()
+        return if (a == b) listOf(a) else listOf(a, b)
     }
 
     data class Row(val day: LocalDate, val metric: String, val origin: String, val value: Double)
