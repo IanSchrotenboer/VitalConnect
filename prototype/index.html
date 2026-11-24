@@ -3,376 +3,362 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Vitaal health app</title>
+<title>Vital Connect</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* VOICE everyday, calm and clear: one glance tells how the day is going
-   IDEA a sports-watch face: dark dial with goal rings, then tidy data tiles like watch widgets
-   PICTURE three daily goal rings on a dark band, fed by the metrics the user picks
-   COLOUR white ground, near-black dial; activity coral, heart pink, sleep indigo, body teal, recovery amber
-   TYPE Sora 600/700 display + Inter text
-   LAYOUT dial band full width, rings left and legend right; tiles in a 2-column grid on phone, more columns wider; tab bar at the bottom */
-:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0d0e11);--card:light-dark(#f3f3f0,#191a1f);--ink:light-dark(#121316,#f1f1ee);--mut:light-dark(#5b5e66,#a2a5ad);--line:light-dark(#e0e0db,#2c2e35);--dial:light-dark(#121318,#1b1d24);--act:light-dark(#e8492a,#ff6a45);--hart:light-dark(#d81b60,#ff5c93);--slaap:light-dark(#5248d9,#8d86ff);--lich:light-dark(#0b8577,#2dc2ae);--herst:light-dark(#b87800,#f2b630);--warn:light-dark(#fff3dc,#33280f)}
+/* VOICE calm and encouraging: rust in de basis, warmte in de doelen
+   IDEA the Android app itself: a deep-pine watch dial over soft mist, three tabs
+   PICTURE the dial with daily rings and one motivating line, then clear metric tiles
+   COLOUR pine #123430 dial, mist #F5F7F4 ground, apricot/rose/indigo/sea/ochre per category, green for goals met
+   TYPE Inter 700 for figures with tabular numbers, Inter for text
+   LAYOUT phone column up to 560px centred; dial on top, tiles 2-up, tab bar at the bottom */
+:root{color-scheme:light dark;
+--bg:light-dark(#f5f7f4,#0c1614);--card:light-dark(#fff,#15221f);--ink:light-dark(#0f1e1b,#e9f1ee);--mut:light-dark(#52615c,#9db0aa);--line:light-dark(#e1e6e2,#24332f);
+--pri:light-dark(#1c4d46,#7fd1c1);--onpri:light-dark(#fff,#0c1614);
+--dial:light-dark(#123430,#0f2a26);--dink:#f3f7f5;--dmut:#a9bdb7;
+--act:light-dark(#e4793b,#f5935a);--hart:light-dark(#d04e6a,#ec7290);--slaap:light-dark(#5865d6,#8c97f2);--herst:light-dark(#2f9c8f,#4cc3b3);--lich:light-dark(#b9892b,#ddb15a);
+--good:light-dark(#1e7f5c,#4cc79a);--bad:light-dark(#b4462b,#f07d5f);
+--dact:#f5935a;--dhart:#ec7290;--dslaap:#8c97f2;--dherst:#4cc3b3;--dlich:#ddb15a;--dgood:#4cc79a}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font:16px/1.5 Inter,system-ui,sans-serif;overflow-x:clip;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
-body.lock{overflow:hidden}
-h1,h2,h3{font-family:Sora,Inter,sans-serif;letter-spacing:-.02em;line-height:1.05;margin:0;text-wrap:balance}
-h1{font-size:clamp(30px,6vw,40px)}h2{font-size:21px}h3{font-size:17px}
-button,select,input{font:inherit;color:inherit}
-button{cursor:pointer}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 Inter,system-ui,sans-serif;overflow-x:clip}
+.app{max-width:560px;margin:0 auto;min-height:100vh;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px));position:relative}
+h1,h2,h3{margin:0;line-height:1.1;letter-spacing:-.02em}
+h1{font-size:30px;font-weight:700}h2{font-size:20px;font-weight:600}h3{font-size:16px;font-weight:600}
+button,input,select{font:inherit;color:inherit}button{cursor:pointer}
 :focus-visible{outline:3px solid var(--act);outline-offset:2px}
-.wrap{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.dial{background:var(--dial);color:#f4f4f1;padding-top:max(20px,env(safe-area-inset-top,0px));padding-bottom:22px}
-.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-.date{margin:0 0 6px;color:#a7aab2;font-size:15px}
-.sync{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border-radius:22px;border:1px solid #3a3d46;background:transparent;color:#f4f4f1;font-size:14px;white-space:nowrap}
-.sync svg{width:18px;height:18px}
-.sync.spin svg{animation:sp .9s linear infinite}
-@keyframes sp{to{transform:rotate(360deg)}}
-.dialg{display:grid;grid-template-columns:minmax(0,210px) minmax(0,1fr);gap:clamp(16px,4vw,40px);align-items:center;margin-top:18px}
+.num{font-variant-numeric:tabular-nums;font-weight:700;letter-spacing:-.02em}
+.mut{color:var(--mut)}
+.pad{padding:0 16px}
+/* wijzerplaat */
+.dial{background:var(--dial);color:var(--dink);border-radius:0 0 28px 28px;padding:max(16px,env(safe-area-inset-top,0px)) 12px 22px 20px}
+.dtop{display:flex;align-items:flex-start;gap:4px}
+.dtop .t{flex:1}.dtop small{color:var(--dmut);font-size:14px}
+.ib{width:44px;height:44px;border:0;border-radius:22px;background:transparent;display:grid;place-items:center;color:inherit}
+.ib svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ib:hover{background:color-mix(in srgb,currentColor 10%,transparent)}
+.ib.spin svg{animation:sp .9s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+.dmid{display:grid;grid-template-columns:150px minmax(0,1fr);gap:20px;align-items:center;margin:16px 8px 0 0}
 .rsvg{width:100%;height:auto;display:block}
-.rt{fill:none;stroke-width:16;stroke-opacity:.2}
-.rp{fill:none;stroke-width:16;stroke-linecap:round;transition:stroke-dasharray .9s cubic-bezier(.3,.7,.2,1)}
-.rsvg text{fill:#f4f4f1;font-family:Sora,sans-serif;font-weight:700;text-anchor:middle}
-.leg{list-style:none;margin:0;padding:0;display:grid;gap:14px}
-.leg li{display:grid;grid-template-columns:12px minmax(0,1fr);gap:4px 10px;align-items:baseline}
-.leg i{width:12px;height:12px;border-radius:50%;align-self:center}
-.leg b{font-weight:500;color:#c9ccd3;font-size:15px}
-.leg span{grid-column:2;font:600 clamp(19px,4.6vw,24px)/1.1 Sora,sans-serif}
-.leg small{color:#a7aab2;font:400 14px Inter,sans-serif}
-.demo{margin:18px 0 0;color:#a7aab2;font-size:13px}
-.sh{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:24px 0 14px}
-.btn{min-height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--line);background:var(--bg);font-weight:600;font-size:15px;white-space:nowrap}
-.btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.btn:disabled{opacity:.6;cursor:progress}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
-.tile{display:flex;flex-direction:column;gap:6px;text-align:left;background:var(--card);border:0;border-radius:18px;padding:14px;min-height:136px;text-decoration:none;color:inherit}
+.rt{fill:none;stroke-width:13;stroke-opacity:.22}.rp{fill:none;stroke-width:13;stroke-linecap:round;transition:stroke-dasharray .9s cubic-bezier(.3,.7,.2,1)}
+.rsvg text{fill:var(--dink);font:700 22px Inter,sans-serif;text-anchor:middle}
+.leg{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.leg b{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;color:var(--dmut)}
+.leg span{font-size:22px}.leg small{color:var(--dmut);font-size:14px;font-weight:400}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
+.mot{margin:16px 8px 0 0;padding:10px 14px;border-radius:14px;background:rgba(243,247,245,.08);font-weight:600;font-size:15px}
+.mot.ok{color:var(--dgood)}
+.upd{margin:12px 0 0;color:var(--dmut);font-size:13px}
+.demo{color:var(--dmut);font-size:13px;margin:4px 0 0}
+/* kaarten */
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:8px}
+:root[data-theme=dark] .card{border-color:transparent}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]) .card{border-color:transparent}}
+.tap{cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%}
+.tap:hover{border-color:color-mix(in srgb,var(--pri) 40%,var(--line))}
+.sh{display:flex;align-items:center;gap:10px;margin:20px 0 12px;padding:0 4px}.sh h2{flex:1}
+.lnk{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;border:0;border-radius:22px;background:transparent;color:var(--pri);font-weight:600}
+.lnk svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .tile.l{grid-column:span 2}
-.tile:hover{background:color-mix(in srgb,var(--card),var(--ink) 4%)}
-.th{display:flex;align-items:center;gap:8px}
-.th i{width:9px;height:9px;border-radius:50%;flex:none}
-.tn{font-weight:600;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tv{font:600 clamp(25px,6.4vw,31px)/1.05 Sora,sans-serif;letter-spacing:-.02em;margin-top:auto;white-space:nowrap}
-.tv small{font:500 14px Inter,sans-serif;color:var(--mut);margin-left:4px;letter-spacing:0}
-.tm{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--mut)}
-.tm span{white-space:nowrap}
-.up{color:var(--lich)}.dn{color:var(--act)}
-.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}.bar b{display:block;height:100%;border-radius:3px}
-.spark{width:100%;height:34px;display:block}
-.tile.l .spark{height:48px}
-.empty{color:var(--mut);font-size:14px;margin-top:auto}
-.lede{color:var(--mut);margin:8px 0 18px;max-width:62ch}
-.vh{padding-top:max(24px,env(safe-area-inset-top,0px))}
-.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:thin}
-.chip{flex:none;min-height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--line);background:var(--bg);font-size:15px;white-space:nowrap}
-.chip[aria-pressed=true],.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.seg button{min-height:44px;padding:0 14px;border:0;background:transparent;font-size:15px;white-space:nowrap}
-.seg button+button{border-left:1px solid var(--line)}
-.card{background:var(--card);border-radius:20px;padding:16px;margin-top:14px}
-.ro{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
-.ro b{font:600 clamp(26px,6vw,34px)/1.1 Sora,sans-serif;white-space:nowrap}
-.ro span{color:var(--mut);font-size:14px}
-.fig{position:relative;min-height:280px;margin-top:8px;touch-action:pan-y}
-.fig>svg{position:absolute;inset:0;width:100%;height:100%}
-.fig text{font-size:13px;fill:var(--mut);font-family:Inter,sans-serif}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(9em,1fr));gap:12px;margin-top:12px}
-.stats div{background:var(--card);border-radius:16px;padding:12px 14px}
-.stats span{display:block;color:var(--mut);font-size:14px}
-.stats b{font:600 20px Sora,sans-serif;white-space:nowrap}
-.pv{background:var(--card);border-radius:20px;padding:16px;margin-bottom:12px}
-.pvh{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center}
-.mk{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:#fff;font:700 18px Sora,sans-serif}
-.st{margin:2px 0 0;font-size:14px;color:var(--mut)}.st.ok{color:var(--lich)}
-.pm{margin:12px 0 0;font-size:14px;color:var(--mut)}
-.warn{background:var(--warn);border-radius:12px;padding:10px 12px;margin:12px 0 0;font-size:14px}
-.about{margin:24px 0 8px}
-.about dl{display:grid;grid-template-columns:minmax(0,11em) minmax(0,1fr);gap:10px 16px;margin:12px 0 0;font-size:15px}
-.about dt{font-weight:600}.about dd{margin:0;color:var(--mut)}
-.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+.tn{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tv{display:flex;align-items:baseline;gap:4px}.tv .num{font-size:28px;line-height:1.1}.tile.l .tv .num{font-size:36px}.tv small{color:var(--mut);font-size:14px}
+.bar{height:8px;border-radius:4px;overflow:hidden}.bar b{display:block;height:100%;border-radius:4px}
+.gl{font-size:13px;font-weight:500;color:var(--mut)}.gl.ok{color:var(--good)}
+.spark{width:100%;height:34px;display:block}.tile.l .spark{height:52px}
+.tm{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:500;color:var(--mut)}
+.tm span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.up{color:var(--good)!important}.dn{color:var(--bad)!important}
+.empty{color:var(--mut);font-size:14px;padding:6px 0}
+/* koppen */
+.ph{padding:20px 20px 4px}.ph p{margin:4px 0 0;color:var(--mut);font-size:15px}
+.cat{display:flex;align-items:center;gap:10px;margin:22px 4px 10px}.cat h2{font-size:18px}
+.stack{display:grid;gap:12px}
+.st{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px}
+.st div small{display:block;color:var(--mut);font-size:13px;font-weight:500}
+.st div b{font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.big{display:flex;align-items:baseline;gap:4px}.big .num{font-size:28px}.big small{color:var(--mut);font-size:14px}.big em{margin-left:auto;font-style:normal;color:var(--mut);font-size:13px}
+.hero{background:var(--pri);color:var(--onpri);border:0}
+.hero .st div small{color:color-mix(in srgb,var(--onpri) 75%,transparent)}
+.chev{width:20px;height:20px;fill:none;stroke:var(--mut);stroke-width:2;stroke-linecap:round;margin-left:auto}
+/* slaap */
+.night{background:var(--dial);color:var(--dink);border:0}
+.night .mut{color:var(--dmut)}
+.night .num.xl{font-size:44px;line-height:1}
+.tip{background:color-mix(in srgb,var(--slaap) 12%,transparent);border-radius:16px;padding:16px;font-size:15px}
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.trio .num{font-size:22px}
+/* grafiek */
+.fig{position:relative;height:240px;touch-action:pan-y}.fig svg{position:absolute;inset:0;width:100%;height:100%}
+.fig text{font:12px Inter,sans-serif;fill:var(--mut);paint-order:stroke;stroke:var(--card);stroke-width:4px}
+.pills{display:flex;gap:8px;overflow-x:auto;padding:8px 16px}
+.pill{flex:none;min-height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--line);background:transparent;font-weight:600;font-size:15px}
+.pill[aria-pressed=true]{background:var(--pri);color:var(--onpri);border-color:var(--pri)}
+.back{display:flex;align-items:center;gap:4px;padding:8px 16px 0 4px}
+/* knoppen en bronnen */
+.btn{min-height:44px;padding:0 18px;border-radius:22px;border:1px solid var(--line);background:transparent;font-weight:600}
+.btn.pri{background:var(--pri);color:var(--onpri);border-color:var(--pri)}
+.btn:disabled{opacity:.6}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.src{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:center}
+.mk{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:#fff;font-weight:700}
+.ok{color:var(--good)}
+/* tabbalk */
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
 .tabs div{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
-.tabs a{display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 0 8px;font-size:13px;color:var(--mut);text-decoration:none;font-weight:500}
-.tabs a[aria-current=page]{color:var(--ink)}
+.tabs button{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;font-size:13px;font-weight:500;color:var(--mut)}
+.tabs button span{display:grid;place-items:center;width:64px;height:32px;border-radius:16px}
+.tabs button[aria-current=page]{color:var(--pri)}.tabs button[aria-current=page] span{background:color-mix(in srgb,var(--pri) 12%,transparent)}
 .tabs svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.sheet{position:fixed;inset:0;background:rgba(10,11,14,.5);display:flex;align-items:flex-end;justify-content:center;z-index:10}
-.sheet[hidden]{display:none}
-.panel{background:var(--bg);width:min(640px,100%);max-height:92dvh;overflow:auto;border-radius:22px 22px 0 0;padding:20px max(16px,env(safe-area-inset-left,0px)) calc(20px + env(safe-area-inset-bottom,0px))}
-.ph{display:flex;justify-content:space-between;align-items:center;gap:12px}
-.list{list-style:none;margin:14px 0;padding:0}
-.row{border-bottom:1px solid var(--line);padding:6px 0}
-.rh{display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:center;gap:8px}
-.sw{display:grid;grid-template-columns:48px minmax(0,1fr);column-gap:12px;align-items:center;min-height:52px;cursor:pointer}
-.sw b{font-weight:600}.sw small{grid-column:2;color:var(--mut);font-size:13px}
-.sw input{grid-row:span 2;appearance:none;-webkit-appearance:none;width:46px;height:28px;border-radius:14px;background:var(--line);position:relative;margin:0;cursor:pointer;transition:background .2s}
-.sw input::before{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .2s}
-.sw input:checked{background:var(--ink)}.sw input:checked::before{transform:translateX(18px)}
-.ib{width:44px;height:44px;border:0;background:transparent;border-radius:12px;display:grid;place-items:center}
-.ib svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;transition:transform .2s}
-.ib[aria-expanded=true] svg{transform:rotate(180deg)}
-.rd{display:grid;gap:12px;padding:6px 0 14px 60px}
-.fld{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-size:15px}
-.fld select,.fld input[type=number]{min-height:44px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 10px}
-.fld select{flex:1 1 12em;max-width:16em}
-.fld input[type=number]{width:8em;text-align:right}
-.ck{display:flex;align-items:center;gap:10px;font-size:15px;min-height:44px}
-.ck input{width:22px;height:22px;accent-color:var(--ink)}
-.note{color:var(--act);font-size:14px;min-height:1.4em;margin:0}
-@media(max-width:600px){.dialg{grid-template-columns:minmax(0,150px) minmax(0,1fr)}.rd{padding-left:0}.about dl{grid-template-columns:minmax(0,1fr)}.about dd{margin-bottom:6px}}
-@media(max-width:370px){.dialg{grid-template-columns:minmax(0,1fr)}.rsvg{max-width:200px;margin:0 auto}}
-@media(prefers-reduced-motion:reduce){.rp,.sw input,.sw input::before,.ib svg{transition:none}.sync.spin svg{animation:none}}
+/* aanpassen */
+.edit .er{display:flex;align-items:center;gap:10px}
+.edit .er .t{flex:1}
+.sw{appearance:none;-webkit-appearance:none;width:48px;height:28px;border-radius:14px;background:var(--line);position:relative;margin:0;cursor:pointer;flex:none}
+.sw::before{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .2s}
+.sw:checked{background:var(--pri)}.sw:checked::before{transform:translateX(20px)}
+.fld{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:15px}
+.fld input{width:8em;min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 10px;font-size:16px;text-align:right}
+.note{color:var(--bad);font-size:14px;min-height:1.2em;margin:0 4px}
+[hidden]{display:none!important}
+@media(max-width:380px){.dmid{grid-template-columns:120px minmax(0,1fr);gap:14px}.tv .num{font-size:24px}}
+@media(prefers-reduced-motion:reduce){.rp,.sw::before{transition:none}.ib.spin svg{animation:none}}
 </style>
 </head>
 <body>
-
-<section id="v-vandaag" class="view">
-  <header class="dial"><div class="wrap">
-    <div class="top">
-      <div><p class="date" id="date"></p><h1 id="greet">Goedemorgen</h1></div>
-      <button class="sync" id="syncBtn" data-act="sync" aria-label="Nu synchroniseren"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg><span id="syncTxt"></span></button>
-    </div>
-    <div class="dialg" id="rings"></div>
-    <p class="demo">Voorbeelddata. Koppelingen worden in dit prototype gesimuleerd.</p>
-  </div></header>
-  <main class="wrap">
-    <div class="sh"><h2>Jouw metrics</h2><button class="btn" data-act="edit">Aanpassen</button></div>
-    <div class="grid" id="grid"></div>
-  </main>
-</section>
-
-<section id="v-trends" class="view" hidden><div class="wrap vh">
-  <h1>Trends</h1>
-  <p class="lede">Tik op een dag in de grafiek om de waarde te zien.</p>
-  <div class="chips" id="chips" role="group" aria-label="Metric"></div>
-  <div class="seg" id="per" role="group" aria-label="Periode"></div>
-  <div class="card"><div class="ro" id="ro"></div><div class="fig" id="fig"><svg id="chart" role="img" aria-label="Trendgrafiek"></svg></div></div>
-  <div class="stats" id="stats"></div>
-</div></section>
-
-<section id="v-koppelingen" class="view" hidden><div class="wrap vh">
-  <h1>Koppelingen</h1>
-  <p class="lede">Kies welke apps je data leveren. Per metric stel je de voorkeursbron in onder Vandaag, Aanpassen. Valt een bron weg, dan neemt de volgende gekoppelde bron het over.</p>
-  <div id="prov"></div>
-  <div class="about">
-    <h2>Wat een echte koppeling vraagt</h2>
-    <dl>
-      <dt>Garmin Connect</dt><dd>Garmin Connect Developer Program met OAuth 2.0. Zakelijke toegang vraagt goedkeuring; voor je eigen data bestaat een persoonlijke API-sleutel.</dd>
-      <dt>Suunto app</dt><dd>Suunto Cloud API via het partnerprogramma (API Zone). Levert trainingen als FIT-bestanden; niet bedoeld voor persoonlijk gebruik.</dd>
-      <dt>Google Health</dt><dd>Google Health API voor clouddata van Fitbit- en Google-apparaten. In een Android-app komt daar Health Connect bij, met data op het toestel.</dd>
-      <dt>Google Fit</dt><dd>De Fit-API's worden ondersteund tot eind 2026. Nieuwe koppelingen lopen via Google Health API of Health Connect.</dd>
-    </dl>
-  </div>
-</div></section>
-
-<nav class="tabs" aria-label="Hoofdmenu"><div>
-  <a href="#vandaag" data-nav="vandaag"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>Vandaag</a>
-  <a href="#trends" data-nav="trends"><svg viewBox="0 0 24 24"><path d="M3 17l5-5 4 3 8-8"/><path d="M15 7h5v5"/></svg>Trends</a>
-  <a href="#koppelingen" data-nav="koppelingen"><svg viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></svg>Koppelingen</a>
-</div></nav>
-
-<div class="sheet" id="sheet" hidden>
-  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="shT">
-    <div class="ph"><h2 id="shT">Dashboard aanpassen</h2><button class="btn pri" data-act="close" id="shClose">Klaar</button></div>
-    <p class="lede" style="margin-bottom:0">Zet metrics aan of uit en kies per metric de bron, de grootte en een dagdoel. Maximaal drie doelen komen in de ringen.</p>
-    <p class="note" id="note" aria-live="polite"></p>
-    <ul class="list" id="list"></ul>
-    <button class="btn" data-act="reset" id="shReset">Standaardindeling herstellen</button>
-  </div>
+<div class="app">
+  <section id="v-today"></section>
+  <section id="v-health" hidden></section>
+  <section id="v-sleep" hidden></section>
+  <section id="v-detail" hidden></section>
+  <section id="v-settings" hidden></section>
+  <section id="v-edit" hidden></section>
 </div>
+<nav class="tabs" id="tabs" aria-label="Hoofdmenu"><div>
+  <button data-tab="today"><span><svg viewBox="0 0 24 24"><path d="M4 3h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM15 3h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM4 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1zM15 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1z"/></svg></span>Vandaag</button>
+  <button data-tab="health"><span><svg viewBox="0 0 24 24"><path d="M3 12h4l2.5-6 5 12 2.5-6h4"/></svg></span>Gezondheid</button>
+  <button data-tab="sleep"><span><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></span>Slaap</button>
+</div></nav>
 
 <script>
 {
 const $=q=>document.querySelector(q);
-const N=180,DAY=864e5,now=new Date();
-const P={garmin:{n:'Garmin Connect',k:'G',c:'#1f6fd1'},suunto:{n:'Suunto app',k:'S',c:'#c8372d'},ghealth:{n:'Google Health',k:'H',c:'#2f8f5b'},gfit:{n:'Google Fit',k:'F',c:'#c27a00'}};
-const PO=['garmin','suunto','ghealth','gfit'];
-const CAT={act:'Activiteit',hart:'Hart',slaap:'Slaap',lich:'Lichaam',herst:'Herstel'};
-const A=PO;
+const N=400,DAY=864e5,NOW=new Date();
+const NL='nl-NL';
+const CAT={act:'Activiteit',hart:'Hart',slaap:'Slaap',herst:'Herstel',lich:'Lichaam'};
 const M=[
-{id:'steps',n:'Stappen',u:'',cat:'act',d:0,b:9200,v:3000,t:4,g:10000,bar:1,src:A},
-{id:'active',n:'Actieve minuten',u:'min',cat:'act',d:0,b:46,v:20,t:.02,g:30,bar:1,src:A},
-{id:'kcal',n:'Actieve calorieën',u:'kcal',cat:'act',d:0,b:640,v:200,t:.3,g:600,bar:1,src:A},
-{id:'dist',n:'Afstand',u:'km',cat:'act',d:1,b:7.4,v:2.6,t:.003,g:8,bar:1,src:A},
-{id:'floors',n:'Verdiepingen',u:'',cat:'act',d:0,b:9,v:4,t:0,g:10,bar:1,src:['garmin','ghealth','gfit']},
-{id:'rhr',n:'Rusthartslag',u:'bpm',cat:'hart',d:0,b:53,v:2.2,t:-.008,lo:1,src:A},
-{id:'hrv',n:'HRV',u:'ms',cat:'hart',d:0,b:58,v:8,t:.02,src:['garmin','suunto','ghealth']},
-{id:'spo2',n:'Zuurstof (SpO₂)',u:'%',cat:'hart',d:0,b:96.4,v:.9,t:0,max:100,src:['garmin','suunto','ghealth']},
-{id:'sleep',n:'Slaapduur',u:'',cat:'slaap',d:2,b:7.2,v:.7,t:.001,g:8,bar:1,src:A},
-{id:'sscore',n:'Slaapscore',u:'',cat:'slaap',d:0,b:78,v:8,t:.02,g:80,max:100,src:['garmin','suunto','ghealth']},
-{id:'resp',n:'Ademhaling',u:'/min',cat:'slaap',d:1,b:14.6,v:.6,t:0,src:['garmin','suunto','ghealth']},
-{id:'stress',n:'Stress',u:'',cat:'herst',d:0,b:31,v:9,t:-.02,lo:1,max:100,src:['garmin','suunto']},
-{id:'energy',n:'Energieniveau',u:'%',cat:'herst',d:0,b:64,v:16,t:.03,min:5,max:100,src:['garmin']},
-{id:'recov',n:'Hersteltijd',u:'u',cat:'herst',d:0,b:22,v:11,t:0,lo:1,src:['garmin','suunto']},
-{id:'vo2',n:'VO₂max',u:'ml/kg/min',cat:'lich',d:0,b:51,v:.5,t:.008,src:['garmin','suunto']},
-{id:'weight',n:'Gewicht',u:'kg',cat:'lich',d:1,b:76.2,v:.3,t:-.006,g:75,lo:1,src:['garmin','ghealth','gfit']}
+{id:'steps',n:'Stappen',u:'stappen',cat:'act',d:0,b:9200,v:3000,t:2,g:10000,agg:'sum'},
+{id:'active',n:'Actieve minuten',u:'min',cat:'act',d:0,b:46,v:20,t:.01,g:30,agg:'sum'},
+{id:'kcal',n:'Actieve calorieën',u:'kcal',cat:'act',d:0,b:640,v:200,t:.1,g:600,agg:'sum'},
+{id:'dist',n:'Afstand',u:'km',cat:'act',d:1,b:7.4,v:2.6,t:.002,g:8,agg:'sum'},
+{id:'floors',n:'Verdiepingen',u:'',cat:'act',d:0,b:9,v:4,t:0,g:10,agg:'sum'},
+{id:'rhr',n:'Rusthartslag',u:'bpm',cat:'hart',d:0,b:53,v:2.2,t:-.004,lo:1,agg:'avg'},
+{id:'hrv',n:'HRV',u:'ms',cat:'hart',d:0,b:58,v:8,t:.01,agg:'avg'},
+{id:'spo2',n:'Zuurstof (SpO₂)',u:'%',cat:'hart',d:0,b:96.4,v:.9,t:0,max:100,agg:'avg'},
+{id:'sleep',n:'Slaapduur',u:'',cat:'slaap',d:2,b:7.2,v:.7,t:.0005,g:8,agg:'sum'},
+{id:'sscore',n:'Slaapscore',u:'',cat:'slaap',d:0,b:78,v:8,t:.01,max:100,agg:'last'},
+{id:'resp',n:'Ademhaling',u:'/min',cat:'slaap',d:1,b:14.6,v:.6,t:0,lo:1,agg:'avg'},
+{id:'stress',n:'Stress',u:'',cat:'herst',d:0,b:31,v:9,t:-.01,lo:1,max:100,agg:'avg'},
+{id:'energy',n:'Energieniveau',u:'%',cat:'herst',d:0,b:64,v:16,t:.015,min:5,max:100,agg:'last'},
+{id:'recov',n:'Hersteltijd',u:'u',cat:'herst',d:0,b:22,v:11,t:0,lo:1,agg:'last'},
+{id:'vo2',n:'VO₂max',u:'ml/kg/min',cat:'lich',d:0,b:51,v:.5,t:.004,agg:'last'},
+{id:'weight',n:'Gewicht',u:'kg',cat:'lich',d:1,b:76.2,v:.3,t:-.003,g:75,lo:1,agg:'last'}
 ];
 const MI=Object.fromEntries(M.map(m=>[m.id,m]));
+const SRC={steps:'Garmin Connect',active:'Garmin Connect',kcal:'Garmin Connect',dist:'Garmin Connect',floors:'Garmin Connect',rhr:'Garmin Connect',hrv:'Garmin Connect',spo2:'Google Health',sleep:'Garmin Connect',sscore:'Garmin Connect',resp:'Google Health',stress:'Garmin Connect',energy:'Garmin Connect',recov:'Garmin Connect',vo2:'Garmin Connect',weight:'Health Connect'};
 
-const hash=k=>{let h=7;for(const ch of k)h=(h*31+ch.charCodeAt(0))%2147483647;return h||1};
+const hash=k=>{let h=7;for(const c of k)h=(h*31+c.charCodeAt(0))%2147483647;return h||1};
 const cache={};
-const series=(id,p)=>{const k=id+'|'+p;if(cache[k])return cache[k];const m=MI[id];let s=hash(k);const r=()=>(s=s*16807%2147483647)/2147483647;const off=1+(r()-.5)*.03;let w=0;const a=[];for(let i=0;i<N;i++){const n=(r()+r()+r()-1.5)/.75;w=.5*w+.5*n;const wk=Math.sin(i*2*Math.PI/7)*.3;let x=(m.b+m.t*(i-N+1))*off+m.v*(w+wk);x=Math.max(m.min??0,Math.min(m.max??Infinity,x));const f=10**m.d;a.push(Math.round(x*f)/f)}return cache[k]=a};
+const series=id=>{if(cache[id])return cache[id];const m=MI[id];let s=hash(id);const r=()=>(s=s*16807%2147483647)/2147483647;let w=0;const a=[];
+for(let i=0;i<N;i++){const n=(r()+r()+r()-1.5)/.75;w=.5*w+.5*n;const wk=Math.sin(i*2*Math.PI/7)*.3;let x=(m.b+m.t*(i-N+1))+m.v*(w+wk);x=Math.max(m.min??0,Math.min(m.max??Infinity,x));const f=10**m.d;a.push(Math.round(x*f)/f)}return cache[id]=a};
+const dd=i=>new Date(NOW.getTime()-(N-1-i)*DAY);
 
-const KEY='vitaal.v1';
-const fresh=()=>({order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},src:{},goal:{},rings:['steps','active','sleep'],conn:{garmin:true,suunto:true,ghealth:true,gfit:false},sync:{garmin:now-6e5,suunto:now-25e5,ghealth:now-14e5}});
+const KEY='vitalconnect.preview.v1';
+const fresh=()=>({order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},goal:{},rings:['steps','active','sleep'],conn:{hc:true,google:true,garmin:true}});
 let S;try{S=Object.assign(fresh(),JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S=fresh()}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
-
-const src=id=>{const m=MI[id],pr=S.src[id];if(pr&&S.conn[pr]&&m.src.includes(pr))return pr;return m.src.find(p=>S.conn[p])||null};
 const goal=id=>id in S.goal?S.goal[id]:MI[id].g;
-const today=id=>{const p=src(id);return p?series(id,p)[N-1]:null};
-const col=id=>`var(--${MI[id].cat})`;
-const nl=(v,d)=>v.toLocaleString('nl-NL',{minimumFractionDigits:d,maximumFractionDigits:d});
-const fmt=(id,v)=>{if(v==null)return'–';if(id==='sleep'){let h=Math.floor(v),mm=Math.round((v-h)*60);if(mm===60){h++;mm=0}return`${h}u ${String(mm).padStart(2,'0')}m`}return nl(v,MI[id].d)};
-const dd=i=>new Date(now.getTime()-(N-1-i)*DAY);
-const hm=t=>new Date(t).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
-const when=t=>{if(!t)return'nog niet';const d=new Date(t);return d.toDateString()===now.toDateString()?'om '+hm(t):d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'})};
+const today=id=>series(id)[N-1];
+const col=(id,dial)=>`var(--${dial?'d':''}${MI[id].cat})`;
+// Ringen krijgen een kleur per positie, zodat twee doelen uit dezelfde categorie niet gelijk kleuren
+const RING=['var(--dact)','var(--dherst)','var(--dslaap)'];
+const nl=(v,d=0)=>v.toLocaleString(NL,{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtH=v=>{let h=Math.floor(v),m=Math.round((v-h)*60);if(m===60){h++;m=0}return`${h}u ${String(m).padStart(2,'0')}m`};
+const fmt=(id,v)=>v==null?'–':id==='sleep'?fmtH(v):nl(v,MI[id].d);
+const unit=id=>id==='sleep'?'':MI[id].u;
+const compact=v=>Math.abs(v)>=1e6?nl(v/1e6,1)+' mln':Math.abs(v)>=1e4?nl(v/1e3,0)+'k':nl(v,0);
 const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
+const dlt=id=>{const a=series(id),v=a[N-1],p=mean(a.slice(N-8,N-1));return p?(v-p)/p*100:0};
+const deltaHtml=id=>{const pc=dlt(id),m=MI[id];if(Math.abs(pc)<1)return'<span>gelijk aan je week</span>';const good=m.lo?pc<0:pc>0;return`<span class="${good?'up':'dn'}">${pc>0?'▲':'▼'} ${nl(Math.abs(pc))}% vs week</span>`};
+const spark=(id,days)=>{const a=series(id).slice(N-days),lo=Math.min(...a),hi=Math.max(...a),rg=hi-lo||1;const pts=a.map((v,i)=>`${(i/(a.length-1)*100).toFixed(1)},${(28-(v-lo)/rg*24).toFixed(1)}`);const last=pts[pts.length-1].split(',');
+return`<svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts.join(' ')}" fill="none" style="stroke:${col(id)}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>`};
+const I={
+sync:'<svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>',
+person:'<svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20a8 8 0 0 1 16 0"/></svg>',
+back:'<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>',
+sliders:'<svg viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M15 4v4M4 12h3M11 12h9M9 10v4M4 18h11M19 18h1M17 16v4"/></svg>',
+chev:'<svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>'};
 
-let open=null,busy=null,tm='steps',per=30,sel=null;
+let tab='today',detail=null,period=30,sel=null,settings=false,editing=false,busy=null,syncedAt=new Date(NOW.getTime()-6e5);
+const views=['today','health','sleep','detail','settings','edit'];
+function show(){const v=editing?'edit':detail?'detail':settings?'settings':tab;views.forEach(n=>$('#v-'+n).hidden=n!==v);$('#tabs').hidden=v!==tab;
+document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false'));window.scrollTo(0,0)}
 
-function renderRings(){
-  const ids=S.rings.filter(id=>MI[id]&&src(id)&&goal(id)).slice(0,3),R=[86,64,42],box=$('#rings');
-  if(!ids.length){box.innerHTML=`<p style="grid-column:1/-1;margin:0;color:#c9ccd3">${PO.some(p=>S.conn[p])?'Kies maximaal drie dagdoelen via Aanpassen.':'Koppel een bron om je dagdoelen te zien.'}</p>`;return}
-  const pr=ids.map(id=>Math.min(today(id)/goal(id),1));
-  const tot=Math.round(mean(pr)*100);
-  box.innerHTML=`<svg class="rsvg" viewBox="0 0 200 200" role="img" aria-label="Dagdoelen ${tot}% gehaald">${ids.map((id,i)=>{const r=R[i],c=2*Math.PI*r;return`<circle cx="100" cy="100" r="${r}" class="rt" style="stroke:${col(id)}"/><circle cx="100" cy="100" r="${r}" class="rp" style="stroke:${col(id)}" stroke-dasharray="0 ${c}" data-d="${c*pr[i]} ${c}" transform="rotate(-90 100 100)"/>`}).join('')}<text x="100" y="${ids.length>2?109:111}" font-size="${ids.length>2?24:30}">${tot}%</text></svg>
-  <ul class="leg">${ids.map(id=>{const m=MI[id];return`<li><i style="background:${col(id)}"></i><b>${m.n}</b><span>${fmt(id,today(id))} <small>van ${fmt(id,goal(id))}${m.u?' '+m.u:''}</small></span></li>`}).join('')}</ul>`;
-  requestAnimationFrame(()=>requestAnimationFrame(()=>box.querySelectorAll('.rp').forEach(c=>c.setAttribute('stroke-dasharray',c.dataset.d))));
-}
-
-function spark(a,id){const lo=Math.min(...a),hi=Math.max(...a),rg=hi-lo||1;const pts=a.map((v,i)=>`${(i/(a.length-1)*100).toFixed(1)},${(30-(v-lo)/rg*26-2).toFixed(1)}`).join(' ');return`<svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" style="stroke:${col(id)}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>`}
-
-function tile(id){
-  const m=MI[id],p=src(id),big=S.size[id]==='l';
-  const head=`<div class="th"><i style="background:${col(id)}"></i><span class="tn">${m.n}</span></div>`;
-  if(!p)return`<a class="tile ${big?'l':''}" href="#koppelingen">${head}<span class="empty">Geen gekoppelde bron. Tik om een app te koppelen.</span></a>`;
-  const a=series(id,p),v=a[N-1],avg=mean(a.slice(N-8,N-1)),pc=avg?(v-avg)/avg*100:0;
-  const g=goal(id),good=m.lo?pc<0:pc>0,flat=Math.abs(pc)<1;
-  const dl=flat?'gelijk aan gem.':`${pc>0?'+':'−'}${nl(Math.abs(pc),0)}% vs 7 d.`;
-  const gp=g?Math.min(m.lo?g/v:v/g,1)*100:null;
-  return`<button class="tile ${big?'l':''}" data-open="${id}" aria-label="${m.n} ${fmt(id,v)} ${m.u}, open trend">${head}
-  <div class="tv">${fmt(id,v)}${m.u?`<small>${m.u}</small>`:''}</div>
-  ${gp!=null?`<div class="bar" title="Doel ${fmt(id,g)}"><b style="width:${gp.toFixed(0)}%;background:${col(id)}"></b></div>`:''}
-  ${spark(a.slice(big?N-14:N-7),id)}
-  <div class="tm"><span>${P[p].n}</span><span class="${flat?'':good?'up':'dn'}">${dl}</span></div></button>`;
-}
-
+// ---------- Vandaag ----------
 function renderToday(){
-  const h=now.getHours();$('#greet').textContent=h<12?'Goedemorgen':h<18?'Goedemiddag':'Goedenavond';
-  $('#date').textContent=now.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'});
-  const ts=PO.filter(p=>S.conn[p]).map(p=>S.sync[p]||0);
-  $('#syncTxt').textContent=ts.length?'Bijgewerkt '+when(Math.max(...ts)):'Geen bron';
-  renderRings();
-  $('#grid').innerHTML=S.order.length?S.order.filter(id=>MI[id]).map(tile).join(''):`<p class="empty" style="grid-column:1/-1">Je dashboard is leeg. Kies metrics via Aanpassen.</p>`;
+  const h=NOW.getHours(),greet=h<12?'Goedemorgen':h<18?'Goedemiddag':'Goedenavond';
+  const date=NOW.toLocaleDateString(NL,{weekday:'long',day:'numeric',month:'long'});
+  const rings=S.rings.filter(id=>goal(id)&&!MI[id].lo).slice(0,3),R=[68,50,32];
+  const fr=rings.map(id=>today(id)/goal(id)),avg=Math.round(mean(fr.map(f=>Math.min(f,1)))*100);
+  const open=rings.map((id,i)=>[id,fr[i]]).filter(x=>x[1]<1).sort((a,b)=>b[1]-a[1])[0];
+  const mot=open?`Nog ${fmt(open[0],goal(open[0])-today(open[0]))} ${unit(open[0])} tot je doel voor ${MI[open[0]].n.toLowerCase()}.`.replace('  ',' '):'Alle dagdoelen gehaald. Mooi werk!';
+  const rows=[];let pair=[];for(const id of S.order){if(S.size[id]==='l'){if(pair.length){rows.push(pair);pair=[]}rows.push([id])}else{pair.push(id);if(pair.length===2){rows.push(pair);pair=[]}}}if(pair.length)rows.push(pair);
+  $('#v-today').innerHTML=`<header class="dial">
+    <div class="dtop"><div class="t"><small>${date.charAt(0).toUpperCase()+date.slice(1)}</small><h1>${greet}</h1></div>
+    <button class="ib" id="syncBtn" data-act="sync" aria-label="Bijwerken">${I.sync}</button><button class="ib" data-act="settings" aria-label="Koppelingen en account">${I.person}</button></div>
+    ${rings.length?`<div class="dmid"><svg class="rsvg" viewBox="0 0 150 150" role="img" aria-label="Dagdoelen ${avg}% gehaald">${rings.map((id,i)=>{const r=R[i],c=2*Math.PI*r;return`<circle cx="75" cy="75" r="${r}" class="rt" style="stroke:${RING[i]}"/><circle cx="75" cy="75" r="${r}" class="rp" style="stroke:${RING[i]}" stroke-dasharray="0 ${c}" data-d="${c*Math.min(fr[i],1)} ${c}" transform="rotate(-90 75 75)"/>`}).join('')}<text x="75" y="83">${avg}%</text></svg>
+    <ul class="leg">${rings.map((id,i)=>`<li><b><i class="dot" style="background:${RING[i]}"></i>${MI[id].n}</b><span class="num">${fmt(id,today(id))}</span> <small>/ ${fmt(id,goal(id))}</small></li>`).join('')}</ul></div>
+    <div class="mot ${open?'':'ok'}">${mot}</div>`:`<p class="mot">Kies tot drie dagdoelen via Aanpassen om hier je voortgang te zien.</p>`}
+    <p class="upd">Bijgewerkt om ${syncedAt.toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'})}</p>
+    <p class="demo">Preview met voorbeelddata</p></header>
+  <div class="pad"><div class="sh"><h2>Jouw metrics</h2><button class="lnk" data-act="edit">${I.sliders}Aanpassen</button></div>
+  <div class="grid">${rows.map(r=>r.map(tile).join('')).join('')}</div></div>`;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelectorAll('#v-today .rp').forEach(c=>c.setAttribute('stroke-dasharray',c.dataset.d))));
+}
+function tile(id){const m=MI[id],v=today(id),g=goal(id),wide=S.size[id]==='l';const f=g?(m.lo?g/v:v/g):null;
+  return`<button class="card tap tile ${wide?'l':''}" data-open="${id}"><span class="tn"><i class="dot" style="background:${col(id)}"></i>${m.n}</span>
+  <span class="tv"><span class="num">${fmt(id,v)}</span>${unit(id)?`<small>${unit(id)}</small>`:''}</span>
+  ${f!=null?`<span class="bar" style="background:color-mix(in srgb,${col(id)} 18%,transparent)"><b style="width:${Math.min(f,1)*100}%;background:${f>=1?'var(--good)':col(id)}"></b></span><span class="gl ${f>=1?'ok':''}">${f>=1?'Doel gehaald':`${nl(f*100)}% van ${fmt(id,g)}`}</span>`:''}
+  ${spark(id,wide?14:7)}<span class="tm"><span>${SRC[id]}</span>${deltaHtml(id)}</span></button>`}
+
+// ---------- Gezondheid ----------
+function stats(id){const a=series(id),m=MI[id];return{last:a[N-1],avg:mean(a),avg30:mean(a.slice(N-30)),max:Math.max(...a),min:Math.min(...a),total:a.reduce((x,y)=>x+y,0)}}
+function renderHealth(){
+  const first=dd(0).toLocaleDateString(NL,{day:'numeric',month:'short',year:'numeric'});
+  const s=stats('steps'),k=stats('dist'),sl=stats('sleep');
+  $('#v-health').innerHTML=`<div class="ph"><h1>Gezondheid</h1><p>Al je statistieken sinds ${first}</p></div>
+  <div class="pad stack"><div class="card hero"><small style="opacity:.8;font-weight:500">Tot nu toe</small><div class="st" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+  <div><small>Stappen</small><b>${compact(s.total)}</b></div><div><small>Kilometer</small><b>${compact(k.total)}</b></div><div><small>Gem. slaap</small><b>${fmtH(sl.avg)}</b></div></div></div>
+  ${Object.keys(CAT).map(c=>`<div class="cat"><i class="dot" style="background:var(--${c});width:10px;height:10px"></i><h2>${CAT[c]}</h2></div>
+  <div class="stack">${M.filter(m=>m.cat===c).map(m=>statCard(m.id)).join('')}</div>`).join('')}</div>`;
+}
+function statCard(id){const m=MI[id],s=stats(id),sum=m.agg==='sum'&&id!=='sleep',f=v=>fmt(id,v);
+  return`<button class="card tap" data-open="${id}"><span style="display:flex;align-items:center;gap:8px"><i class="dot" style="background:${col(id)}"></i><h3>${m.n}</h3>${I.chev}</span>
+  <span class="big"><span class="num">${f(s.last)}</span>${unit(id)?`<small>${unit(id)}</small>`:''}<em>vandaag</em></span>
+  <span class="st"><div><small>${sum?'Gem. per dag':'Gemiddeld'}</small><b>${f(s.avg)}</b></div><div><small>Laatste 30 d.</small><b>${f(s.avg30)}</b></div>
+  <div><small>${m.lo?'Beste (laagste)':'Record'}</small><b style="color:${col(id)}">${f(m.lo?s.min:s.max)}</b></div>
+  <div><small>${sum?'Totaal':m.lo?'Hoogste':'Laagste'}</small><b>${sum?compact(s.total):f(m.lo?s.max:s.min)}</b></div></span>
+  <span class="gl">${N} dagen gemeten</span></button>`}
+
+// ---------- Slaap ----------
+let sleepSel=13;
+function renderSleep(){
+  const a=series('sleep'),g=goal('sleep')||8,nights=a.slice(N-14),last=a[N-1],f=last/g,wk=nights.slice(7),avg7=mean(wk),debt=wk.reduce((s,v)=>s+Math.max(g-v,0),0),score=series('sscore')[N-1];
+  const diff=g-avg7,tip=diff>.5?`Je slaapt deze week gemiddeld ${fmtH(diff)} korter dan je doel. Een vaste bedtijd, ook in het weekend, helpt je ritme.`:diff>0?'Je zit dicht bij je slaapdoel. Nog een kwartier eerder naar bed en je haalt het.':'Je haalt je slaapdoel gemiddeld. Houd dit ritme vast.';
+  const si=dd(N-14+sleepSel);
+  $('#v-sleep').innerHTML=`<div class="ph"><h1>Slaap</h1><p>Hoe goed je rust, en hoe je lichaam herstelt</p></div>
+  <div class="pad stack"><button class="card tap night" data-open="sleep"><span class="mut" style="font-size:14px;font-weight:500">Afgelopen nacht</span>
+  <span style="display:flex;align-items:flex-end;gap:12px"><span class="num xl">${fmtH(last)}</span><span style="margin-left:auto;text-align:right"><small class="mut" style="display:block;font-size:13px">Score</small><span class="num" style="font-size:28px;color:var(--dslaap)">${nl(score)}</span></span></span>
+  <span class="bar" style="height:10px;background:rgba(140,151,242,.2)"><b style="width:${Math.min(f,1)*100}%;background:${f>=1?'var(--dgood)':'var(--dslaap)'}"></b></span>
+  <span style="font-weight:600;font-size:15px;${f>=1?'color:var(--dgood)':''}">${f>=1?`Slaapdoel van ${fmtH(g)} gehaald`:`${nl(f*100)}% van je doel van ${fmtH(g)}`}</span></button>
+  <div class="card"><h3>Laatste 14 nachten</h3><p class="mut" style="margin:0;font-size:15px">${si.toLocaleDateString(NL,{weekday:'long',day:'numeric',month:'short'})}: ${fmtH(nights[sleepSel])}</p>
+  <div class="fig" id="sleepFig"><svg></svg></div>
+  <div class="st" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><small>Gem. 7 nachten</small><b>${fmtH(avg7)}</b></div><div><small>Tekort deze week</small><b class="${debt>2?'dn':''}">${fmtH(debt)}</b></div><div><small>Beste nacht</small><b style="color:var(--slaap)">${fmtH(Math.max(...nights))}</b></div></div></div>
+  <div class="tip">${tip}</div>
+  <div class="sh" style="margin-bottom:0"><h2>Herstel tijdens je slaap</h2></div>
+  <div class="trio">${['hrv','rhr','resp'].map(id=>`<button class="card tap" data-open="${id}"><span class="gl">${MI[id].n}</span><span class="tv"><span class="num">${fmt(id,today(id))}</span><small>${MI[id].u}</small></span><span class="tm">${deltaHtml(id)}</span></button>`).join('')}</div></div>`;
+  drawChart($('#sleepFig svg'),nights.map((v,i)=>({d:dd(N-14+i),v})),{bars:true,goal:g,color:'var(--slaap)',sel:sleepSel,axis:v=>Math.round(v)+'u',onSel:i=>{sleepSel=i;renderSleep()}});
 }
 
-function renderSheet(){
-  if($('#sheet').hidden)return;
-  const fid=document.activeElement?.id;
-  const ids=[...S.order.filter(id=>MI[id]),...M.map(m=>m.id).filter(id=>!S.order.includes(id))];
-  $('#list').innerHTML=ids.map(id=>{const m=MI[id],on=S.order.includes(id),p=src(id),o=open===id,g=goal(id);
-    return`<li class="row"><div class="rh"><label class="sw"><input type="checkbox" id="t-${id}" data-tog="${id}" ${on?'checked':''}><b>${m.n}</b><small>${CAT[m.cat]} · ${p?P[p].n:'geen gekoppelde bron'}</small></label>
-    <button class="ib" id="x-${id}" data-exp="${id}" aria-expanded="${o}" aria-label="Instellingen ${m.n}"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button></div>
-    ${o?`<div class="rd">
-      <label class="fld" for="s-${id}">Bron<select id="s-${id}" data-src="${id}">${m.src.map(q=>`<option value="${q}" ${q===p?'selected':''} ${S.conn[q]?'':'disabled'}>${P[q].n}${S.conn[q]?'':' (niet gekoppeld)'}</option>`).join('')}</select></label>
-      <div class="fld"><span>Grootte</span><div class="seg"><button id="zs-${id}" data-size="${id}:s" aria-pressed="${S.size[id]!=='l'}">Klein</button><button id="zl-${id}" data-size="${id}:l" aria-pressed="${S.size[id]==='l'}">Breed</button></div></div>
-      <label class="fld" for="g-${id}">${m.lo?'Streefwaarde':'Dagdoel'}<span><input type="number" step="any" min="0" inputmode="decimal" id="g-${id}" data-goal="${id}" value="${g??''}" placeholder="geen"> ${id==='sleep'?'uur':m.u}</span></label>
-      ${m.g&&!m.lo?`<label class="ck"><input type="checkbox" id="r-${id}" data-ring="${id}" ${S.rings.includes(id)?'checked':''}>Tonen in dagringen</label>`:''}
-      ${on?`<div class="fld"><span>Volgorde</span><div class="seg"><button id="u-${id}" data-mv="${id}:-1">Omhoog</button><button id="d-${id}" data-mv="${id}:1">Omlaag</button></div></div>`:''}
-    </div>`:''}</li>`}).join('');
-  if(fid)document.getElementById(fid)?.focus();
+// ---------- Grafiek ----------
+function drawChart(s,pts,o){
+  const draw=()=>{const W=s.clientWidth,H=s.clientHeight;if(!W)return;const n=pts.length,vals=pts.map(p=>p.v);
+    let lo=Math.min(...vals),hi=Math.max(...vals);if(o.goal){lo=Math.min(lo,o.goal);hi=Math.max(hi,o.goal)}
+    if(o.bars){lo=0;hi*=1.08}else{const pd=(hi-lo)*.15||1;lo-=pd;hi+=pd}
+    const L=W<400?40:48,R=8,T=10,B=24,iw=W-L-R,ih=H-T-B,bw=iw/n,y=v=>T+ih-(v-lo)/(hi-lo)*ih,x=i=>L+bw*(i+.5);
+    let g='';for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4,yy=y(v);g+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--line)"/>`;if(k%2===0)g+=`<text x="${L-6}" y="${yy+4}" text-anchor="end">${o.axis(v)}</text>`}
+    const step=n<=7?1:n<=31?7:n<=92?30:91;
+    for(let i=n-1;i>=0;i-=step){const lb=n<=14&&n>7?pts[i].d.toLocaleDateString(NL,{day:'numeric'}):n<=7?pts[i].d.toLocaleDateString(NL,{weekday:'short'}):pts[i].d.toLocaleDateString(NL,{day:'numeric',month:'short'});g+=`<text x="${Math.min(Math.max(x(i),L+12),W-R-14)}" y="${H-6}" text-anchor="middle">${lb}</text>`}
+    if(o.bars){const w=Math.max(bw*.62,1.5);pts.forEach((p,i)=>{g+=`<rect x="${x(i)-w/2}" y="${y(p.v)}" width="${w}" height="${Math.max(y(lo)-y(p.v),1)}" rx="${Math.min(w/2,6)}" style="fill:${o.color}" opacity="${i===o.sel?1:.42}"/>`})}
+    else{const ln=pts.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join('');g+=`<path d="${ln}L${x(n-1)},${y(lo)}L${x(0)},${y(lo)}Z" style="fill:${o.color}" opacity=".14"/><path d="${ln}" fill="none" style="stroke:${o.color}" stroke-width="2.5" stroke-linejoin="round"/>`;
+      g+=`<line x1="${x(o.sel)}" x2="${x(o.sel)}" y1="${T}" y2="${T+ih}" stroke="var(--mut)" stroke-dasharray="3 3"/><circle cx="${x(o.sel)}" cy="${y(pts[o.sel].v)}" r="5.5" style="fill:${o.color}" stroke="var(--card)" stroke-width="2.5"/>`}
+    if(o.goal&&o.goal>=lo&&o.goal<=hi)g+=`<line x1="${L}" x2="${W-R}" y1="${y(o.goal)}" y2="${y(o.goal)}" stroke="var(--ink)" stroke-dasharray="6 4" stroke-width="1.5"/><text x="${W-R}" y="${y(o.goal)-6}" text-anchor="end" style="fill:var(--ink)">Doel</text>`;
+    s.innerHTML=g;
+    s.onpointerdown=s.onpointermove=e=>{if(e.type==='pointermove'&&!e.buttons&&e.pointerType!=='mouse')return;if(e.type==='pointermove'&&e.pointerType==='mouse'&&!e.buttons)return;const r=s.getBoundingClientRect(),i=Math.max(0,Math.min(n-1,Math.floor((e.clientX-r.left-L)/bw)));if(i!==o.sel)o.onSel(i)}};
+  draw();const ro=new ResizeObserver(draw);ro.observe(s);
 }
 
-function renderTrends(){
-  $('#chips').innerHTML=M.map(m=>`<button class="chip" data-metric="${m.id}" aria-pressed="${m.id===tm}">${m.n}</button>`).join('');
-  $('#per').innerHTML=[[7,'7 dagen'],[30,'30 dagen'],[90,'90 dagen']].map(([v,l])=>`<button data-per="${v}" aria-pressed="${v===per}">${l}</button>`).join('');
-  $('#chips [aria-pressed=true]')?.scrollIntoView({block:'nearest',inline:'nearest'});
-  const p=src(tm),m=MI[tm];
-  if(!p){$('#ro').innerHTML=`<span>Geen gekoppelde bron voor ${m.n}.</span>`;$('#stats').innerHTML='';$('#chart').innerHTML='';return}
-  const all=series(tm,p),a=all.slice(N-per),pv=all.slice(N-2*per,N-per),u=m.u?' '+m.u:'';
-  const ch=(mean(a)-mean(pv))/mean(pv)*100,good=m.lo?ch<0:ch>0;
-  $('#stats').innerHTML=[['Gemiddelde',fmt(tm,mean(a))+u],['Laagste',fmt(tm,Math.min(...a))+u],['Hoogste',fmt(tm,Math.max(...a))+u],['Vs vorige periode',`<span class="${Math.abs(ch)<1?'':good?'up':'dn'}">${ch>=0?'+':'−'}${nl(Math.abs(ch),1)}%</span>`]].map(([l,v])=>`<div><span>${l}</span><b>${v}</b></div>`).join('');
-  draw();
+// ---------- Detail ----------
+function renderDetail(){
+  const id=detail,m=MI[id],a=series(id),shown=a.slice(N-period),prev=a.slice(N-2*period,N-period);if(sel==null||sel>=period)sel=period-1;
+  const ch=(mean(shown)-mean(prev))/mean(prev)*100,good=m.lo?ch<0:ch>0,sum=m.agg==='sum';
+  $('#v-detail').innerHTML=`<div class="back"><button class="ib" data-act="back" aria-label="Terug">${I.back}</button><div><h2>${m.n}</h2><span style="color:${col(id)};font-weight:500;font-size:14px">${CAT[m.cat]}</span></div></div>
+  <div class="pills">${[[7,'7 dagen'],[30,'30 dagen'],[90,'90 dagen'],[365,'Jaar']].map(([d,l])=>`<button class="pill" data-per="${d}" aria-pressed="${d===period}">${l}</button>`).join('')}</div>
+  <div class="pad stack"><div class="card"><span class="big"><span class="num" style="font-size:36px">${fmt(id,shown[sel])}</span>${unit(id)?`<small>${unit(id)}</small>`:''}</span>
+  <span class="gl">${dd(N-period+sel).toLocaleDateString(NL,{weekday:'long',day:'numeric',month:'long',year:'numeric'})} · ${SRC[id]}</span>
+  <div class="fig" style="height:260px"><svg id="dfig"></svg></div></div>
+  <div class="card"><div class="st" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><small>Gemiddelde</small><b>${fmt(id,mean(shown))}</b></div><div><small>Laagste</small><b>${fmt(id,Math.min(...shown))}</b></div><div><small>Hoogste</small><b>${fmt(id,Math.max(...shown))}</b></div></div>
+  <span class="tm" style="font-size:14px"><span>Vergeleken met de periode ervoor</span><b class="${Math.abs(ch)<1?'':good?'up':'dn'}" style="font-size:16px">${ch>=0?'+':'−'}${nl(Math.abs(ch),1)}%</b></span>
+  ${sum?`<span class="gl">Totaal in deze periode: ${compact(shown.reduce((x,y)=>x+y,0))} ${unit(id)}</span>`:''}</div></div>`;
+  drawChart($('#dfig'),shown.map((v,i)=>({d:dd(N-period+i),v})),{bars:sum,goal:goal(id),color:col(id),sel,axis:v=>id==='sleep'?Math.round(v)+'u':compact(v),onSel:i=>{sel=i;renderDetail()}});
 }
 
-function readout(a,i){const m=MI[tm],d=dd(N-a.length+i);$('#ro').innerHTML=`<b>${fmt(tm,a[i])}${m.u?' '+m.u:''}</b><span>${d.toLocaleDateString('nl-NL',{weekday:'short',day:'numeric',month:'short'})} · ${P[src(tm)].n}</span>`}
-
-function draw(){
-  const s=$('#chart'),W=s.clientWidth,H=s.clientHeight;if(!W||!H)return;
-  const m=MI[tm],p=src(tm);if(!p)return;
-  const a=series(tm,p).slice(N-per),g=goal(tm),c=col(tm);
-  let lo=Math.min(...a),hi=Math.max(...a);if(g){lo=Math.min(lo,g);hi=Math.max(hi,g)}
-  if(m.bar)lo=0;else{const pd=(hi-lo)*.15||1;lo-=pd;hi+=pd}
-  hi*=m.bar?1.06:1;
-  const L=W<520?40:52,Rm=8,T=12,B=26,iw=W-L-Rm,ih=H-T-B,bw=iw/a.length;
-  const y=v=>T+ih-(v-lo)/(hi-lo)*ih,x=i=>L+bw*(i+.5);
-  const si=sel??a.length-1;
-  const af=v=>tm==='sleep'?nl(v,1):(hi-lo)>=10?nl(Math.round(v),0):nl(v,1);
-  let o='';
-  for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4,yy=y(v);o+=`<line x1="${L}" x2="${W-Rm}" y1="${yy}" y2="${yy}" stroke="var(--line)"/>${W<520&&k%2?'':`<text x="${L-8}" y="${yy+4}" text-anchor="end">${af(v)}</text>`}`}
-  const st=per===7?1:per===30?(W<520?10:7):(W<520?30:15);
-  a.forEach((v,i)=>{if((a.length-1-i)%st===0){const d=dd(N-a.length+i);const lb=per===7?d.toLocaleDateString('nl-NL',{weekday:'short'}):d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'});o+=`<text x="${x(i)}" y="${H-6}" text-anchor="middle">${lb}</text>`}});
-  if(m.bar){a.forEach((v,i)=>{const w=Math.max(bw*.7,1.5);o+=`<rect x="${x(i)-w/2}" y="${y(v)}" width="${w}" height="${Math.max(y(lo)-y(v),0)}" rx="${Math.min(w/2,4)}" style="fill:${c}" opacity="${i===si?1:.42}"/>`})}
-  else{const ln=a.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');o+=`<path d="${ln}L${x(a.length-1)},${y(lo)}L${x(0)},${y(lo)}Z" style="fill:${c}" opacity=".12"/><path d="${ln}" fill="none" style="stroke:${c}" stroke-width="2.5" stroke-linejoin="round"/><line x1="${x(si)}" x2="${x(si)}" y1="${T}" y2="${y(lo)}" stroke="var(--mut)" stroke-dasharray="3 3"/><circle cx="${x(si)}" cy="${y(a[si])}" r="5" style="fill:${c}" stroke="var(--card)" stroke-width="2"/>`}
-  if(g&&g>=lo&&g<=hi){o+=`<line x1="${L}" x2="${W-Rm}" y1="${y(g)}" y2="${y(g)}" stroke="var(--ink)" stroke-dasharray="5 4" stroke-width="1.5"/><text x="${W-Rm}" y="${y(g)-6}" text-anchor="end" style="fill:var(--ink);paint-order:stroke;stroke:var(--card);stroke-width:4px">Doel ${fmt(tm,g)}</text>`}
-  s.innerHTML=o;readout(a,si);
-  s.onpointerdown=s.onpointermove=e=>{if(e.type==='pointermove'&&e.pointerType!=='mouse'&&!e.buttons)return;const r=s.getBoundingClientRect(),i=Math.max(0,Math.min(a.length-1,Math.floor((e.clientX-r.left-L)/bw)));if(i!==sel){sel=i;draw()}};
-}
-const ro=new ResizeObserver(()=>draw());ro.observe($('#chart'));
-
-function renderProv(){
-  $('#prov').innerHTML=PO.map(p=>{const on=S.conn[p],b=busy===p,used=S.order.filter(id=>src(id)===p).length,ms=M.filter(m=>m.src.includes(p));
-  return`<article class="pv"><div class="pvh"><span class="mk" style="background:${P[p].c}" aria-hidden="true">${P[p].k}</span><div><h3>${P[p].n}</h3><p class="st ${on?'ok':''}">${on?`Gekoppeld · gesynchroniseerd ${when(S.sync[p])}${used?` · levert ${used} op je dashboard`:''}`:'Niet gekoppeld'}</p></div>
-  <button class="btn ${on?'':'pri'}" id="c-${p}" data-conn="${p}" ${b?'disabled':''}>${b?'Verbinden…':on?'Ontkoppelen':'Koppelen'}</button></div>
-  ${p==='gfit'?'<p class="warn">Google Fit stopt eind 2026. Koppel liever Google Health; die levert dezelfde metrics.</p>':''}
-  <p class="pm">Levert ${ms.map(m=>m.n.toLowerCase()).join(', ')}.</p></article>`}).join('');
+// ---------- Koppelingen ----------
+function renderSettings(){
+  const card=(k,l,c,name,desc,okText)=>{const on=S.conn[k],b=busy===k;return`<div class="card"><div class="src"><span class="mk" style="background:${c}">${l}</span><div><h3>${name}</h3><span class="${on?'ok':'mut'}" style="font-size:14px">${on?okText:'Niet gekoppeld'}</span></div></div>
+  <span class="gl">${desc}</span><div class="row">${on?`${k==='google'?'<button class="btn pri" data-act="sync">Nu ophalen</button>':''}<button class="btn" data-conn="${k}">Ontkoppelen</button>`:`<button class="btn pri" data-conn="${k}" ${b?'disabled':''}>${b?'Verbinden…':'Koppelen'}</button>`}</div></div>`};
+  $('#v-settings').innerHTML=`<div class="back"><button class="ib" data-act="back" aria-label="Terug">${I.back}</button><h2>Koppelingen en account</h2></div>
+  <div class="pad stack" style="margin-top:8px"><p class="mut" style="margin:0 4px">Kies welke bronnen je data leveren. Per metric stel je de voorkeursbron in onder Vandaag → Aanpassen.</p>
+  ${card('hc','H','#2f7d6e','Health Connect','Data van apps op deze telefoon, zoals Google Fit, Samsung Health en de Suunto-app.','Gekoppeld · elk uur op de achtergrond')}
+  ${card('google','F','#3f7f4a','Google Health','Data van Fitbit, Pixel Watch en de Google Health-app.','Gekoppeld · elk uur opgehaald')}
+  ${card('garmin','G','#2b5fa8','Garmin Connect','Data van je Garmin-horloge.','Gekoppeld · data na elke sync van je horloge')}
+  <div class="sh" style="margin-bottom:0"><h2>Account</h2></div>
+  <div class="card"><span class="gl">Je data is van jou. Je kunt alles exporteren of je account met alle data verwijderen.</span>
+  <div class="row"><button class="btn">Mijn data exporteren</button><button class="btn">Uitloggen</button></div><button class="lnk" style="color:var(--bad);padding:0">Account verwijderen</button></div>
+  <p class="gl" style="margin:4px">Vital Connect 0.2.0 · preview</p></div>`;
 }
 
-function renderAll(){renderToday();renderProv();renderSheet();if(!$('#v-trends').hidden)renderTrends()}
-const commit=()=>{save();renderSheet();renderToday()};
-const note=t=>{$('#note').textContent=t;clearTimeout(note.t);note.t=setTimeout(()=>$('#note').textContent='',4000)};
-const sheet=on=>{$('#sheet').hidden=!on;document.body.classList.toggle('lock',on);if(on){renderSheet();$('#shClose').focus()}else{open=null;document.querySelector('[data-act=edit]')?.focus()}};
+// ---------- Aanpassen ----------
+let openEdit=null;
+function renderEdit(){
+  const ids=[...S.order,...M.map(m=>m.id).filter(id=>!S.order.includes(id))];
+  $('#v-edit').innerHTML=`<div class="pad"><div class="sh" style="margin-top:16px"><h2 style="font-size:22px">Dashboard aanpassen</h2><button class="btn pri" data-act="done">Klaar</button></div>
+  <p class="mut" style="margin:0 4px 12px">Zet metrics aan of uit en tik op een metric voor grootte en dagdoel. Maximaal drie doelen komen in de ringen.</p>
+  <p class="note" id="note" aria-live="polite"></p><div class="stack edit">${ids.map(id=>{const m=MI[id],on=S.order.includes(id),o=openEdit===id;
+  return`<div class="card"><div class="er"><i class="dot" style="background:${col(id)}"></i><div class="t"><h3>${m.n}</h3><span class="gl">${CAT[m.cat]}</span></div>
+  <button class="ib" data-exp="${id}" aria-expanded="${o}" aria-label="Instellingen ${m.n}"><svg viewBox="0 0 24 24" style="stroke:var(--mut)"><path d="${o?'M6 15l6-6 6 6':'M6 9l6 6 6-6'}"/></svg></button>
+  <input type="checkbox" class="sw" id="t-${id}" data-tog="${id}" ${on?'checked':''} aria-label="${m.n} tonen"></div>
+  ${o?`${on?`<div class="row"><button class="pill" data-mv="${id}:-1">Omhoog</button><button class="pill" data-mv="${id}:1">Omlaag</button><button class="pill" data-size="${id}:s" aria-pressed="${S.size[id]!=='l'}">Klein</button><button class="pill" data-size="${id}:l" aria-pressed="${S.size[id]==='l'}">Breed</button></div>`:''}
+  <label class="fld" for="g-${id}">${m.lo?'Streefwaarde':'Dagdoel'}<span><input type="number" step="any" min="0" id="g-${id}" data-goal="${id}" value="${goal(id)??''}" placeholder="geen"> ${id==='sleep'?'uur':m.u}</span></label>
+  ${!m.lo&&goal(id)?`<label class="fld" style="justify-content:flex-start"><input type="checkbox" id="r-${id}" data-ring="${id}" ${S.rings.includes(id)?'checked':''} style="width:22px;height:22px;min-height:0;accent-color:var(--pri)">Tonen in de dagringen</label>`:''}`:''}</div>`}).join('')}</div></div>`;
+}
 
-function toggleConn(p){
-  if(S.conn[p]){S.conn[p]=false;save();renderAll();return}
-  busy=p;renderProv();
-  setTimeout(()=>{S.conn[p]=true;S.sync[p]=Date.now();busy=null;save();renderAll();document.getElementById('c-'+p)?.focus()},1200);
-}
-function sync(){
-  const b=$('#syncBtn');if(b.classList.contains('spin'))return;b.classList.add('spin');
-  setTimeout(()=>{PO.forEach(p=>{if(S.conn[p])S.sync[p]=Date.now()});save();b.classList.remove('spin');renderToday();renderProv()},900);
-}
+function renderAll(){renderToday();renderHealth();renderSleep();if(detail)renderDetail();if(settings)renderSettings();if(editing)renderEdit()}
+const note=t=>{const n=$('#note');if(n)n.textContent=t};
 
 document.addEventListener('click',e=>{
-  if(e.target.id==='sheet'){sheet(false);return}
   const t=e.target.closest('button');if(!t)return;const d=t.dataset;
-  if(d.act==='edit')sheet(true);
-  else if(d.act==='close')sheet(false);
-  else if(d.act==='reset'){S=fresh();open=null;save();renderAll();note('Standaardindeling hersteld.')}
-  else if(d.act==='sync')sync();
-  else if(d.exp){open=open===d.exp?null:d.exp;renderSheet()}
-  else if(d.size){const[id,v]=d.size.split(':');S.size[id]=v;commit()}
-  else if(d.mv){const[id,dir]=d.mv.split(':'),i=S.order.indexOf(id),j=i+Number(dir);if(i>=0&&j>=0&&j<S.order.length){[S.order[i],S.order[j]]=[S.order[j],S.order[i]];commit()}}
-  else if(d.open){tm=d.open;sel=null;if(location.hash==='#trends')go();else location.hash='trends'}
-  else if(d.metric){tm=d.metric;sel=null;renderTrends()}
-  else if(d.per){per=Number(d.per);sel=null;renderTrends()}
-  else if(d.conn)toggleConn(d.conn);
+  if(d.tab){tab=d.tab;detail=null;settings=false;show()}
+  else if(d.open){detail=d.open;sel=null;renderDetail();show()}
+  else if(d.per){period=+d.per;sel=null;renderDetail()}
+  else if(d.act==='back'){detail=null;settings=false;show()}
+  else if(d.act==='settings'){settings=true;renderSettings();show()}
+  else if(d.act==='edit'){editing=true;renderEdit();show()}
+  else if(d.act==='done'){editing=false;save();renderAll();show()}
+  else if(d.act==='sync'){const b=$('#syncBtn');b&&b.classList.add('spin');setTimeout(()=>{syncedAt=new Date();renderToday();renderSettings()},900)}
+  else if(d.conn){const k=d.conn;if(S.conn[k]){S.conn[k]=false;save();renderSettings()}else{busy=k;renderSettings();setTimeout(()=>{S.conn[k]=true;busy=null;save();renderSettings()},1100)}}
+  else if(d.exp){openEdit=openEdit===d.exp?null:d.exp;renderEdit()}
+  else if(d.size){const[id,v]=d.size.split(':');S.size[id]=v;renderEdit()}
+  else if(d.mv){const[id,dir]=d.mv.split(':'),i=S.order.indexOf(id),j=i+Number(dir);if(i>=0&&j>=0&&j<S.order.length){[S.order[i],S.order[j]]=[S.order[j],S.order[i]];renderEdit()}}
 });
 document.addEventListener('change',e=>{
   const t=e.target,d=t.dataset;
-  if(d.tog){const id=d.tog;if(t.checked){if(!S.order.includes(id))S.order.push(id)}else S.order=S.order.filter(x=>x!==id);commit()}
-  else if(d.src){S.src[d.src]=t.value;commit()}
-  else if(d.goal){const v=parseFloat(String(t.value).replace(',','.'));S.goal[d.goal]=isFinite(v)&&v>0?v:null;if(!S.goal[d.goal])S.rings=S.rings.filter(x=>x!==d.goal);commit()}
-  else if(d.ring){const id=d.ring;if(t.checked){if(S.rings.length>=3){t.checked=false;note('Er passen drie doelen in de ringen. Zet er eerst één uit.');return}if(!goal(id)){t.checked=false;note('Stel eerst een dagdoel in.');return}S.rings.push(id)}else S.rings=S.rings.filter(x=>x!==id);commit()}
+  if(d.tog){const id=d.tog;if(t.checked){if(!S.order.includes(id))S.order.push(id)}else{S.order=S.order.filter(x=>x!==id);S.rings=S.rings.filter(x=>x!==id)}renderEdit()}
+  else if(d.goal){const v=parseFloat(String(t.value).replace(',','.'));S.goal[d.goal]=isFinite(v)&&v>0?v:null;if(!S.goal[d.goal])S.rings=S.rings.filter(x=>x!==d.goal);renderEdit()}
+  else if(d.ring){const id=d.ring;if(t.checked){if(S.rings.length>=3){t.checked=false;note('Er passen drie doelen in de ringen. Zet er eerst één uit.');return}S.rings.push(id)}else S.rings=S.rings.filter(x=>x!==id)}
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#sheet').hidden)sheet(false)});
-
-const views=['vandaag','trends','koppelingen'];
-function go(){const h=location.hash.slice(1),v=views.includes(h)?h:'vandaag';views.forEach(n=>{$('#v-'+n).hidden=n!==v;$(`[data-nav="${n}"]`).setAttribute('aria-current',n===v?'page':'false')});if(v==='trends')renderTrends();if(v==='vandaag')renderRings();window.scrollTo(0,0)}
-window.addEventListener('hashchange',go);
-renderToday();renderProv();go();
+renderAll();show();
 }
 </script>
 </body>

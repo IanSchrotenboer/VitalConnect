@@ -79,6 +79,8 @@ private fun DialHeader(vm: MainViewModel) {
     val greeting = when { now.hour < 12 -> "Goedemorgen"; now.hour < 18 -> "Goedemiddag"; else -> "Goedenavond" }
     val rings = vm.visible.filter { it.inRings && it.goal != null && !(vm.metrics[it.metric]?.lowerIsBetter ?: false) }.take(3)
     val fractions = rings.map { pref -> ((vm.today[pref.metric]?.value ?: 0.0) / pref.goal!!).toFloat() }
+    // Kleur per positie, zodat twee doelen uit dezelfde categorie niet dezelfde ring krijgen
+    val ringColors = listOf(d.activity, d.recovery, d.sleep)
 
     Column(
         Modifier.fillMaxWidth()
@@ -107,13 +109,13 @@ private fun DialHeader(vm: MainViewModel) {
         } else {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp)) {
                 val avg = (fractions.map { it.coerceAtMost(1f) }.average() * 100).roundToInt()
-                Rings(rings.mapIndexed { i, pref -> fractions[i] to d.colorOf(pref.metric) }, "$avg%", Modifier.size(150.dp))
+                Rings(rings.indices.map { i -> fractions[i] to ringColors[i] }, "$avg%", Modifier.size(150.dp))
                 Spacer(Modifier.width(20.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     rings.forEachIndexed { i, pref ->
                         val m = vm.metrics[pref.metric]
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Dot(d.colorOf(pref.metric), 9.dp)
+                            Dot(ringColors[i], 9.dp)
                             Spacer(Modifier.width(8.dp))
                             Text(m?.name ?: pref.metric, style = MaterialTheme.typography.labelMedium, color = d.dialMuted, maxLines = 1)
                         }
