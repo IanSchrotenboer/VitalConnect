@@ -11,6 +11,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,11 +67,12 @@ fun Sparkline(values: List<Double?>, color: Color, modifier: Modifier = Modifier
 
 /** Dagringen: één ring per doel, van buiten naar binnen. Groeit bij het openen. */
 @Composable
-fun Rings(rings: List<Pair<Float, Color>>, center: String, modifier: Modifier = Modifier) {
+fun Rings(rings: List<Pair<Float, Color>>, center: String, modifier: Modifier = Modifier, description: String? = null) {
     var started by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { started = true }
     val t by animateFloatAsState(if (started) 1f else 0f, tween(900), label = "rings")
-    Box(modifier, contentAlignment = Alignment.Center) {
+    Box(modifier.then(if (description != null) Modifier.clearAndSetSemantics { contentDescription = description } else Modifier),
+        contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val d = size.minDimension
             val w = d * 0.085f
@@ -97,10 +104,12 @@ fun TrendChart(
     onSelect: (Int) -> Unit,
     axis: (Double) -> String,
     modifier: Modifier = Modifier,
+    format: (Double) -> String = axis,
+    name: String = "",
 ) {
     val p = LocalPalette.current
     val tm = rememberTextMeasurer()
-    val label = TextStyle(fontSize = 12.sp, color = p.muted)
+    val label = TextStyle(fontFamily = Figtree, fontSize = 12.sp, color = p.muted)
     val n = points.size
     val values = points.mapNotNull { it.value }
     if (n == 0 || values.isEmpty()) {
@@ -113,8 +122,26 @@ fun TrendChart(
     val leftDp = 46.dp
     val rightDp = 8.dp
 
+    // Voor TalkBack: een samenvatting, de gekozen dag als stand, en Vorige/Volgende dag als acties
+    val withVal = points.withIndex().filter { it.value.value != null }
+    val hi = withVal.maxByOrNull { it.value.value!! }
+    val lo = withVal.minByOrNull { it.value.value!! }
+    val dayFmt = java.time.format.DateTimeFormatter.ofPattern("EEEE d MMMM", NL)
+    val summary = "Grafiek $name over $n dagen: gemiddeld ${format(values.average())}" +
+        (hi?.let { ", hoogste ${format(it.value.value!!)} op ${it.value.day.format(dayFmt)}" } ?: "") +
+        (lo?.let { ", laagste ${format(it.value.value!!)} op ${it.value.day.format(dayFmt)}" } ?: "")
+    val sel = points.getOrNull(selected)
+    val state = sel?.let { "${it.day.format(dayFmt)}: ${it.value?.let(format) ?: "geen data"}" } ?: ""
     Canvas(
         modifier
+            .semantics {
+                contentDescription = summary
+                stateDescription = state
+                customActions = listOf(
+                    CustomAccessibilityAction("Vorige dag") { if (selected > 0) { onSelect(selected - 1); true } else false },
+                    CustomAccessibilityAction("Volgende dag") { if (selected < n - 1) { onSelect(selected + 1); true } else false },
+                )
+            }
             .pointerInput(n) {
                 detectTapGestures { o ->
                     val l = leftDp.toPx(); val bw = (size.width - l - rightDp.toPx()) / n

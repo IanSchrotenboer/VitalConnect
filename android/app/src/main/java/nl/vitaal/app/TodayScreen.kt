@@ -21,6 +21,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,26 +100,43 @@ private fun DialHeader(vm: MainViewModel) {
             Text("Kies tot drie dagdoelen via Aanpassen om hier je voortgang te zien.", color = d.dialMuted,
                 modifier = Modifier.padding(end = 12.dp))
         } else {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp)) {
-                val avg = (fractions.map { it.coerceAtMost(1f) }.average() * 100).roundToInt()
-                val tiny = LocalWidthClass.current == WidthClass.Tiny
-                Rings(rings.indices.map { i -> fractions[i] to ringColors[i] }, "$avg%", Modifier.size(if (tiny) 108.dp else 150.dp))
-                Spacer(Modifier.width(if (tiny) 12.dp else 20.dp))
+            val avg = (fractions.map { it.coerceAtMost(1f) }.average() * 100).roundToInt()
+            val tiny = LocalWidthClass.current == WidthClass.Tiny
+            // Bij grote letters (vanaf 130%) de uitleg onder de ringen, zodat niets wordt afgekapt
+            val stacked = LocalDensity.current.fontScale > 1.3f
+            val ringsView = @Composable {
+                Rings(
+                    rings.indices.map { i -> fractions[i] to ringColors[i] }, "$avg%", Modifier.size(if (tiny) 108.dp else 150.dp),
+                    description = "Dagringen: gemiddeld $avg procent van je doelen gehaald",
+                )
+            }
+            val legend = @Composable {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     rings.forEachIndexed { i, pref ->
                         val m = vm.metrics[pref.metric]
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Dot(ringColors[i], 9.dp)
-                            Spacer(Modifier.width(8.dp))
-                            Text(m?.name ?: pref.metric, style = MaterialTheme.typography.labelMedium, color = d.dialMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text(vm.today[pref.metric]?.let { fmt(pref.metric, it.value) } ?: "–",
-                                style = MaterialTheme.typography.headlineSmall, color = d.dialInk, maxLines = 1)
-                            Text("  / ${fmt(pref.metric, pref.goal!!)}", style = MaterialTheme.typography.bodySmall, color = d.dialMuted)
+                        Column(Modifier.semantics(mergeDescendants = true) {}) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Dot(ringColors[i], 9.dp)
+                                Spacer(Modifier.width(8.dp))
+                                Text(m?.name ?: pref.metric, style = MaterialTheme.typography.labelMedium, color = d.dialMuted,
+                                    maxLines = if (stacked) 2 else 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            Row(verticalAlignment = Alignment.Bottom) {
+                                Text(vm.today[pref.metric]?.let { fmt(pref.metric, it.value) } ?: "–",
+                                    style = MaterialTheme.typography.headlineSmall, color = d.dialInk, maxLines = 1, softWrap = false)
+                                Text("  / ${fmt(pref.metric, pref.goal!!)}", style = MaterialTheme.typography.bodySmall, color = d.dialMuted,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
                         }
                     }
                 }
+            }
+            if (stacked) Column(Modifier.padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                ringsView(); legend()
+            } else Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp)) {
+                ringsView()
+                Spacer(Modifier.width(if (tiny) 12.dp else 20.dp))
+                legend()
             }
             if (vm.layout.motivation) Motivation(vm, rings, fractions)
         }
@@ -175,7 +194,7 @@ private fun Tile(vm: MainViewModel, pref: Pref, modifier: Modifier) {
         } else {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(fmt(pref.metric, v.value), style = if (wide) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium,
-                    color = p.ink, maxLines = 1)
+                    color = p.ink, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 val unit = unitOf(pref.metric, m.unit)
                 if (unit.isNotEmpty()) Text(" $unit", style = MaterialTheme.typography.bodySmall, color = p.muted,
                     modifier = Modifier.padding(bottom = 4.dp))
@@ -189,9 +208,9 @@ private fun Tile(vm: MainViewModel, pref: Pref, modifier: Modifier) {
         }
         Sparkline(spark, color, Modifier.fillMaxWidth().height(if (wide) 52.dp else 34.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(v?.let { sourceLabel(it.source) } ?: "", style = MaterialTheme.typography.labelSmall, color = p.muted,
+            Text(v?.let { if (wide) sourceLabel(it.source) else sourceShort(it.source) } ?: "", style = MaterialTheme.typography.labelSmall, color = p.muted,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            Delta(deltaVsWeek(hist), m.lowerIsBetter)
+            Delta(deltaVsWeek(hist), m.lowerIsBetter, short = !wide)
         }
     }
 }

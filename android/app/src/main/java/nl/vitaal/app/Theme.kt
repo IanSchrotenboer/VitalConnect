@@ -11,6 +11,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -29,6 +31,8 @@ data class Palette(
     val ink: Color,
     val muted: Color,
     val line: Color,
+    /** Randen van bedienbare onderdelen (chips, invulvelden): minimaal 3:1 op de achtergrond. */
+    val outline: Color,
     val primary: Color,
     val onPrimary: Color,
     val dial: Color,
@@ -42,26 +46,33 @@ data class Palette(
     val good: Color,
     val bad: Color,
     val warn: Color,
+    // Herkenningskleuren van de bronnen (koppelingen)
+    val srcHealthConnect: Color,
+    val srcGoogle: Color,
+    val srcGarmin: Color,
 )
 
 private val Light = Palette(
     dark = false,
     bg = Color(0xFFF5F7F4), card = Color(0xFFFFFFFF), ink = Color(0xFF0F1E1B), muted = Color(0xFF52615C),
-    line = Color(0xFFE1E6E2), primary = Color(0xFF1C4D46), onPrimary = Color(0xFFFFFFFF),
+    line = Color(0xFFE1E6E2), outline = Color(0xFF7F8F89), primary = Color(0xFF1C4D46), onPrimary = Color(0xFFFFFFFF),
     dial = Color(0xFF123430), dialInk = Color(0xFFF3F7F5), dialMuted = Color(0xFFA9BDB7),
-    activity = Color(0xFFE4793B), heart = Color(0xFFD04E6A), sleep = Color(0xFF5865D6),
-    body = Color(0xFFB9892B), recovery = Color(0xFF2F9C8F),
+    // Abrikoos en oker iets donkerder dan in de wijzerplaat: grafieklijnen halen zo 3:1 op wit
+    activity = Color(0xFFD86F31), heart = Color(0xFFD04E6A), sleep = Color(0xFF5865D6),
+    body = Color(0xFFAD7E24), recovery = Color(0xFF2F9C8F),
     good = Color(0xFF1E7F5C), bad = Color(0xFFB4462B), warn = Color(0xFFFFF4E0),
+    srcHealthConnect = Color(0xFF2F7D6E), srcGoogle = Color(0xFF3F7F4A), srcGarmin = Color(0xFF2B5FA8),
 )
 
 private val Dark = Palette(
     dark = true,
     bg = Color(0xFF0C1614), card = Color(0xFF15221F), ink = Color(0xFFE9F1EE), muted = Color(0xFF9DB0AA),
-    line = Color(0xFF24332F), primary = Color(0xFF7FD1C1), onPrimary = Color(0xFF0C1614),
+    line = Color(0xFF24332F), outline = Color(0xFF63776F), primary = Color(0xFF7FD1C1), onPrimary = Color(0xFF0C1614),
     dial = Color(0xFF0F2A26), dialInk = Color(0xFFF3F7F5), dialMuted = Color(0xFFA9BDB7),
     activity = Color(0xFFF5935A), heart = Color(0xFFEC7290), sleep = Color(0xFF8C97F2),
     body = Color(0xFFDDB15A), recovery = Color(0xFF4CC3B3),
     good = Color(0xFF4CC79A), bad = Color(0xFFF07D5F), warn = Color(0xFF2E2717),
+    srcHealthConnect = Color(0xFF3A9483), srcGoogle = Color(0xFF4E9659), srcGarmin = Color(0xFF3B72C4),
 )
 
 val LocalPalette = staticCompositionLocalOf { Light }
@@ -94,21 +105,32 @@ fun Palette.colorOf(c: Category): Color = when (c) {
 /** Cijfers met vaste breedte, zodat waarden onder elkaar netjes uitlijnen. */
 private const val TNUM = "tnum"
 
+/**
+ * Figtree (SIL Open Font License, zie assets/licenses): rustig, vriendelijk en goed leesbaar,
+ * met cijfers van vaste breedte. Dezelfde letter staat in de preview en op de website.
+ */
+val Figtree = FontFamily(
+    Font(R.font.figtree_regular, FontWeight.Normal),
+    Font(R.font.figtree_medium, FontWeight.Medium),
+    Font(R.font.figtree_semibold, FontWeight.SemiBold),
+    Font(R.font.figtree_bold, FontWeight.Bold),
+)
+
 private val Type = Typography(
-    displayLarge = TextStyle(fontSize = 44.sp, lineHeight = 46.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.02).em, fontFeatureSettings = TNUM),
-    displaySmall = TextStyle(fontSize = 34.sp, lineHeight = 38.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.02).em, fontFeatureSettings = TNUM),
-    headlineLarge = TextStyle(fontSize = 30.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.02).em),
-    headlineMedium = TextStyle(fontSize = 28.sp, lineHeight = 32.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.01).em, fontFeatureSettings = TNUM),
-    headlineSmall = TextStyle(fontSize = 22.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold, fontFeatureSettings = TNUM),
-    titleLarge = TextStyle(fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold),
-    titleMedium = TextStyle(fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold),
-    titleSmall = TextStyle(fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
-    bodyLarge = TextStyle(fontSize = 16.sp, lineHeight = 24.sp),
-    bodyMedium = TextStyle(fontSize = 15.sp, lineHeight = 22.sp),
-    bodySmall = TextStyle(fontSize = 14.sp, lineHeight = 19.sp),
-    labelLarge = TextStyle(fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
-    labelMedium = TextStyle(fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.Medium),
-    labelSmall = TextStyle(fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
+    displayLarge = TextStyle(fontFamily = Figtree, fontSize = 44.sp, lineHeight = 46.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.02).em, fontFeatureSettings = TNUM),
+    displaySmall = TextStyle(fontFamily = Figtree, fontSize = 34.sp, lineHeight = 38.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.02).em, fontFeatureSettings = TNUM),
+    headlineLarge = TextStyle(fontFamily = Figtree, fontSize = 30.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.02).em),
+    headlineMedium = TextStyle(fontFamily = Figtree, fontSize = 28.sp, lineHeight = 32.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.01).em, fontFeatureSettings = TNUM),
+    headlineSmall = TextStyle(fontFamily = Figtree, fontSize = 22.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold, fontFeatureSettings = TNUM),
+    titleLarge = TextStyle(fontFamily = Figtree, fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold),
+    titleMedium = TextStyle(fontFamily = Figtree, fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold),
+    titleSmall = TextStyle(fontFamily = Figtree, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
+    bodyLarge = TextStyle(fontFamily = Figtree, fontSize = 16.sp, lineHeight = 24.sp),
+    bodyMedium = TextStyle(fontFamily = Figtree, fontSize = 15.sp, lineHeight = 22.sp),
+    bodySmall = TextStyle(fontFamily = Figtree, fontSize = 14.sp, lineHeight = 19.sp),
+    labelLarge = TextStyle(fontFamily = Figtree, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
+    labelMedium = TextStyle(fontFamily = Figtree, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.Medium),
+    labelSmall = TextStyle(fontFamily = Figtree, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
 )
 
 /** Weergavekeuze in het profiel. */
@@ -130,13 +152,13 @@ fun VitaalTheme(mode: ThemeMode = ThemeMode.System, content: @Composable () -> U
     val scheme = if (p.dark) darkColorScheme(
         primary = p.primary, onPrimary = p.onPrimary, secondary = p.activity, onSecondary = p.bg,
         background = p.bg, onBackground = p.ink, surface = p.bg, onSurface = p.ink,
-        surfaceVariant = p.card, onSurfaceVariant = p.muted, outline = p.line, outlineVariant = p.line,
+        surfaceVariant = p.card, onSurfaceVariant = p.muted, outline = p.outline, outlineVariant = p.line,
         error = p.bad, surfaceContainer = p.bg, surfaceContainerHigh = p.card,
         secondaryContainer = p.line, onSecondaryContainer = p.ink,
     ) else lightColorScheme(
         primary = p.primary, onPrimary = p.onPrimary, secondary = p.activity, onSecondary = Color.White,
         background = p.bg, onBackground = p.ink, surface = p.bg, onSurface = p.ink,
-        surfaceVariant = p.card, onSurfaceVariant = p.muted, outline = p.line, outlineVariant = p.line,
+        surfaceVariant = p.card, onSurfaceVariant = p.muted, outline = p.outline, outlineVariant = p.line,
         error = p.bad, surfaceContainer = p.card, surfaceContainerHigh = p.card,
         secondaryContainer = Color(0xFFDCEBE6), onSecondaryContainer = p.ink,
     )

@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,14 +41,9 @@ fun DetailScreen(vm: MainViewModel) {
     val unit = unitOf(id, m?.unit ?: "")
     val bars = m?.aggregation == "sum"
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
-        Row(Modifier.padding(start = 4.dp, end = 16.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = vm::closeDetail) { Icon(VIcons.Back, contentDescription = "Terug", tint = p.ink) }
-            Column(Modifier.weight(1f)) {
-                Text(m?.name ?: id, style = MaterialTheme.typography.headlineSmall, color = p.ink)
-                Text(categoryOf(id).label, style = MaterialTheme.typography.labelMedium, color = color)
-            }
-        }
+    Column(Modifier.fillMaxSize()) {
+    VTopBar(m?.name ?: id, onBack = vm::closeDetail, subtitle = categoryOf(id).label)
+    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
 
         Row(
             Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
@@ -78,6 +71,8 @@ fun DetailScreen(vm: MainViewModel) {
                 selected = selected, onSelect = { selected = it },
                 axis = { v -> if (id == "sleep") "${v.roundToInt()}u" else fmtCompact(v) },
                 modifier = Modifier.fillMaxWidth().height(260.dp),
+                format = { v -> fmt(id, v) + if (unit.isNotEmpty()) " $unit" else "" },
+                name = m?.name ?: id,
             )
         }
 
@@ -105,4 +100,5 @@ fun DetailScreen(vm: MainViewModel) {
             }
         }
     }
+}
 }

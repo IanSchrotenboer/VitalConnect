@@ -22,8 +22,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -31,6 +29,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,18 +68,13 @@ fun ProfileScreen(
     val p = LocalPalette.current
     var disconnecting by remember { mutableStateOf<String?>(null) }
 
-    LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxSize()) {
+    VTopBar("Profiel", onBack = { vm.showSettings = false })
+    // imePadding: invulvelden blijven boven het toetsenbord
+    LazyColumn(Modifier.weight(1f).imePadding(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { vm.showSettings = false }) { Icon(VIcons.Back, contentDescription = "Terug", tint = p.ink) }
-                Text("Profiel", style = MaterialTheme.typography.headlineSmall, color = p.ink)
-            }
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 4.dp)) {
-                Pill("Profiel", vm.profileTab == ProfileTab.Profile, Modifier.weight(1f)) { vm.profileTab = ProfileTab.Profile }
-                Pill("Koppelingen", vm.profileTab == ProfileTab.Connections, Modifier.weight(1f)) { vm.profileTab = ProfileTab.Connections }
-            }
+            Segmented(listOf(ProfileTab.Profile to "Profiel", ProfileTab.Connections to "Koppelingen"), vm.profileTab,
+                Modifier.padding(horizontal = 4.dp)) { vm.profileTab = it }
         }
         when (vm.profileTab) {
             ProfileTab.Profile -> {
@@ -113,6 +110,7 @@ fun ProfileScreen(
                 off.forEach { s -> item(key = "off-$s") { SourceCard(vm, s, onRequestHc, onOpenUrl) { disconnecting = it } } }
             }
         }
+    }
     }
 
     disconnecting?.let { provider ->
@@ -179,11 +177,8 @@ fun PersonalCard(
             )
         }
         Text("Geslacht", style = MaterialTheme.typography.labelMedium, color = p.muted)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("female" to "Vrouw", "male" to "Man", "other" to "Anders").forEach { (id, label) ->
-                Pill(label, sex == id, Modifier.weight(1f)) { sex = if (sex == id) null else id }
-            }
-        }
+        // Nog een keer tikken op de gekozen optie maakt het veld weer leeg
+        Segmented(listOf("female" to "Vrouw", "male" to "Man", "other" to "Anders"), sex) { sex = if (sex == it) null else it }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 value = height, onValueChange = { height = it.take(5) }, label = { Text("Lengte (cm)") }, singleLine = true,
@@ -234,11 +229,7 @@ private fun ThemeCard(vm: MainViewModel) {
     val p = LocalPalette.current
     VCard(Modifier.fillMaxWidth()) {
         Text("Kies licht of donker, of laat het je telefoon volgen.", style = MaterialTheme.typography.bodySmall, color = p.muted)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ThemeMode.entries.forEach { m ->
-                Pill(m.label, vm.themeMode == m, Modifier.weight(1f)) { vm.setTheme(m) }
-            }
-        }
+        Segmented(ThemeMode.entries.map { it to it.label }, vm.themeMode) { vm.setTheme(it) }
     }
 }
 
@@ -283,12 +274,17 @@ private fun NotificationsCard(vm: MainViewModel, onRequestNotifications: () -> U
 @Composable
 private fun SwitchRow(title: String, text: String, checked: Boolean, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
     val p = LocalPalette.current
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+    // De hele rij is één schakelaar: TalkBack leest "Doel gehaald, schakelaar, aan" en de hele rij is aantikbaar
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().toggleable(checked, enabled = enabled, role = Role.Switch, onValueChange = onChange)
+            .padding(vertical = 4.dp),
+    ) {
         Column(Modifier.weight(1f).padding(end = 12.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall, color = if (enabled) p.ink else p.muted)
             Text(text, style = MaterialTheme.typography.bodySmall, color = p.muted)
         }
-        Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
+        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
     }
 }
 
@@ -366,7 +362,7 @@ private fun HealthConnectCard(vm: MainViewModel, onRequestHc: () -> Unit) {
         HcStatus.OK -> "Bijwerken: ${syncLabel(vm.syncMinutes)}" + (synced?.let { " · $it" } ?: "")
     }
     VCard(Modifier.fillMaxWidth()) {
-        SourceHeader("H", Color(0xFF2F7D6E), "Health Connect", status, ok)
+        SourceHeader("H", p.srcHealthConnect, "Health Connect", status, ok)
         Text("Data van apps op deze telefoon, zoals Google Fit, Samsung Health en de Suunto-app.",
             style = MaterialTheme.typography.bodySmall, color = p.muted)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -412,7 +408,7 @@ private fun CloudCard(vm: MainViewModel, provider: String, onOpenUrl: (String) -
         else -> "Bijwerken: ${syncLabel(vm.syncMinutes)}" + (synced?.let { " · $it" } ?: "")
     }
     VCard(Modifier.fillMaxWidth()) {
-        SourceHeader(if (provider == "garmin") "G" else "F", if (provider == "garmin") Color(0xFF2B5FA8) else Color(0xFF3F7F4A),
+        SourceHeader(if (provider == "garmin") "G" else "F", if (provider == "garmin") p.srcGarmin else p.srcGoogle,
             providerName(provider), status, connected)
         Text(if (provider == "garmin") "Data van je Garmin-horloge via Garmin Connect." else "Data van Fitbit, Pixel Watch en de Google Health-app.",
             style = MaterialTheme.typography.bodySmall, color = p.muted)

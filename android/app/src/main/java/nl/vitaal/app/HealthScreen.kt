@@ -36,7 +36,7 @@ fun HealthScreen(vm: MainViewModel) {
         item {
             Row(verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f).padding(start = 4.dp, top = 8.dp, bottom = 4.dp)) {
-                    Text("Gezondheid", style = MaterialTheme.typography.headlineLarge, color = p.ink)
+                    ScreenTitle("Gezondheid")
                     Text(if (first != null) "Al je statistieken sinds ${fmtDate(first)}" else "Al je statistieken, zodra er data binnenkomt",
                         style = MaterialTheme.typography.bodyMedium, color = p.muted)
                 }

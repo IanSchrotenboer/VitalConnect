@@ -14,7 +14,7 @@ android {
         targetSdk = 36
         // In GitHub Actions telt het buildnummer op, zodat elke APK over de vorige heen te installeren is
         versionCode = System.getenv("BUILD_NUMBER")?.toIntOrNull() ?: 2
-        versionName = "1.4.0"
+        versionName = "1.5.0"
     }
 
     // Release-ondertekening: GitHub Actions zet de sleutel klaar (vaste sleutel uit de geheimen,
@@ -34,7 +34,10 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8: kleinere en snellere app. Regels voor de bibliotheken in proguard-rules.pro
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = if (keystore != null) signingConfigs.getByName("release") else null
         }
     }

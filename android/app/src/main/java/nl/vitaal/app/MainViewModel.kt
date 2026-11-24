@@ -8,6 +8,8 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -374,14 +376,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     // ---------- Data ----------
     fun load() = task { loadNow() }
 
-    private suspend fun loadNow() {
-        metrics = api.select("metrics?select=id,name_nl,unit,lower_is_better,aggregation&order=id").associate {
+    private suspend fun loadNow() = coroutineScope {
+        // Alle verzoeken tegelijk: Vandaag staat er zo na één rondje naar de server in plaats van zes
+        val now = LocalDate.now()
+        val metricsQ = async { if (metrics.isEmpty()) api.select("metrics?select=id,name_nl,unit,lower_is_better,aggregation&order=id") else null }
+        val prefsQ = async { api.select("metric_prefs?select=*") }
+        val profQ = async { api.select("profiles?select=email,display_name,birth_date,sex,height_cm,weight_kg,theme,consent_health_at,onboarded_at,layout") }
+        val connQ = async { api.select("connections?select=provider,status,last_sync_at,last_error") }
+        val dailyQ = async {
+            api.rpc("resolved_daily", buildJsonObject { put("p_from", now.minusDays(13).toString()); put("p_to", now.toString()) })
+        }
+        val statsQ = async { api.rpc("metric_stats", JsonObject(emptyMap())) }
+        metricsQ.await()?.let { list -> metrics = list.associate {
             val o = it.jsonObject
             val id = o.str("id")
             id to MetricInfo(id, o.str("name_nl"), o.str("unit"),
                 o["lower_is_better"]?.jsonPrimitive?.booleanOrNull == true, o.str("aggregation").ifEmpty { "avg" })
         }
-        prefs = api.select("metric_prefs?select=*").associate {
+        }
+        prefs = prefsQ.await().associate {
             val o = it.jsonObject
             val p = Pref(
                 metric = o.str("metric"),
@@ -395,8 +408,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             )
             p.metric to p
         }
-        val prof = api.select("profiles?select=email,display_name,birth_date,sex,height_cm,weight_kg,theme,consent_health_at,onboarded_at,layout")
-            .firstOrNull()?.jsonObject
+        val prof = profQ.await().firstOrNull()?.jsonObject
         needsConsent = prof?.get("consent_health_at").let { it == null || it == JsonNull }
         if (prof != null) {
             fun d(k: String) = prof[k]?.takeIf { it != JsonNull }?.jsonPrimitive?.doubleOrNull
@@ -412,21 +424,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             layout = Layout.from(prof["layout"] as? JsonObject)
             if (!needsConsent && onboarding == null && prof.str("onboarded_at").isEmpty()) onboarding = Onboarding.Import
         }
-        connections = api.select("connections?select=provider,status,last_sync_at,last_error").associate {
+        connections = connQ.await().associate {
             val o = it.jsonObject
             o.str("provider") to Connection(o.str("status"), o.str("last_sync_at").ifEmpty { null }, o.str("last_error").ifEmpty { null })
         }
-        val now = LocalDate.now()
-        val rows = (api.rpc("resolved_daily", buildJsonObject {
-            put("p_from", now.minusDays(13).toString()); put("p_to", now.toString())
-        }) as? JsonArray).orEmpty().map { it.jsonObject }
+        val rows = (dailyQ.await() as? JsonArray).orEmpty().map { it.jsonObject }
         history = rows.groupBy { it.str("metric") }.mapValues { (_, list) ->
             list.associate { LocalDate.parse(it.str("day")) to (it["value"]?.jsonPrimitive?.doubleOrNull ?: 0.0) }
         }
         today = rows.filter { it.str("day") == now.toString() }.associate {
             it.str("metric") to DayValue(it["value"]?.jsonPrimitive?.doubleOrNull ?: 0.0, it.str("source"))
         }
-        stats = (api.rpc("metric_stats", JsonObject(emptyMap())) as? JsonArray).orEmpty().associate {
+        stats = (statsQ.await() as? JsonArray).orEmpty().associate {
             val o = it.jsonObject
             fun d(k: String) = o[k]?.takeIf { v -> v != JsonNull }?.jsonPrimitive?.doubleOrNull
             fun day(k: String) = o.str(k).takeIf { v -> v.isNotEmpty() }?.let(LocalDate::parse)

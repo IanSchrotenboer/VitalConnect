@@ -46,7 +46,7 @@ fun SleepScreen(vm: MainViewModel) {
         item {
             Row(verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f).padding(start = 4.dp, top = 8.dp, bottom = 4.dp)) {
-                    Text("Slaap", style = MaterialTheme.typography.headlineLarge, color = p.ink)
+                    ScreenTitle("Slaap")
                     Text("Hoe goed je rust, en hoe je lichaam herstelt", style = MaterialTheme.typography.bodyMedium, color = p.muted)
                 }
                 IconLabel(VIcons.Sliders, "Aanpassen", p.primary) { vm.editing = EditTarget.Sleep }
@@ -96,6 +96,7 @@ fun SleepScreen(vm: MainViewModel) {
                     selected = selected, onSelect = { selected = it },
                     axis = { "${it.roundToInt()}u" },
                     modifier = Modifier.fillMaxWidth().height(200.dp),
+                    format = { fmtHours(it) }, name = "slaapduur",
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Stat("Gem. 7 nachten", avg7?.let { fmtHours(it) } ?: "–", Modifier.weight(1f))
@@ -150,6 +151,6 @@ private fun RecoveryTile(vm: MainViewModel, id: String, modifier: Modifier) {
             if (last != null && m != null) Text(" ${m.unit}", style = MaterialTheme.typography.labelSmall, color = p.muted,
                 modifier = Modifier.padding(bottom = 3.dp))
         }
-        Delta(deltaVsWeek(hist), m?.lowerIsBetter ?: false)
+        Delta(deltaVsWeek(hist), m?.lowerIsBetter ?: false, short = true)
     }
 }

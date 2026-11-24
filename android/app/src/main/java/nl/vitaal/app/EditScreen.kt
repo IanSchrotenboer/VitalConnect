@@ -24,6 +24,12 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,13 +58,13 @@ fun EditScreen(vm: MainViewModel, target: EditTarget) {
         EditTarget.Health -> "Gezondheid aanpassen" to "Kies welke statistieken je in Gezondheid ziet. Dit staat los van Vandaag."
         EditTarget.Sleep -> "Slaap aanpassen" to "Kies je slaapdoel, de hersteltegels en of je slaapadvies wilt zien."
     }
-    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxSize()) {
+    VTopBar(title, onBack = { vm.editing = null }) {
+        Button(onClick = { vm.editing = null }, modifier = Modifier.padding(end = 8.dp)) { Text("Klaar") }
+    }
+    LazyColumn(Modifier.weight(1f).imePadding(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(title, style = MaterialTheme.typography.headlineSmall, color = p.ink, modifier = Modifier.weight(1f))
-                Button(onClick = { vm.editing = null }) { Text("Klaar") }
-            }
-            Text(intro, style = MaterialTheme.typography.bodyMedium, color = p.muted, modifier = Modifier.padding(top = 6.dp))
+            Text(intro, style = MaterialTheme.typography.bodyMedium, color = p.muted, modifier = Modifier.padding(horizontal = 4.dp))
         }
         when (target) {
             EditTarget.Today -> {
@@ -103,6 +109,7 @@ fun EditScreen(vm: MainViewModel, target: EditTarget) {
             EditTarget.Sleep -> item { SleepEdit(vm) }
         }
     }
+    }
 }
 
 /** Dagringen: maximaal drie, op volgorde (buitenste ring eerst). */
@@ -138,7 +145,7 @@ private fun RingsCard(vm: MainViewModel) {
             Text("Toevoegen", style = MaterialTheme.typography.labelMedium, color = p.muted)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 vm.metrics.values.filter { !it.lowerIsBetter && rings.none { r -> r.metric == it.id } }.sortedBy { it.name }.forEach { m ->
-                    Pill("+ ${m.name}", false) { vm.addRing(m.id) }
+                    ActionChip("+ ${m.name}", enabled = !vm.busy) { vm.addRing(m.id) }
                 }
             }
         }
@@ -179,12 +186,16 @@ private fun SleepEdit(vm: MainViewModel) {
 @Composable
 private fun ToggleRow(title: String, subtitle: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
     val p = LocalPalette.current
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+    // De hele rij is één schakelaar, zodat TalkBack de naam erbij voorleest
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().toggleable(checked, role = Role.Switch, onValueChange = onChange).padding(vertical = 4.dp),
+    ) {
         Column(Modifier.weight(1f).padding(end = 12.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall, color = p.ink)
             subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = p.muted) }
         }
-        Switch(checked = checked, onCheckedChange = onChange,
+        Switch(checked = checked, onCheckedChange = null,
             colors = SwitchDefaults.colors(checkedTrackColor = p.primary, checkedThumbColor = p.onPrimary))
     }
 }
@@ -211,6 +222,7 @@ private fun EditRow(vm: MainViewModel, pref: Pref, expanded: Boolean, onToggle: 
             if (!pref.inRings) Switch(
                 checked = pref.visible, onCheckedChange = { vm.setVisible(pref.metric, it) }, enabled = !vm.busy,
                 colors = SwitchDefaults.colors(checkedTrackColor = p.primary, checkedThumbColor = p.onPrimary),
+                modifier = Modifier.semantics { contentDescription = "${m.name} als tegel tonen" },
             )
         }
         if (!expanded) return@VCard
@@ -218,24 +230,17 @@ private fun EditRow(vm: MainViewModel, pref: Pref, expanded: Boolean, onToggle: 
         if (pref.visible && !pref.inRings) {
             Text("Volgorde en grootte", style = MaterialTheme.typography.labelMedium, color = p.muted)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Pill("Omhoog", false) { vm.move(pref.metric, -1) }
-                Pill("Omlaag", false) { vm.move(pref.metric, 1) }
+                ActionChip("Omhoog", enabled = !vm.busy) { vm.move(pref.metric, -1) }
+                ActionChip("Omlaag", enabled = !vm.busy) { vm.move(pref.metric, 1) }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Pill("Klein", pref.size != "l") { vm.save(pref.copy(size = "s")) }
-                Pill("Breed", pref.size == "l") { vm.save(pref.copy(size = "l")) }
-            }
+            Segmented(listOf("s" to "Klein", "l" to "Breed"), if (pref.size == "l") "l" else "s") { vm.save(pref.copy(size = it)) }
         }
         if (pref.inRings) Text("Deze metric staat in de dagringen. Haal hem daar weg om hem weer als tegel te tonen.",
             style = MaterialTheme.typography.bodySmall, color = p.muted)
         Text("Bron", style = MaterialTheme.typography.labelMedium, color = p.muted)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Pill("Automatisch", pref.preferredSource == null) { vm.save(pref.copy(preferredSource = null)) }
-            Pill("Garmin", pref.preferredSource == "garmin") { vm.save(pref.copy(preferredSource = "garmin")) }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Pill("Google Health", pref.preferredSource == "google_health") { vm.save(pref.copy(preferredSource = "google_health")) }
-            Pill("Health Connect", pref.preferredSource == "health_connect") { vm.save(pref.copy(preferredSource = "health_connect")) }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(null to "Automatisch", "garmin" to "Garmin", "google_health" to "Google Health", "health_connect" to "Health Connect")
+                .forEach { (src, label) -> Pill(label, pref.preferredSource == src) { vm.save(pref.copy(preferredSource = src)) } }
         }
         OutlinedTextField(
             value = goal,

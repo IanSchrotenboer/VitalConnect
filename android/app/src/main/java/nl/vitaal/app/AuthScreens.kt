@@ -25,6 +25,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,7 +61,7 @@ private fun AuthHeader(title: String, subtitle: String, step: Pair<Int, Int>? = 
         step?.let { (n, total) ->
             Text("Stap $n van $total", style = MaterialTheme.typography.labelMedium, color = d.dialMuted)
         }
-        Text(title, style = MaterialTheme.typography.displaySmall, color = d.dialInk)
+        Text(title, style = MaterialTheme.typography.displaySmall, color = d.dialInk, modifier = Modifier.semantics { heading() })
         Text(subtitle, style = MaterialTheme.typography.bodyLarge, color = d.dialMuted)
     }
 }
@@ -66,14 +72,12 @@ fun LoginScreen(vm: MainViewModel, onGoogleSignIn: () -> Unit, onOpenUrl: (Strin
     var showEmail by rememberSaveable { mutableStateOf(false) }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
         AuthHeader(APP_NAME, "Je gezondheid op één plek: beweging, hart en slaap.")
         Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Log in met je Google-account en importeer direct je gezondheidsgegevens.",
                 style = MaterialTheme.typography.titleMedium, color = p.ink)
-            Button(onClick = onGoogleSignIn, enabled = !vm.busy, modifier = Modifier.fillMaxWidth().height(56.dp)) {
-                Text("Doorgaan met Google", style = MaterialTheme.typography.titleMedium)
-            }
+            GoogleButton(onGoogleSignIn, enabled = !vm.busy)
             listOf(
                 "Geen nieuw wachtwoord nodig",
                 "Koppel Google Health, Health Connect of Garmin in de volgende stap",
@@ -120,7 +124,7 @@ fun CodeScreen(vm: MainViewModel, step: AuthStep.Code) {
         "recovery" -> "Nieuw wachtwoord"
         else -> "Inloggen met code"
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
         AuthHeader(title, "We hebben een code van 6 cijfers gestuurd naar ${step.email}.")
         Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(code, { v -> code = v.filter(Char::isDigit).take(6) }, label = { Text("Code") }, singleLine = true,
@@ -142,7 +146,7 @@ fun CodeScreen(vm: MainViewModel, step: AuthStep.Code) {
 fun NewPasswordScreen(vm: MainViewModel) {
     var pw by rememberSaveable { mutableStateOf("") }
     var pw2 by rememberSaveable { mutableStateOf("") }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
         AuthHeader("Nieuw wachtwoord", "Kies een wachtwoord van minimaal 8 tekens.")
         Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(pw, { pw = it }, label = { Text("Nieuw wachtwoord") }, singleLine = true,
@@ -161,7 +165,7 @@ fun NewPasswordScreen(vm: MainViewModel) {
 fun ConsentScreen(vm: MainViewModel, onSignOut: () -> Unit) {
     val p = LocalPalette.current
     var agreed by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
         AuthHeader("Toestemming", "Voordat we beginnen.", step = 1 to 3)
         Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("$APP_NAME verwerkt gezondheidsgegevens: stappen, hartslag, slaap, gewicht en vergelijkbare metingen. " +
@@ -187,7 +191,7 @@ fun ImportScreen(vm: MainViewModel, onRequestHc: () -> Unit, onOpenUrl: (String)
     val count = listOf(hcOn, vm.isConnected("google_health"), vm.isConnected("garmin")).count { it }
     // Wie met Google inlogde, ziet Google Health bovenaan
     val order = if (vm.signedInWithGoogle) listOf("google_health", "health_connect", "garmin") else listOf("health_connect", "google_health", "garmin")
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
         AuthHeader("Gegevens importeren", "Haal je stappen, hartslag en slaap direct binnen.", step = 2 to 3)
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Kies een of meer bronnen. Je kunt dit later altijd aanpassen via het persoon-icoon → Koppelingen.",
@@ -209,7 +213,7 @@ fun ImportScreen(vm: MainViewModel, onRequestHc: () -> Unit, onOpenUrl: (String)
 fun OnboardingProfileScreen(vm: MainViewModel) {
     val p = LocalPalette.current
     val suggested = vm.suggestedProfile
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
         AuthHeader("Over jou", "Vul je profiel aan. Alles is optioneel.", step = 3 to 3)
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (suggested.weightKg != null && vm.profile.weightKg == null) Text(
@@ -223,5 +227,34 @@ fun OnboardingProfileScreen(vm: MainViewModel) {
             )
             TextButton(onClick = { vm.onboarding = Onboarding.Import }) { Text("Terug naar importeren", color = p.muted) }
         }
+    }
+}
+
+/**
+ * Inlogknop volgens de richtlijnen van Google voor "Sign in with Google": licht of donker thema,
+ * vaste kleuren, ronde vorm en de tekst "Doorgaan met Google". Het G-logo van Google voeg je toe als
+ * res/drawable/google_g.xml uit het officiële pakket (developers.google.com/identity/branding-guidelines);
+ * zolang dat bestand er niet is, toont de knop alleen tekst.
+ */
+@Composable
+private fun GoogleButton(onClick: () -> Unit, enabled: Boolean) {
+    val dark = LocalPalette.current.dark
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val logo = remember { ctx.resources.getIdentifier("google_g", "drawable", ctx.packageName) }
+    OutlinedButton(
+        onClick = onClick, enabled = enabled,
+        modifier = Modifier.fillMaxWidth().height(56.dp),
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, if (dark) Color(0xFF8E918F) else Color(0xFF747775)),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = if (dark) Color(0xFF131314) else Color.White,
+            contentColor = if (dark) Color(0xFFE3E3E3) else Color(0xFF1F1F1F),
+        ),
+    ) {
+        if (logo != 0) {
+            Image(painterResource(logo), contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
+        }
+        Text("Doorgaan met Google", style = MaterialTheme.typography.titleMedium)
     }
 }
