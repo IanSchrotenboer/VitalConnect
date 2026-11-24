@@ -97,6 +97,7 @@ class MainActivity : ComponentActivity() {
         when (data.host) {
             "garmin" -> vm.onConnectReturn("garmin", data.getQueryParameter("status"))
             "google" -> vm.onConnectReturn("google_health", data.getQueryParameter("status"))
+            "suunto" -> vm.onConnectReturn("suunto", data.getQueryParameter("status"))
             else -> return
         }
         intent.data = null

@@ -55,6 +55,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="vitaal" android:host="garmin" />
                 <data android:scheme="vitaal" android:host="google" />
+                <data android:scheme="vitaal" android:host="suunto" />
             </intent-filter>
         </activity>
 

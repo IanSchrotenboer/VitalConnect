@@ -241,7 +241,7 @@ private fun SyncCard(vm: MainViewModel) {
     val p = LocalPalette.current
     VCard(Modifier.fillMaxWidth()) {
         Text("Synchroniseren", style = MaterialTheme.typography.titleMedium, color = p.ink)
-        Text("Hoe vaak $APP_NAME Health Connect en Google Health bijwerkt, ook als de app dicht is. " +
+        Text("Hoe vaak $APP_NAME Health Connect, Google Health en Suunto bijwerkt, ook als de app dicht is. " +
             "Garmin stuurt nieuwe data zelf na elke sync van je horloge. Vaker kost iets meer batterij; Android kan een ronde soms iets uitstellen.",
             style = MaterialTheme.typography.bodySmall, color = p.muted)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -388,6 +388,7 @@ private fun sourceLook(provider: String): SourceLook {
     val p = LocalPalette.current
     return when (provider) {
         "garmin" -> SourceLook("G", p.srcGarmin, "Data van je Garmin-horloge via Garmin Connect.")
+        "suunto" -> SourceLook("S", p.srcSuunto, "Stappen, slaap en workouts van je Suunto-horloge via de Suunto-app.")
         else -> SourceLook("F", p.srcGoogle, "Data van Fitbit, Pixel Watch en de Google Health-app.")
     }
 }

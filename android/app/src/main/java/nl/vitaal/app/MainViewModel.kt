@@ -111,7 +111,7 @@ data class Connection(val status: String, val lastSync: String?, val lastError: 
 data class SourceInfo(val id: String, val name: String, val sync: String, val available: Boolean)
 
 /** Bronnen die deze versie van de app kan tonen, in deze volgorde. */
-val KNOWN_SOURCES = listOf("health_connect", "google_health", "garmin")
+val KNOWN_SOURCES = listOf("health_connect", "google_health", "suunto", "garmin")
 
 /** Persoonlijke gegevens uit het profiel. Alles behalve het e-mailadres is optioneel. */
 data class Profile(
@@ -562,12 +562,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun onConnectReturn(provider: String, status: String?) {
-        val name = if (provider == "garmin") "Garmin Connect" else "Google Health"
+        val name = providerName(provider)
         message = when (status) {
-            "ok" -> if (provider == "garmin") "$name is gekoppeld. Nieuwe data komt binnen zodra je horloge synchroniseert."
+            "ok" -> if (sources[provider]?.sync == "push" || provider == "garmin") "$name is gekoppeld. Nieuwe data komt binnen zodra je horloge synchroniseert."
                     else "$name is gekoppeld. De afgelopen 30 dagen worden opgehaald."
             "cancelled" -> "Koppelen met $name is afgebroken."
-            "not_linked" -> "Je Google-account heeft nog geen Google Health-gegevens. Open eerst de Fitbit- of Google Health-app."
+            "not_linked" -> if (provider == "google_health") "Je Google-account heeft nog geen Google Health-gegevens. Open eerst de Fitbit- of Google Health-app."
+                            else "Je $name-account heeft nog geen gegevens. Open eerst de $name-app."
             "expired" -> "Het koppelen duurde te lang. Probeer het opnieuw."
             else -> "Koppelen met $name is mislukt."
         }
