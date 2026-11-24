@@ -34,6 +34,20 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 
 @Composable
 fun TodayScreen(vm: MainViewModel) {
@@ -88,9 +102,7 @@ private fun DialHeader(vm: MainViewModel) {
                     style = MaterialTheme.typography.bodyMedium, color = d.dialMuted)
                 Text(greeting, style = MaterialTheme.typography.headlineLarge, color = d.dialInk, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
-            IconButton(onClick = vm::refreshAll, enabled = !vm.busy) {
-                Icon(VIcons.Sync, contentDescription = "Bijwerken", tint = d.dialInk)
-            }
+            RefreshButton(vm, d)
             IconButton(onClick = { vm.openProfile() }) {
                 Icon(VIcons.Person, contentDescription = "Profiel en koppelingen", tint = d.dialInk)
             }
@@ -108,6 +120,7 @@ private fun DialHeader(vm: MainViewModel) {
                 Rings(
                     rings.indices.map { i -> fractions[i] to ringColors[i] }, "$avg%", Modifier.size(if (tiny) 108.dp else 150.dp),
                     description = "Dagringen: gemiddeld $avg procent van je doelen gehaald",
+                    refreshing = vm.refresh == RefreshState.Busy,
                 )
             }
             val legend = @Composable {
@@ -141,11 +154,51 @@ private fun DialHeader(vm: MainViewModel) {
             if (vm.layout.motivation) Motivation(vm, rings, fractions)
         }
 
-        vm.lastLoaded?.let {
-            Text("Bijgewerkt om " + it.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm")),
-                style = MaterialTheme.typography.labelSmall, color = d.dialMuted)
+        RefreshStatus(vm, d)
+    }
+}
+
+/** Knop bijwerken: draait tijdens het vernieuwen, daarna even een vinkje (gelukt) of een waarschuwing (mislukt). */
+@Composable
+private fun RefreshButton(vm: MainViewModel, d: Palette) {
+    IconButton(onClick = vm::refreshAll, enabled = vm.refresh != RefreshState.Busy) {
+        Crossfade(vm.refresh, label = "bijwerken") { state ->
+            when (state) {
+                RefreshState.Busy -> {
+                    val turn by rememberInfiniteTransition(label = "draaien")
+                        .animateFloat(0f, 360f, infiniteRepeatable(tween(900, easing = LinearEasing)), label = "hoek")
+                    Icon(VIcons.Sync, contentDescription = "Bezig met bijwerken", tint = d.dialInk,
+                        modifier = Modifier.graphicsLayer { rotationZ = turn })
+                }
+                RefreshState.Done -> {
+                    val pop = remember { Animatable(0.6f) }
+                    LaunchedEffect(Unit) { pop.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = 500f)) }
+                    Icon(VIcons.Check, contentDescription = "Bijgewerkt", tint = d.good,
+                        modifier = Modifier.graphicsLayer { scaleX = pop.value; scaleY = pop.value })
+                }
+                RefreshState.Failed -> Icon(VIcons.Alert, contentDescription = "Bijwerken mislukt. Tik om het opnieuw te proberen", tint = d.bad)
+                RefreshState.Idle -> Icon(VIcons.Sync, contentDescription = "Bijwerken", tint = d.dialInk)
+            }
         }
     }
+}
+
+/** Regel onder de ringen: bezig, wanneer bijgewerkt, of waarom het mislukte. Wordt voorgelezen bij een wijziging. */
+@Composable
+private fun RefreshStatus(vm: MainViewModel, d: Palette) {
+    val time = vm.lastLoaded?.atZone(ZoneId.systemDefault())?.format(DateTimeFormatter.ofPattern("HH:mm"))
+    val text = when (vm.refresh) {
+        RefreshState.Busy -> "Bijwerken…"
+        RefreshState.Failed -> "Bijwerken mislukt: ${vm.refreshError ?: "er ging iets mis"}"
+        RefreshState.Done -> time?.let { "Bijgewerkt om $it" }
+        RefreshState.Idle -> time?.let { "Bijgewerkt om $it" }
+    } ?: return
+    val color by animateColorAsState(
+        when (vm.refresh) { RefreshState.Done -> d.good; RefreshState.Failed -> d.bad; RefreshState.Busy -> d.dialInk; else -> d.dialMuted },
+        tween(300), label = "statuskleur",
+    )
+    Text(text, style = MaterialTheme.typography.labelSmall, color = color,
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
 }
 
 /** Eén zin die laat zien wat er vandaag nog te halen valt. */

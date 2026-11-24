@@ -41,6 +41,10 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.format.DateTimeFormatter
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 
 /** Klein lijntje van de afgelopen dagen, met een stip op de laatste waarde. */
 @Composable
@@ -67,23 +71,35 @@ fun Sparkline(values: List<Double?>, color: Color, modifier: Modifier = Modifier
 
 /** Dagringen: één ring per doel, van buiten naar binnen. Groeit bij het openen. */
 @Composable
-fun Rings(rings: List<Pair<Float, Color>>, center: String, modifier: Modifier = Modifier, description: String? = null) {
+fun Rings(
+    rings: List<Pair<Float, Color>>,
+    center: String,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    refreshing: Boolean = false,
+) {
     var started by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { started = true }
     val t by animateFloatAsState(if (started) 1f else 0f, tween(900), label = "rings")
+    // Na vernieuwen groeien de ringen naar de nieuwe waarde in plaats van te verspringen
+    val shown = rings.mapIndexed { i, (f, _) -> animateFloatAsState(f.coerceIn(0f, 1f), tween(700), label = "ring$i").value }
+    val pulse = if (refreshing) {
+        rememberInfiniteTransition(label = "vernieuwen")
+            .animateFloat(1f, 0.45f, infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "puls").value
+    } else 1f
     Box(modifier.then(if (description != null) Modifier.clearAndSetSemantics { contentDescription = description } else Modifier),
         contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val d = size.minDimension
             val w = d * 0.085f
             val gap = w * 0.42f
-            rings.forEachIndexed { i, (f, c) ->
+            rings.forEachIndexed { i, (_, c) ->
                 val inset = w / 2 + i * (w + gap)
                 val sz = Size(d - 2 * inset, d - 2 * inset)
                 val tl = Offset((size.width - sz.width) / 2, (size.height - sz.height) / 2)
                 drawArc(c.copy(alpha = 0.22f), 0f, 360f, false, tl, sz, style = Stroke(w))
-                val sweep = 360f * f.coerceIn(0f, 1f) * t
-                if (sweep > 0.5f) drawArc(c, -90f, sweep, false, tl, sz, style = Stroke(w, cap = StrokeCap.Round))
+                val sweep = 360f * shown[i] * t
+                if (sweep > 0.5f) drawArc(c.copy(alpha = pulse), -90f, sweep, false, tl, sz, style = Stroke(w, cap = StrokeCap.Round))
             }
         }
         Text(center, style = MaterialTheme.typography.titleLarge, color = DialPalette.dialInk)

@@ -21,6 +21,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.time.Instant
 import java.time.LocalDate
+import kotlinx.coroutines.delay
 
 data class MetricInfo(
     val id: String,
@@ -121,6 +122,9 @@ enum class ProfileTab { Profile, Connections }
 /** Kennismaking na de eerste keer inloggen (na de toestemming). */
 enum class Onboarding { Import, Profile }
 
+/** Vernieuwen met de knop of door omlaag te trekken: bezig, gelukt of mislukt (korte tijd zichtbaar). */
+enum class RefreshState { Idle, Busy, Done, Failed }
+
 enum class HcStatus { UNKNOWN, UNAVAILABLE, UPDATE_REQUIRED, NO_PERMISSION, FOREGROUND_ONLY, OK }
 
 /** Stappen in het inlogscherm. */
@@ -180,6 +184,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var connections by mutableStateOf<Map<String, Connection>>(emptyMap()); private set
     var hcStatus by mutableStateOf(HcStatus.UNKNOWN); private set
     var lastSync by mutableStateOf(hc.lastSync); private set
+    var refresh by mutableStateOf(RefreshState.Idle); private set
+    /** Waarom vernieuwen mislukte, kort, voor onder de dagringen. */
+    var refreshError by mutableStateOf<String?>(null); private set
 
     val visible: List<Pref> get() = prefs.values.filter { it.visible }.sortedBy { it.position }
     /** Dagringen (max. 3) op volgorde. */
@@ -193,7 +200,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun isConnected(provider: String) = connections[provider]?.status == "active"
 
-    init { if (signedIn) load() }
+    /** Eerste keer laden na het openen is klaar (gelukt of niet): dan mag het beginscherm weg. */
+    var firstLoadDone by mutableStateOf(!signedIn); private set
+
+    init { if (signedIn) task { try { loadNow() } finally { firstLoadDone = true } } }
 
     private fun task(block: suspend () -> Unit) = viewModelScope.launch {
         busy = true
@@ -358,6 +368,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun applyTheme(mode: ThemeMode) {
         themeMode = mode
         ui.edit().putString("theme", mode.id).apply()
+        // Android 12+: het beginscherm van het systeem volgt dan ook de gekozen weergave (geen lichte flits in donker)
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            val night = when (mode) {
+                ThemeMode.Light -> android.app.UiModeManager.MODE_NIGHT_NO
+                ThemeMode.Dark -> android.app.UiModeManager.MODE_NIGHT_YES
+                ThemeMode.System -> android.app.UiModeManager.MODE_NIGHT_AUTO
+            }
+            getApplication<Application>().getSystemService(android.app.UiModeManager::class.java)?.setApplicationNightMode(night)
+        }
     }
 
     fun openProfile(tab: ProfileTab = ProfileTab.Profile) {
@@ -434,18 +453,42 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         trendSeries = (0 until 2 * trendDays).map { i -> start.plusDays(i.toLong()).let { TrendPoint(it, byDay[it]) } }
     }
 
-    /** Knop in de wijzerplaat: Health Connect bijwerken (als dat kan) en alles opnieuw laden. */
-    fun refreshAll() = task {
-        refreshHcStatusNow()
-        // Health Connect en Google Health tegelijk bijwerken; de server haalt Google hooguit eens per 10 minuten op
-        coroutineScope {
-            if (hcStatus == HcStatus.OK || hcStatus == HcStatus.FOREGROUND_ONLY) launch {
-                try { hc.sync() } catch (e: Exception) { message = "Health Connect: ${e.message}" }
+    /**
+     * Knop in de wijzerplaat en omlaag trekken: Health Connect en Google Health bijwerken en alles opnieuw laden.
+     * De status (bezig, gelukt, mislukt) is in de wijzerplaat te zien, zodat je weet of het gelukt is.
+     */
+    fun refreshAll() {
+        if (refresh == RefreshState.Busy) return
+        viewModelScope.launch {
+            refresh = RefreshState.Busy; busy = true
+            val started = System.currentTimeMillis()
+            val failedSources = mutableListOf<String>()
+            val ok = try {
+                refreshHcStatusNow()
+                // Tegelijk; de server haalt Google hooguit eens per 10 minuten op
+                coroutineScope {
+                    if (hcStatus == HcStatus.OK || hcStatus == HcStatus.FOREGROUND_ONLY) launch {
+                        try { hc.sync() } catch (_: Exception) { failedSources += "Health Connect" }
+                    }
+                    if (isConnected("google_health")) launch {
+                        try { api.function("google-health-sync") } catch (_: Exception) { failedSources += "Google Health" }
+                    }
+                }
+                loadNow()
+                if (detailMetric != null) loadTrend()
+                true
+            } catch (e: Exception) {
+                refreshError = if (e is java.io.IOException && e !is ApiException) "geen verbinding" else (e.message ?: "er ging iets mis")
+                false
             }
-            if (isConnected("google_health")) launch { runCatching { api.function("google-health-sync") } }
+            // Even laten draaien, ook als het razendsnel ging: anders zie je niet dat er iets gebeurde
+            delay((700 - (System.currentTimeMillis() - started)).coerceAtLeast(0))
+            busy = false
+            if (failedSources.isNotEmpty()) message = "${failedSources.joinToString(" en ")} kon niet worden bijgewerkt. De rest is wel bijgewerkt."
+            refresh = if (ok) RefreshState.Done else RefreshState.Failed
+            delay(if (ok) 2500 else 6000)
+            if (refresh != RefreshState.Busy) refresh = RefreshState.Idle
         }
-        loadNow()
-        if (detailMetric != null) loadTrend()
     }
 
     // ---------- Health Connect ----------

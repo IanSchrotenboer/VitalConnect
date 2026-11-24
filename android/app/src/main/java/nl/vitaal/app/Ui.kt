@@ -29,6 +29,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 private val TABS = listOf(
     Triple(Tab.Today, "Vandaag", VIcons.Today),
@@ -132,11 +139,13 @@ fun VitaalRoot(
                             vm.editing != null -> EditScreen(vm, vm.editing!!)
                             vm.detailMetric != null -> DetailScreen(vm)
                             vm.showSettings -> ProfileScreen(vm, onRequestHc, onOpenUrl, onShare, onSignOut, onRequestNotifications)
-                            else -> HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 1) { page ->
-                                when (Tab.entries[page]) {
-                                    Tab.Today -> TodayScreen(vm)
-                                    Tab.Health -> HealthScreen(vm)
-                                    Tab.Sleep -> SleepScreen(vm)
+                            else -> PullToRefresh(vm) {
+                                HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 1) { page ->
+                                    when (Tab.entries[page]) {
+                                        Tab.Today -> TodayScreen(vm)
+                                        Tab.Health -> HealthScreen(vm)
+                                        Tab.Sleep -> SleepScreen(vm)
+                                    }
                                 }
                             }
                         }
@@ -145,4 +154,27 @@ fun VitaalRoot(
             }
         }
     }
+}
+
+/** Omlaag trekken om te vernieuwen. Het rondje bovenin draait alleen als je zelf trok; de knop heeft zijn eigen animatie. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PullToRefresh(vm: MainViewModel, content: @Composable () -> Unit) {
+    val p = LocalPalette.current
+    val state = rememberPullToRefreshState()
+    var pulled by remember { mutableStateOf(false) }
+    LaunchedEffect(vm.refresh) { if (vm.refresh != RefreshState.Busy) pulled = false }
+    val refreshing = pulled && vm.refresh == RefreshState.Busy
+    PullToRefreshBox(
+        isRefreshing = refreshing,
+        onRefresh = { pulled = true; vm.refreshAll() },
+        modifier = Modifier.fillMaxSize(),
+        state = state,
+        indicator = {
+            PullToRefreshDefaults.Indicator(
+                state = state, isRefreshing = refreshing, modifier = Modifier.align(Alignment.TopCenter),
+                containerColor = p.card, color = p.primary,
+            )
+        },
+    ) { content() }
 }
