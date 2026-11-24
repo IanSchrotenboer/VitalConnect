@@ -22,6 +22,7 @@
 4. Meld de uitkomst kort in de commit of release-notities. Een rode controle wordt eerst opgelost.
 
 ## Vormgeving
+- Ontwerpskill: `.claude/skills/impeccable` (Impeccable 4.10, Apache 2.0; zonder de hooks). Gebruik `/impeccable critique`, `audit`, `polish` enz. voor ontwerpwerk aan de app en de preview.
 - Kleuren staan in `android/.../Theme.kt` en als CSS-variabelen bovenaan `prototype/index.html`; houd ze gelijk.
 - Tabbladen: Vandaag, Gezondheid (statistieken over de hele geschiedenis), Slaap. Koppelingen en account achter het persoon-icoon.
 - De dagringen kleuren per positie (abrikoos, zeegroen, indigo), niet per categorie.
