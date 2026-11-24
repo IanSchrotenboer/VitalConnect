@@ -37,6 +37,8 @@ object VIcons {
     val Person = line("person", "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M4 20a8 8 0 0 1 16 0")
     val ChevronRight = line("right", "M9 6l6 6-6 6")
     val Sync = line("sync", "M20 12a8 8 0 1 1-2.3-5.7", "M20 4v5h-5")
+    val Check = line("check", "M5 12.5l4.5 4.5L19 7.5")
+    val Alert = line("alert", "M12 9v4", "M12 16.5v.01", "M10.3 4.2L2.8 17.3A2 2 0 0 0 4.5 20.3h15a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z")
     val Sliders = line("sliders", "M4 6h9", "M17 6h3", "M15 4v4", "M4 12h3", "M11 12h9", "M9 10v4", "M4 18h11", "M19 18h1", "M17 16v4")
     val ChevronDown = line("down", "M6 9l6 6 6-6")
     val ChevronUp = line("up", "M6 15l6-6 6 6")
