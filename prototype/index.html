@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Vitaal health app</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE everyday, calm and clear: one glance tells how the day is going
+   IDEA a sports-watch face: dark dial with goal rings, then tidy data tiles like watch widgets
+   PICTURE three daily goal rings on a dark band, fed by the metrics the user picks
+   COLOUR white ground, near-black dial; activity coral, heart pink, sleep indigo, body teal, recovery amber
+   TYPE Sora 600/700 display + Inter text
+   LAYOUT dial band full width, rings left and legend right; tiles in a 2-column grid on phone, more columns wider; tab bar at the bottom */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0d0e11);--card:light-dark(#f3f3f0,#191a1f);--ink:light-dark(#121316,#f1f1ee);--mut:light-dark(#5b5e66,#a2a5ad);--line:light-dark(#e0e0db,#2c2e35);--dial:light-dark(#121318,#1b1d24);--act:light-dark(#e8492a,#ff6a45);--hart:light-dark(#d81b60,#ff5c93);--slaap:light-dark(#5248d9,#8d86ff);--lich:light-dark(#0b8577,#2dc2ae);--herst:light-dark(#b87800,#f2b630);--warn:light-dark(#fff3dc,#33280f)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 Inter,system-ui,sans-serif;overflow-x:clip;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+body.lock{overflow:hidden}
+h1,h2,h3{font-family:Sora,Inter,sans-serif;letter-spacing:-.02em;line-height:1.05;margin:0;text-wrap:balance}
+h1{font-size:clamp(30px,6vw,40px)}h2{font-size:21px}h3{font-size:17px}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--act);outline-offset:2px}
+.wrap{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.dial{background:var(--dial);color:#f4f4f1;padding-top:max(20px,env(safe-area-inset-top,0px));padding-bottom:22px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.date{margin:0 0 6px;color:#a7aab2;font-size:15px}
+.sync{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border-radius:22px;border:1px solid #3a3d46;background:transparent;color:#f4f4f1;font-size:14px;white-space:nowrap}
+.sync svg{width:18px;height:18px}
+.sync.spin svg{animation:sp .9s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.dialg{display:grid;grid-template-columns:minmax(0,210px) minmax(0,1fr);gap:clamp(16px,4vw,40px);align-items:center;margin-top:18px}
+.rsvg{width:100%;height:auto;display:block}
+.rt{fill:none;stroke-width:16;stroke-opacity:.2}
+.rp{fill:none;stroke-width:16;stroke-linecap:round;transition:stroke-dasharray .9s cubic-bezier(.3,.7,.2,1)}
+.rsvg text{fill:#f4f4f1;font-family:Sora,sans-serif;font-weight:700;text-anchor:middle}
+.leg{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.leg li{display:grid;grid-template-columns:12px minmax(0,1fr);gap:4px 10px;align-items:baseline}
+.leg i{width:12px;height:12px;border-radius:50%;align-self:center}
+.leg b{font-weight:500;color:#c9ccd3;font-size:15px}
+.leg span{grid-column:2;font:600 clamp(19px,4.6vw,24px)/1.1 Sora,sans-serif}
+.leg small{color:#a7aab2;font:400 14px Inter,sans-serif}
+.demo{margin:18px 0 0;color:#a7aab2;font-size:13px}
+.sh{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:24px 0 14px}
+.btn{min-height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--line);background:var(--bg);font-weight:600;font-size:15px;white-space:nowrap}
+.btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn:disabled{opacity:.6;cursor:progress}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.tile{display:flex;flex-direction:column;gap:6px;text-align:left;background:var(--card);border:0;border-radius:18px;padding:14px;min-height:136px;text-decoration:none;color:inherit}
+.tile.l{grid-column:span 2}
+.tile:hover{background:color-mix(in srgb,var(--card),var(--ink) 4%)}
+.th{display:flex;align-items:center;gap:8px}
+.th i{width:9px;height:9px;border-radius:50%;flex:none}
+.tn{font-weight:600;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tv{font:600 clamp(25px,6.4vw,31px)/1.05 Sora,sans-serif;letter-spacing:-.02em;margin-top:auto;white-space:nowrap}
+.tv small{font:500 14px Inter,sans-serif;color:var(--mut);margin-left:4px;letter-spacing:0}
+.tm{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--mut)}
+.tm span{white-space:nowrap}
+.up{color:var(--lich)}.dn{color:var(--act)}
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}.bar b{display:block;height:100%;border-radius:3px}
+.spark{width:100%;height:34px;display:block}
+.tile.l .spark{height:48px}
+.empty{color:var(--mut);font-size:14px;margin-top:auto}
+.lede{color:var(--mut);margin:8px 0 18px;max-width:62ch}
+.vh{padding-top:max(24px,env(safe-area-inset-top,0px))}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:thin}
+.chip{flex:none;min-height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--line);background:var(--bg);font-size:15px;white-space:nowrap}
+.chip[aria-pressed=true],.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.seg button{min-height:44px;padding:0 14px;border:0;background:transparent;font-size:15px;white-space:nowrap}
+.seg button+button{border-left:1px solid var(--line)}
+.card{background:var(--card);border-radius:20px;padding:16px;margin-top:14px}
+.ro{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.ro b{font:600 clamp(26px,6vw,34px)/1.1 Sora,sans-serif;white-space:nowrap}
+.ro span{color:var(--mut);font-size:14px}
+.fig{position:relative;min-height:280px;margin-top:8px;touch-action:pan-y}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.fig text{font-size:13px;fill:var(--mut);font-family:Inter,sans-serif}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(9em,1fr));gap:12px;margin-top:12px}
+.stats div{background:var(--card);border-radius:16px;padding:12px 14px}
+.stats span{display:block;color:var(--mut);font-size:14px}
+.stats b{font:600 20px Sora,sans-serif;white-space:nowrap}
+.pv{background:var(--card);border-radius:20px;padding:16px;margin-bottom:12px}
+.pvh{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center}
+.mk{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:#fff;font:700 18px Sora,sans-serif}
+.st{margin:2px 0 0;font-size:14px;color:var(--mut)}.st.ok{color:var(--lich)}
+.pm{margin:12px 0 0;font-size:14px;color:var(--mut)}
+.warn{background:var(--warn);border-radius:12px;padding:10px 12px;margin:12px 0 0;font-size:14px}
+.about{margin:24px 0 8px}
+.about dl{display:grid;grid-template-columns:minmax(0,11em) minmax(0,1fr);gap:10px 16px;margin:12px 0 0;font-size:15px}
+.about dt{font-weight:600}.about dd{margin:0;color:var(--mut)}
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+.tabs div{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.tabs a{display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 0 8px;font-size:13px;color:var(--mut);text-decoration:none;font-weight:500}
+.tabs a[aria-current=page]{color:var(--ink)}
+.tabs svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sheet{position:fixed;inset:0;background:rgba(10,11,14,.5);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.sheet[hidden]{display:none}
+.panel{background:var(--bg);width:min(640px,100%);max-height:92dvh;overflow:auto;border-radius:22px 22px 0 0;padding:20px max(16px,env(safe-area-inset-left,0px)) calc(20px + env(safe-area-inset-bottom,0px))}
+.ph{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.list{list-style:none;margin:14px 0;padding:0}
+.row{border-bottom:1px solid var(--line);padding:6px 0}
+.rh{display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:center;gap:8px}
+.sw{display:grid;grid-template-columns:48px minmax(0,1fr);column-gap:12px;align-items:center;min-height:52px;cursor:pointer}
+.sw b{font-weight:600}.sw small{grid-column:2;color:var(--mut);font-size:13px}
+.sw input{grid-row:span 2;appearance:none;-webkit-appearance:none;width:46px;height:28px;border-radius:14px;background:var(--line);position:relative;margin:0;cursor:pointer;transition:background .2s}
+.sw input::before{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .2s}
+.sw input:checked{background:var(--ink)}.sw input:checked::before{transform:translateX(18px)}
+.ib{width:44px;height:44px;border:0;background:transparent;border-radius:12px;display:grid;place-items:center}
+.ib svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;transition:transform .2s}
+.ib[aria-expanded=true] svg{transform:rotate(180deg)}
+.rd{display:grid;gap:12px;padding:6px 0 14px 60px}
+.fld{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-size:15px}
+.fld select,.fld input[type=number]{min-height:44px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 10px}
+.fld select{flex:1 1 12em;max-width:16em}
+.fld input[type=number]{width:8em;text-align:right}
+.ck{display:flex;align-items:center;gap:10px;font-size:15px;min-height:44px}
+.ck input{width:22px;height:22px;accent-color:var(--ink)}
+.note{color:var(--act);font-size:14px;min-height:1.4em;margin:0}
+@media(max-width:600px){.dialg{grid-template-columns:minmax(0,150px) minmax(0,1fr)}.rd{padding-left:0}.about dl{grid-template-columns:minmax(0,1fr)}.about dd{margin-bottom:6px}}
+@media(max-width:370px){.dialg{grid-template-columns:minmax(0,1fr)}.rsvg{max-width:200px;margin:0 auto}}
+@media(prefers-reduced-motion:reduce){.rp,.sw input,.sw input::before,.ib svg{transition:none}.sync.spin svg{animation:none}}
+</style>
+</head>
+<body>
+
+<section id="v-vandaag" class="view">
+  <header class="dial"><div class="wrap">
+    <div class="top">
+      <div><p class="date" id="date"></p><h1 id="greet">Goedemorgen</h1></div>
+      <button class="sync" id="syncBtn" data-act="sync" aria-label="Nu synchroniseren"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg><span id="syncTxt"></span></button>
+    </div>
+    <div class="dialg" id="rings"></div>
+    <p class="demo">Voorbeelddata. Koppelingen worden in dit prototype gesimuleerd.</p>
+  </div></header>
+  <main class="wrap">
+    <div class="sh"><h2>Jouw metrics</h2><button class="btn" data-act="edit">Aanpassen</button></div>
+    <div class="grid" id="grid"></div>
+  </main>
+</section>
+
+<section id="v-trends" class="view" hidden><div class="wrap vh">
+  <h1>Trends</h1>
+  <p class="lede">Tik op een dag in de grafiek om de waarde te zien.</p>
+  <div class="chips" id="chips" role="group" aria-label="Metric"></div>
+  <div class="seg" id="per" role="group" aria-label="Periode"></div>
+  <div class="card"><div class="ro" id="ro"></div><div class="fig" id="fig"><svg id="chart" role="img" aria-label="Trendgrafiek"></svg></div></div>
+  <div class="stats" id="stats"></div>
+</div></section>
+
+<section id="v-koppelingen" class="view" hidden><div class="wrap vh">
+  <h1>Koppelingen</h1>
+  <p class="lede">Kies welke apps je data leveren. Per metric stel je de voorkeursbron in onder Vandaag, Aanpassen. Valt een bron weg, dan neemt de volgende gekoppelde bron het over.</p>
+  <div id="prov"></div>
+  <div class="about">
+    <h2>Wat een echte koppeling vraagt</h2>
+    <dl>
+      <dt>Garmin Connect</dt><dd>Garmin Connect Developer Program met OAuth 2.0. Zakelijke toegang vraagt goedkeuring; voor je eigen data bestaat een persoonlijke API-sleutel.</dd>
+      <dt>Suunto app</dt><dd>Suunto Cloud API via het partnerprogramma (API Zone). Levert trainingen als FIT-bestanden; niet bedoeld voor persoonlijk gebruik.</dd>
+      <dt>Google Health</dt><dd>Google Health API voor clouddata van Fitbit- en Google-apparaten. In een Android-app komt daar Health Connect bij, met data op het toestel.</dd>
+      <dt>Google Fit</dt><dd>De Fit-API's worden ondersteund tot eind 2026. Nieuwe koppelingen lopen via Google Health API of Health Connect.</dd>
+    </dl>
+  </div>
+</div></section>
+
+<nav class="tabs" aria-label="Hoofdmenu"><div>
+  <a href="#vandaag" data-nav="vandaag"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>Vandaag</a>
+  <a href="#trends" data-nav="trends"><svg viewBox="0 0 24 24"><path d="M3 17l5-5 4 3 8-8"/><path d="M15 7h5v5"/></svg>Trends</a>
+  <a href="#koppelingen" data-nav="koppelingen"><svg viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></svg>Koppelingen</a>
+</div></nav>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="shT">
+    <div class="ph"><h2 id="shT">Dashboard aanpassen</h2><button class="btn pri" data-act="close" id="shClose">Klaar</button></div>
+    <p class="lede" style="margin-bottom:0">Zet metrics aan of uit en kies per metric de bron, de grootte en een dagdoel. Maximaal drie doelen komen in de ringen.</p>
+    <p class="note" id="note" aria-live="polite"></p>
+    <ul class="list" id="list"></ul>
+    <button class="btn" data-act="reset" id="shReset">Standaardindeling herstellen</button>
+  </div>
+</div>
+
+<script>
+{
+const $=q=>document.querySelector(q);
+const N=180,DAY=864e5,now=new Date();
+const P={garmin:{n:'Garmin Connect',k:'G',c:'#1f6fd1'},suunto:{n:'Suunto app',k:'S',c:'#c8372d'},ghealth:{n:'Google Health',k:'H',c:'#2f8f5b'},gfit:{n:'Google Fit',k:'F',c:'#c27a00'}};
+const PO=['garmin','suunto','ghealth','gfit'];
+const CAT={act:'Activiteit',hart:'Hart',slaap:'Slaap',lich:'Lichaam',herst:'Herstel'};
+const A=PO;
+const M=[
+{id:'steps',n:'Stappen',u:'',cat:'act',d:0,b:9200,v:3000,t:4,g:10000,bar:1,src:A},
+{id:'active',n:'Actieve minuten',u:'min',cat:'act',d:0,b:46,v:20,t:.02,g:30,bar:1,src:A},
+{id:'kcal',n:'Actieve calorieën',u:'kcal',cat:'act',d:0,b:640,v:200,t:.3,g:600,bar:1,src:A},
+{id:'dist',n:'Afstand',u:'km',cat:'act',d:1,b:7.4,v:2.6,t:.003,g:8,bar:1,src:A},
+{id:'floors',n:'Verdiepingen',u:'',cat:'act',d:0,b:9,v:4,t:0,g:10,bar:1,src:['garmin','ghealth','gfit']},
+{id:'rhr',n:'Rusthartslag',u:'bpm',cat:'hart',d:0,b:53,v:2.2,t:-.008,lo:1,src:A},
+{id:'hrv',n:'HRV',u:'ms',cat:'hart',d:0,b:58,v:8,t:.02,src:['garmin','suunto','ghealth']},
+{id:'spo2',n:'Zuurstof (SpO₂)',u:'%',cat:'hart',d:0,b:96.4,v:.9,t:0,max:100,src:['garmin','suunto','ghealth']},
+{id:'sleep',n:'Slaapduur',u:'',cat:'slaap',d:2,b:7.2,v:.7,t:.001,g:8,bar:1,src:A},
+{id:'sscore',n:'Slaapscore',u:'',cat:'slaap',d:0,b:78,v:8,t:.02,g:80,max:100,src:['garmin','suunto','ghealth']},
+{id:'resp',n:'Ademhaling',u:'/min',cat:'slaap',d:1,b:14.6,v:.6,t:0,src:['garmin','suunto','ghealth']},
+{id:'stress',n:'Stress',u:'',cat:'herst',d:0,b:31,v:9,t:-.02,lo:1,max:100,src:['garmin','suunto']},
+{id:'energy',n:'Energieniveau',u:'%',cat:'herst',d:0,b:64,v:16,t:.03,min:5,max:100,src:['garmin']},
+{id:'recov',n:'Hersteltijd',u:'u',cat:'herst',d:0,b:22,v:11,t:0,lo:1,src:['garmin','suunto']},
+{id:'vo2',n:'VO₂max',u:'ml/kg/min',cat:'lich',d:0,b:51,v:.5,t:.008,src:['garmin','suunto']},
+{id:'weight',n:'Gewicht',u:'kg',cat:'lich',d:1,b:76.2,v:.3,t:-.006,g:75,lo:1,src:['garmin','ghealth','gfit']}
+];
+const MI=Object.fromEntries(M.map(m=>[m.id,m]));
+
+const hash=k=>{let h=7;for(const ch of k)h=(h*31+ch.charCodeAt(0))%2147483647;return h||1};
+const cache={};
+const series=(id,p)=>{const k=id+'|'+p;if(cache[k])return cache[k];const m=MI[id];let s=hash(k);const r=()=>(s=s*16807%2147483647)/2147483647;const off=1+(r()-.5)*.03;let w=0;const a=[];for(let i=0;i<N;i++){const n=(r()+r()+r()-1.5)/.75;w=.5*w+.5*n;const wk=Math.sin(i*2*Math.PI/7)*.3;let x=(m.b+m.t*(i-N+1))*off+m.v*(w+wk);x=Math.max(m.min??0,Math.min(m.max??Infinity,x));const f=10**m.d;a.push(Math.round(x*f)/f)}return cache[k]=a};
+
+const KEY='vitaal.v1';
+const fresh=()=>({order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},src:{},goal:{},rings:['steps','active','sleep'],conn:{garmin:true,suunto:true,ghealth:true,gfit:false},sync:{garmin:now-6e5,suunto:now-25e5,ghealth:now-14e5}});
+let S;try{S=Object.assign(fresh(),JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S=fresh()}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+
+const src=id=>{const m=MI[id],pr=S.src[id];if(pr&&S.conn[pr]&&m.src.includes(pr))return pr;return m.src.find(p=>S.conn[p])||null};
+const goal=id=>id in S.goal?S.goal[id]:MI[id].g;
+const today=id=>{const p=src(id);return p?series(id,p)[N-1]:null};
+const col=id=>`var(--${MI[id].cat})`;
+const nl=(v,d)=>v.toLocaleString('nl-NL',{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmt=(id,v)=>{if(v==null)return'–';if(id==='sleep'){let h=Math.floor(v),mm=Math.round((v-h)*60);if(mm===60){h++;mm=0}return`${h}u ${String(mm).padStart(2,'0')}m`}return nl(v,MI[id].d)};
+const dd=i=>new Date(now.getTime()-(N-1-i)*DAY);
+const hm=t=>new Date(t).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+const when=t=>{if(!t)return'nog niet';const d=new Date(t);return d.toDateString()===now.toDateString()?'om '+hm(t):d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'})};
+const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
+
+let open=null,busy=null,tm='steps',per=30,sel=null;
+
+function renderRings(){
+  const ids=S.rings.filter(id=>MI[id]&&src(id)&&goal(id)).slice(0,3),R=[86,64,42],box=$('#rings');
+  if(!ids.length){box.innerHTML=`<p style="grid-column:1/-1;margin:0;color:#c9ccd3">${PO.some(p=>S.conn[p])?'Kies maximaal drie dagdoelen via Aanpassen.':'Koppel een bron om je dagdoelen te zien.'}</p>`;return}
+  const pr=ids.map(id=>Math.min(today(id)/goal(id),1));
+  const tot=Math.round(mean(pr)*100);
+  box.innerHTML=`<svg class="rsvg" viewBox="0 0 200 200" role="img" aria-label="Dagdoelen ${tot}% gehaald">${ids.map((id,i)=>{const r=R[i],c=2*Math.PI*r;return`<circle cx="100" cy="100" r="${r}" class="rt" style="stroke:${col(id)}"/><circle cx="100" cy="100" r="${r}" class="rp" style="stroke:${col(id)}" stroke-dasharray="0 ${c}" data-d="${c*pr[i]} ${c}" transform="rotate(-90 100 100)"/>`}).join('')}<text x="100" y="${ids.length>2?109:111}" font-size="${ids.length>2?24:30}">${tot}%</text></svg>
+  <ul class="leg">${ids.map(id=>{const m=MI[id];return`<li><i style="background:${col(id)}"></i><b>${m.n}</b><span>${fmt(id,today(id))} <small>van ${fmt(id,goal(id))}${m.u?' '+m.u:''}</small></span></li>`}).join('')}</ul>`;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>box.querySelectorAll('.rp').forEach(c=>c.setAttribute('stroke-dasharray',c.dataset.d))));
+}
+
+function spark(a,id){const lo=Math.min(...a),hi=Math.max(...a),rg=hi-lo||1;const pts=a.map((v,i)=>`${(i/(a.length-1)*100).toFixed(1)},${(30-(v-lo)/rg*26-2).toFixed(1)}`).join(' ');return`<svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" style="stroke:${col(id)}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>`}
+
+function tile(id){
+  const m=MI[id],p=src(id),big=S.size[id]==='l';
+  const head=`<div class="th"><i style="background:${col(id)}"></i><span class="tn">${m.n}</span></div>`;
+  if(!p)return`<a class="tile ${big?'l':''}" href="#koppelingen">${head}<span class="empty">Geen gekoppelde bron. Tik om een app te koppelen.</span></a>`;
+  const a=series(id,p),v=a[N-1],avg=mean(a.slice(N-8,N-1)),pc=avg?(v-avg)/avg*100:0;
+  const g=goal(id),good=m.lo?pc<0:pc>0,flat=Math.abs(pc)<1;
+  const dl=flat?'gelijk aan gem.':`${pc>0?'+':'−'}${nl(Math.abs(pc),0)}% vs 7 d.`;
+  const gp=g?Math.min(m.lo?g/v:v/g,1)*100:null;
+  return`<button class="tile ${big?'l':''}" data-open="${id}" aria-label="${m.n} ${fmt(id,v)} ${m.u}, open trend">${head}
+  <div class="tv">${fmt(id,v)}${m.u?`<small>${m.u}</small>`:''}</div>
+  ${gp!=null?`<div class="bar" title="Doel ${fmt(id,g)}"><b style="width:${gp.toFixed(0)}%;background:${col(id)}"></b></div>`:''}
+  ${spark(a.slice(big?N-14:N-7),id)}
+  <div class="tm"><span>${P[p].n}</span><span class="${flat?'':good?'up':'dn'}">${dl}</span></div></button>`;
+}
+
+function renderToday(){
+  const h=now.getHours();$('#greet').textContent=h<12?'Goedemorgen':h<18?'Goedemiddag':'Goedenavond';
+  $('#date').textContent=now.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'});
+  const ts=PO.filter(p=>S.conn[p]).map(p=>S.sync[p]||0);
+  $('#syncTxt').textContent=ts.length?'Bijgewerkt '+when(Math.max(...ts)):'Geen bron';
+  renderRings();
+  $('#grid').innerHTML=S.order.length?S.order.filter(id=>MI[id]).map(tile).join(''):`<p class="empty" style="grid-column:1/-1">Je dashboard is leeg. Kies metrics via Aanpassen.</p>`;
+}
+
+function renderSheet(){
+  if($('#sheet').hidden)return;
+  const fid=document.activeElement?.id;
+  const ids=[...S.order.filter(id=>MI[id]),...M.map(m=>m.id).filter(id=>!S.order.includes(id))];
+  $('#list').innerHTML=ids.map(id=>{const m=MI[id],on=S.order.includes(id),p=src(id),o=open===id,g=goal(id);
+    return`<li class="row"><div class="rh"><label class="sw"><input type="checkbox" id="t-${id}" data-tog="${id}" ${on?'checked':''}><b>${m.n}</b><small>${CAT[m.cat]} · ${p?P[p].n:'geen gekoppelde bron'}</small></label>
+    <button class="ib" id="x-${id}" data-exp="${id}" aria-expanded="${o}" aria-label="Instellingen ${m.n}"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button></div>
+    ${o?`<div class="rd">
+      <label class="fld" for="s-${id}">Bron<select id="s-${id}" data-src="${id}">${m.src.map(q=>`<option value="${q}" ${q===p?'selected':''} ${S.conn[q]?'':'disabled'}>${P[q].n}${S.conn[q]?'':' (niet gekoppeld)'}</option>`).join('')}</select></label>
+      <div class="fld"><span>Grootte</span><div class="seg"><button id="zs-${id}" data-size="${id}:s" aria-pressed="${S.size[id]!=='l'}">Klein</button><button id="zl-${id}" data-size="${id}:l" aria-pressed="${S.size[id]==='l'}">Breed</button></div></div>
+      <label class="fld" for="g-${id}">${m.lo?'Streefwaarde':'Dagdoel'}<span><input type="number" step="any" min="0" inputmode="decimal" id="g-${id}" data-goal="${id}" value="${g??''}" placeholder="geen"> ${id==='sleep'?'uur':m.u}</span></label>
+      ${m.g&&!m.lo?`<label class="ck"><input type="checkbox" id="r-${id}" data-ring="${id}" ${S.rings.includes(id)?'checked':''}>Tonen in dagringen</label>`:''}
+      ${on?`<div class="fld"><span>Volgorde</span><div class="seg"><button id="u-${id}" data-mv="${id}:-1">Omhoog</button><button id="d-${id}" data-mv="${id}:1">Omlaag</button></div></div>`:''}
+    </div>`:''}</li>`}).join('');
+  if(fid)document.getElementById(fid)?.focus();
+}
+
+function renderTrends(){
+  $('#chips').innerHTML=M.map(m=>`<button class="chip" data-metric="${m.id}" aria-pressed="${m.id===tm}">${m.n}</button>`).join('');
+  $('#per').innerHTML=[[7,'7 dagen'],[30,'30 dagen'],[90,'90 dagen']].map(([v,l])=>`<button data-per="${v}" aria-pressed="${v===per}">${l}</button>`).join('');
+  $('#chips [aria-pressed=true]')?.scrollIntoView({block:'nearest',inline:'nearest'});
+  const p=src(tm),m=MI[tm];
+  if(!p){$('#ro').innerHTML=`<span>Geen gekoppelde bron voor ${m.n}.</span>`;$('#stats').innerHTML='';$('#chart').innerHTML='';return}
+  const all=series(tm,p),a=all.slice(N-per),pv=all.slice(N-2*per,N-per),u=m.u?' '+m.u:'';
+  const ch=(mean(a)-mean(pv))/mean(pv)*100,good=m.lo?ch<0:ch>0;
+  $('#stats').innerHTML=[['Gemiddelde',fmt(tm,mean(a))+u],['Laagste',fmt(tm,Math.min(...a))+u],['Hoogste',fmt(tm,Math.max(...a))+u],['Vs vorige periode',`<span class="${Math.abs(ch)<1?'':good?'up':'dn'}">${ch>=0?'+':'−'}${nl(Math.abs(ch),1)}%</span>`]].map(([l,v])=>`<div><span>${l}</span><b>${v}</b></div>`).join('');
+  draw();
+}
+
+function readout(a,i){const m=MI[tm],d=dd(N-a.length+i);$('#ro').innerHTML=`<b>${fmt(tm,a[i])}${m.u?' '+m.u:''}</b><span>${d.toLocaleDateString('nl-NL',{weekday:'short',day:'numeric',month:'short'})} · ${P[src(tm)].n}</span>`}
+
+function draw(){
+  const s=$('#chart'),W=s.clientWidth,H=s.clientHeight;if(!W||!H)return;
+  const m=MI[tm],p=src(tm);if(!p)return;
+  const a=series(tm,p).slice(N-per),g=goal(tm),c=col(tm);
+  let lo=Math.min(...a),hi=Math.max(...a);if(g){lo=Math.min(lo,g);hi=Math.max(hi,g)}
+  if(m.bar)lo=0;else{const pd=(hi-lo)*.15||1;lo-=pd;hi+=pd}
+  hi*=m.bar?1.06:1;
+  const L=W<520?40:52,Rm=8,T=12,B=26,iw=W-L-Rm,ih=H-T-B,bw=iw/a.length;
+  const y=v=>T+ih-(v-lo)/(hi-lo)*ih,x=i=>L+bw*(i+.5);
+  const si=sel??a.length-1;
+  const af=v=>tm==='sleep'?nl(v,1):(hi-lo)>=10?nl(Math.round(v),0):nl(v,1);
+  let o='';
+  for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4,yy=y(v);o+=`<line x1="${L}" x2="${W-Rm}" y1="${yy}" y2="${yy}" stroke="var(--line)"/>${W<520&&k%2?'':`<text x="${L-8}" y="${yy+4}" text-anchor="end">${af(v)}</text>`}`}
+  const st=per===7?1:per===30?(W<520?10:7):(W<520?30:15);
+  a.forEach((v,i)=>{if((a.length-1-i)%st===0){const d=dd(N-a.length+i);const lb=per===7?d.toLocaleDateString('nl-NL',{weekday:'short'}):d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'});o+=`<text x="${x(i)}" y="${H-6}" text-anchor="middle">${lb}</text>`}});
+  if(m.bar){a.forEach((v,i)=>{const w=Math.max(bw*.7,1.5);o+=`<rect x="${x(i)-w/2}" y="${y(v)}" width="${w}" height="${Math.max(y(lo)-y(v),0)}" rx="${Math.min(w/2,4)}" style="fill:${c}" opacity="${i===si?1:.42}"/>`})}
+  else{const ln=a.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');o+=`<path d="${ln}L${x(a.length-1)},${y(lo)}L${x(0)},${y(lo)}Z" style="fill:${c}" opacity=".12"/><path d="${ln}" fill="none" style="stroke:${c}" stroke-width="2.5" stroke-linejoin="round"/><line x1="${x(si)}" x2="${x(si)}" y1="${T}" y2="${y(lo)}" stroke="var(--mut)" stroke-dasharray="3 3"/><circle cx="${x(si)}" cy="${y(a[si])}" r="5" style="fill:${c}" stroke="var(--card)" stroke-width="2"/>`}
+  if(g&&g>=lo&&g<=hi){o+=`<line x1="${L}" x2="${W-Rm}" y1="${y(g)}" y2="${y(g)}" stroke="var(--ink)" stroke-dasharray="5 4" stroke-width="1.5"/><text x="${W-Rm}" y="${y(g)-6}" text-anchor="end" style="fill:var(--ink);paint-order:stroke;stroke:var(--card);stroke-width:4px">Doel ${fmt(tm,g)}</text>`}
+  s.innerHTML=o;readout(a,si);
+  s.onpointerdown=s.onpointermove=e=>{if(e.type==='pointermove'&&e.pointerType!=='mouse'&&!e.buttons)return;const r=s.getBoundingClientRect(),i=Math.max(0,Math.min(a.length-1,Math.floor((e.clientX-r.left-L)/bw)));if(i!==sel){sel=i;draw()}};
+}
+const ro=new ResizeObserver(()=>draw());ro.observe($('#chart'));
+
+function renderProv(){
+  $('#prov').innerHTML=PO.map(p=>{const on=S.conn[p],b=busy===p,used=S.order.filter(id=>src(id)===p).length,ms=M.filter(m=>m.src.includes(p));
+  return`<article class="pv"><div class="pvh"><span class="mk" style="background:${P[p].c}" aria-hidden="true">${P[p].k}</span><div><h3>${P[p].n}</h3><p class="st ${on?'ok':''}">${on?`Gekoppeld · gesynchroniseerd ${when(S.sync[p])}${used?` · levert ${used} op je dashboard`:''}`:'Niet gekoppeld'}</p></div>
+  <button class="btn ${on?'':'pri'}" id="c-${p}" data-conn="${p}" ${b?'disabled':''}>${b?'Verbinden…':on?'Ontkoppelen':'Koppelen'}</button></div>
+  ${p==='gfit'?'<p class="warn">Google Fit stopt eind 2026. Koppel liever Google Health; die levert dezelfde metrics.</p>':''}
+  <p class="pm">Levert ${ms.map(m=>m.n.toLowerCase()).join(', ')}.</p></article>`}).join('');
+}
+
+function renderAll(){renderToday();renderProv();renderSheet();if(!$('#v-trends').hidden)renderTrends()}
+const commit=()=>{save();renderSheet();renderToday()};
+const note=t=>{$('#note').textContent=t;clearTimeout(note.t);note.t=setTimeout(()=>$('#note').textContent='',4000)};
+const sheet=on=>{$('#sheet').hidden=!on;document.body.classList.toggle('lock',on);if(on){renderSheet();$('#shClose').focus()}else{open=null;document.querySelector('[data-act=edit]')?.focus()}};
+
+function toggleConn(p){
+  if(S.conn[p]){S.conn[p]=false;save();renderAll();return}
+  busy=p;renderProv();
+  setTimeout(()=>{S.conn[p]=true;S.sync[p]=Date.now();busy=null;save();renderAll();document.getElementById('c-'+p)?.focus()},1200);
+}
+function sync(){
+  const b=$('#syncBtn');if(b.classList.contains('spin'))return;b.classList.add('spin');
+  setTimeout(()=>{PO.forEach(p=>{if(S.conn[p])S.sync[p]=Date.now()});save();b.classList.remove('spin');renderToday();renderProv()},900);
+}
+
+document.addEventListener('click',e=>{
+  if(e.target.id==='sheet'){sheet(false);return}
+  const t=e.target.closest('button');if(!t)return;const d=t.dataset;
+  if(d.act==='edit')sheet(true);
+  else if(d.act==='close')sheet(false);
+  else if(d.act==='reset'){S=fresh();open=null;save();renderAll();note('Standaardindeling hersteld.')}
+  else if(d.act==='sync')sync();
+  else if(d.exp){open=open===d.exp?null:d.exp;renderSheet()}
+  else if(d.size){const[id,v]=d.size.split(':');S.size[id]=v;commit()}
+  else if(d.mv){const[id,dir]=d.mv.split(':'),i=S.order.indexOf(id),j=i+Number(dir);if(i>=0&&j>=0&&j<S.order.length){[S.order[i],S.order[j]]=[S.order[j],S.order[i]];commit()}}
+  else if(d.open){tm=d.open;sel=null;if(location.hash==='#trends')go();else location.hash='trends'}
+  else if(d.metric){tm=d.metric;sel=null;renderTrends()}
+  else if(d.per){per=Number(d.per);sel=null;renderTrends()}
+  else if(d.conn)toggleConn(d.conn);
+});
+document.addEventListener('change',e=>{
+  const t=e.target,d=t.dataset;
+  if(d.tog){const id=d.tog;if(t.checked){if(!S.order.includes(id))S.order.push(id)}else S.order=S.order.filter(x=>x!==id);commit()}
+  else if(d.src){S.src[d.src]=t.value;commit()}
+  else if(d.goal){const v=parseFloat(String(t.value).replace(',','.'));S.goal[d.goal]=isFinite(v)&&v>0?v:null;if(!S.goal[d.goal])S.rings=S.rings.filter(x=>x!==d.goal);commit()}
+  else if(d.ring){const id=d.ring;if(t.checked){if(S.rings.length>=3){t.checked=false;note('Er passen drie doelen in de ringen. Zet er eerst één uit.');return}if(!goal(id)){t.checked=false;note('Stel eerst een dagdoel in.');return}S.rings.push(id)}else S.rings=S.rings.filter(x=>x!==id);commit()}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#sheet').hidden)sheet(false)});
+
+const views=['vandaag','trends','koppelingen'];
+function go(){const h=location.hash.slice(1),v=views.includes(h)?h:'vandaag';views.forEach(n=>{$('#v-'+n).hidden=n!==v;$(`[data-nav="${n}"]`).setAttribute('aria-current',n===v?'page':'false')});if(v==='trends')renderTrends();if(v==='vandaag')renderRings();window.scrollTo(0,0)}
+window.addEventListener('hashchange',go);
+renderToday();renderProv();go();
+}
+</script>
+</body>
+</html>
