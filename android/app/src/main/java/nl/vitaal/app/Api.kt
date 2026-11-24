@@ -36,12 +36,13 @@ class ApiException(val code: Int, message: String) : IOException(message)
 
 /**
  * Kleine client voor Supabase Auth, PostgREST en Edge Functions.
- * De sessie staat in app-privé opslag; voor productie: versleutelen met de Android Keystore.
+ * De sessie staat in app-privé opslag; de tokens zijn versleuteld met de Android Keystore (SecureStore).
  */
 class Api(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("vitaal_auth", Context.MODE_PRIVATE)
+    private val secure = SecureStore(prefs)
 
-    val isSignedIn: Boolean get() = prefs.getString(REFRESH, null) != null
+    val isSignedIn: Boolean get() = prefs.contains(REFRESH)
     val userId: String? get() = prefs.getString(USER, null)
 
     suspend fun signIn(email: String, password: String) {
@@ -102,11 +103,11 @@ class Api(context: Context) {
         call("POST", "/functions/v1/$name", body).let { if (it is JsonObject) it else JsonObject(emptyMap()) }
 
     private suspend fun accessToken(): String = lock.withLock {
-        val current = prefs.getString(ACCESS, null)
+        val current = secure.get(ACCESS)
         if (current != null && System.currentTimeMillis() / 1000 < prefs.getLong(EXPIRES, 0) - 60) {
             return@withLock current
         }
-        val refresh = prefs.getString(REFRESH, null) ?: throw ApiException(401, "Niet ingelogd")
+        val refresh = secure.get(REFRESH) ?: run { signOut(); throw ApiException(401, "Je bent uitgelogd. Log opnieuw in.") }
         try {
             val res = call("POST", "/auth/v1/token?grant_type=refresh_token",
                 buildJsonObject { put("refresh_token", refresh) }, auth = false)
@@ -115,7 +116,7 @@ class Api(context: Context) {
             if (e.code == 400 || e.code == 401) signOut()
             throw e
         }
-        prefs.getString(ACCESS, null) ?: throw ApiException(401, "Niet ingelogd")
+        secure.get(ACCESS) ?: throw ApiException(401, "Niet ingelogd")
     }
 
     private suspend fun call(
@@ -153,9 +154,9 @@ class Api(context: Context) {
     private fun saveSession(o: JsonObject) {
         val expiresAt = o["expires_at"]?.jsonPrimitive?.longOrNull
             ?: (System.currentTimeMillis() / 1000 + (o["expires_in"]?.jsonPrimitive?.longOrNull ?: 3600))
+        secure.put(ACCESS, o["access_token"]!!.jsonPrimitive.content)
+        secure.put(REFRESH, o["refresh_token"]!!.jsonPrimitive.content)
         prefs.edit()
-            .putString(ACCESS, o["access_token"]!!.jsonPrimitive.content)
-            .putString(REFRESH, o["refresh_token"]!!.jsonPrimitive.content)
             .putLong(EXPIRES, expiresAt)
             .putString(USER, o["user"]?.jsonObject?.get("id")?.jsonPrimitive?.content)
             .apply()

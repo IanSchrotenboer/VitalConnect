@@ -71,7 +71,6 @@ button,input,select{font:inherit;color:inherit}button{cursor:pointer}
 .tm{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:500;color:var(--mut)}
 .tm span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .up{color:var(--good)!important}.dn{color:var(--bad)!important}
-.empty{color:var(--mut);font-size:14px;padding:6px 0}
 /* koppen */
 .ph{padding:20px 20px 4px}.ph p{margin:4px 0 0;color:var(--mut);font-size:15px}
 .cat{display:flex;align-items:center;gap:10px;margin:22px 4px 10px}.cat h2{font-size:18px}
@@ -293,14 +292,14 @@ function drawChart(s,pts,o){
 // ---------- Detail ----------
 function renderDetail(){
   const id=detail,m=MI[id],a=series(id),shown=a.slice(N-period),prev=a.slice(N-2*period,N-period);if(sel==null||sel>=period)sel=period-1;
-  const ch=(mean(shown)-mean(prev))/mean(prev)*100,good=m.lo?ch<0:ch>0,sum=m.agg==='sum';
+  const ch=prev.length&&mean(prev)?(mean(shown)-mean(prev))/mean(prev)*100:null,good=m.lo?ch<0:ch>0,sum=m.agg==='sum';
   $('#v-detail').innerHTML=`<div class="back"><button class="ib" data-act="back" aria-label="Terug">${I.back}</button><div><h2>${m.n}</h2><span style="color:${col(id)};font-weight:500;font-size:14px">${CAT[m.cat]}</span></div></div>
   <div class="pills">${[[7,'7 dagen'],[30,'30 dagen'],[90,'90 dagen'],[365,'Jaar']].map(([d,l])=>`<button class="pill" data-per="${d}" aria-pressed="${d===period}">${l}</button>`).join('')}</div>
   <div class="pad stack"><div class="card"><span class="big"><span class="num" style="font-size:36px">${fmt(id,shown[sel])}</span>${unit(id)?`<small>${unit(id)}</small>`:''}</span>
   <span class="gl">${dd(N-period+sel).toLocaleDateString(NL,{weekday:'long',day:'numeric',month:'long',year:'numeric'})} · ${SRC[id]}</span>
   <div class="fig" style="height:260px"><svg id="dfig"></svg></div></div>
   <div class="card"><div class="st" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><small>Gemiddelde</small><b>${fmt(id,mean(shown))}</b></div><div><small>Laagste</small><b>${fmt(id,Math.min(...shown))}</b></div><div><small>Hoogste</small><b>${fmt(id,Math.max(...shown))}</b></div></div>
-  <span class="tm" style="font-size:14px"><span>Vergeleken met de periode ervoor</span><b class="${Math.abs(ch)<1?'':good?'up':'dn'}" style="font-size:16px">${ch>=0?'+':'−'}${nl(Math.abs(ch),1)}%</b></span>
+  ${ch==null?'':`<span class="tm" style="font-size:14px"><span>Vergeleken met de periode ervoor</span><b class="${Math.abs(ch)<1?'':good?'up':'dn'}" style="font-size:16px">${ch>=0?'+':'−'}${nl(Math.abs(ch),1)}%</b></span>`}
   ${sum?`<span class="gl">Totaal in deze periode: ${compact(shown.reduce((x,y)=>x+y,0))} ${unit(id)}</span>`:''}</div></div>`;
   drawChart($('#dfig'),shown.map((v,i)=>({d:dd(N-period+i),v})),{bars:sum,goal:goal(id),color:col(id),sel,axis:v=>id==='sleep'?Math.round(v)+'u':compact(v),onSel:i=>{sel=i;renderDetail()}});
 }
@@ -388,11 +387,14 @@ document.addEventListener('click',e=>{
   else if(d.size){const[id,v]=d.size.split(':');S.size[id]=v;renderEdit()}
   else if(d.mv){const[id,dir]=d.mv.split(':'),i=S.order.indexOf(id),j=i+Number(dir);if(i>=0&&j>=0&&j<S.order.length){[S.order[i],S.order[j]]=[S.order[j],S.order[i]];renderEdit()}}
 });
+// Opnieuw tekenen na een wijziging pas na de huidige gebeurtenis: anders kan het verdwijnen van een veld
+// (blur) een tweede, geneste tekenronde starten.
+const later=f=>setTimeout(f,0);
 document.addEventListener('change',e=>{
   const t=e.target,d=t.dataset;
-  if(d.tog){const id=d.tog;if(t.checked){if(!S.order.includes(id))S.order.push(id)}else{S.order=S.order.filter(x=>x!==id);S.rings=S.rings.filter(x=>x!==id)}renderEdit()}
-  else if(d.prof){setProf(t);if(d.prof==='birth')renderSettings()}
-  else if(d.goal){const v=parseFloat(String(t.value).replace(',','.'));S.goal[d.goal]=isFinite(v)&&v>0?v:null;if(!S.goal[d.goal])S.rings=S.rings.filter(x=>x!==d.goal);renderEdit()}
+  if(d.tog){const id=d.tog;if(t.checked){if(!S.order.includes(id))S.order.push(id)}else{S.order=S.order.filter(x=>x!==id);S.rings=S.rings.filter(x=>x!==id)}later(renderEdit)}
+  else if(d.prof){setProf(t);if(d.prof==='birth')later(renderSettings)}
+  else if(d.goal){const v=parseFloat(String(t.value).replace(',','.'));S.goal[d.goal]=isFinite(v)&&v>0?v:null;if(!S.goal[d.goal])S.rings=S.rings.filter(x=>x!==d.goal);later(renderEdit)}
   else if(d.ring){const id=d.ring;if(t.checked){if(S.rings.length>=3){t.checked=false;note('Er passen drie doelen in de ringen. Zet er eerst één uit.');return}S.rings.push(id)}else S.rings=S.rings.filter(x=>x!==id)}
 });
 document.addEventListener('input',e=>{if(e.target.dataset.prof)setProf(e.target)});
