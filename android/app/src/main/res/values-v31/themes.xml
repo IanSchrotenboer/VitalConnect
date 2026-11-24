@@ -1,0 +1,9 @@
+<resources>
+    <!-- Android 12+: het systeem toont bij het starten alleen de achtergrondkleur; daarna neemt het
+         beginscherm in de app het over met het bewegende logo (Splash.kt). -->
+    <style name="Theme.Vitaal" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_bg</item>
+        <item name="android:windowSplashScreenBackground">@color/window_bg</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_leeg</item>
+    </style>
+</resources>
