@@ -27,6 +27,9 @@ object Config {
     const val SUPABASE_URL = "https://qtythirnpokfptchavgy.supabase.co"
     // Publishable key: mag in de app staan; RLS beschermt de data.
     const val SUPABASE_KEY = "sb_publishable_rjGuOZAOLKJ99uwAkP3S8A_aHkkyzGh"
+    // Web client-ID uit Google Cloud (OAuth-client van het type "Webapplicatie").
+    // Leeg = knop "Inloggen met Google" meldt dat het nog niet is ingesteld.
+    const val GOOGLE_WEB_CLIENT_ID = ""
 }
 
 class ApiException(val code: Int, message: String) : IOException(message)
@@ -54,6 +57,39 @@ class Api(context: Context) {
         return if (res["access_token"] != null) { saveSession(res); true } else false
     }
 
+    /** Inloggen met een Google ID-token uit Credential Manager. */
+    suspend fun signInWithGoogle(idToken: String, rawNonce: String) {
+        val res = call("POST", "/auth/v1/token?grant_type=id_token", buildJsonObject {
+            put("provider", "google"); put("id_token", idToken); put("nonce", rawNonce)
+        }, auth = false)
+        saveSession(res.jsonObject)
+    }
+
+    /** Stuurt een inlogcode per e-mail (maakt zo nodig een account aan). */
+    suspend fun sendLoginCode(email: String) {
+        call("POST", "/auth/v1/otp", buildJsonObject { put("email", email); put("create_user", true) }, auth = false)
+    }
+
+    suspend fun sendRecovery(email: String) {
+        call("POST", "/auth/v1/recover", buildJsonObject { put("email", email) }, auth = false)
+    }
+
+    suspend fun resendSignup(email: String) {
+        call("POST", "/auth/v1/resend", buildJsonObject { put("type", "signup"); put("email", email) }, auth = false)
+    }
+
+    /** Controleert een 6-cijferige code. type: signup, email of recovery. */
+    suspend fun verifyCode(email: String, code: String, type: String) {
+        val res = call("POST", "/auth/v1/verify", buildJsonObject {
+            put("type", type); put("email", email); put("token", code)
+        }, auth = false)
+        saveSession(res.jsonObject)
+    }
+
+    suspend fun updatePassword(password: String) {
+        call("PUT", "/auth/v1/user", buildJsonObject { put("password", password) })
+    }
+
     fun signOut() = prefs.edit().clear().apply()
 
     suspend fun select(path: String): JsonArray = call("GET", "/rest/v1/$path", null).jsonArray
@@ -62,8 +98,8 @@ class Api(context: Context) {
     suspend fun upsert(table: String, body: JsonElement) {
         call("POST", "/rest/v1/$table", body, prefer = "resolution=merge-duplicates,return=minimal")
     }
-    suspend fun function(name: String): JsonObject =
-        call("POST", "/functions/v1/$name", JsonObject(emptyMap())).let { if (it is JsonObject) it else JsonObject(emptyMap()) }
+    suspend fun function(name: String, body: JsonObject = JsonObject(emptyMap())): JsonObject =
+        call("POST", "/functions/v1/$name", body).let { if (it is JsonObject) it else JsonObject(emptyMap()) }
 
     private suspend fun accessToken(): String = lock.withLock {
         val current = prefs.getString(ACCESS, null)

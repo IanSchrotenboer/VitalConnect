@@ -101,13 +101,21 @@ private val APPS = mapOf(
 
 fun sourceLabel(source: String): String = when {
     source == "garmin" -> "Garmin Connect"
+    source == "google_health" -> "Google Health"
     source.startsWith("health_connect:") -> source.removePrefix("health_connect:")
         .let { "Health Connect · " + (APPS[it] ?: it) }
     else -> source
 }
 
 @Composable
-fun VitaalRoot(vm: MainViewModel, onRequestHc: () -> Unit, onOpenUrl: (String) -> Unit) {
+fun VitaalRoot(
+    vm: MainViewModel,
+    onRequestHc: () -> Unit,
+    onOpenUrl: (String) -> Unit,
+    onGoogleSignIn: () -> Unit,
+    onShare: (String) -> Unit,
+    onSignOut: () -> Unit,
+) {
     val snack = remember { SnackbarHostState() }
     LaunchedEffect(vm.message) {
         vm.message?.let { snack.showSnackbar(it); vm.message = null }
@@ -115,10 +123,12 @@ fun VitaalRoot(vm: MainViewModel, onRequestHc: () -> Unit, onOpenUrl: (String) -
     Scaffold(snackbarHost = { SnackbarHost(snack) }) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
             when {
-                !vm.signedIn -> LoginScreen(vm)
-                vm.needsConsent -> ConsentScreen(vm)
+                vm.authStep is AuthStep.NewPassword -> NewPasswordScreen(vm)
+                vm.authStep is AuthStep.Code -> CodeScreen(vm, vm.authStep as AuthStep.Code)
+                !vm.signedIn -> LoginScreen(vm, onGoogleSignIn)
+                vm.needsConsent -> ConsentScreen(vm, onSignOut)
                 vm.editing -> EditScreen(vm)
-                else -> HomeScreen(vm, onRequestHc, onOpenUrl)
+                else -> HomeScreen(vm, onRequestHc, onOpenUrl, onShare, onSignOut)
             }
         }
     }
@@ -126,7 +136,7 @@ fun VitaalRoot(vm: MainViewModel, onRequestHc: () -> Unit, onOpenUrl: (String) -
 
 // ---------------- Inloggen ----------------
 @Composable
-private fun LoginScreen(vm: MainViewModel) {
+private fun LoginScreen(vm: MainViewModel, onGoogleSignIn: () -> Unit) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -138,15 +148,66 @@ private fun LoginScreen(vm: MainViewModel) {
         OutlinedTextField(password, { password = it }, label = { Text("Wachtwoord (min. 8 tekens)") }, singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth())
-        val ok = email.contains("@") && password.length >= 8 && !vm.busy
+        val emailOk = email.contains("@") && !vm.busy
+        val ok = emailOk && password.length >= 8
         Button(onClick = { vm.signIn(email, password) }, enabled = ok, modifier = Modifier.fillMaxWidth()) { Text("Inloggen") }
         OutlinedButton(onClick = { vm.signUp(email, password) }, enabled = ok, modifier = Modifier.fillMaxWidth()) { Text("Account maken") }
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            TextButton(onClick = { vm.requestLoginCode(email) }, enabled = emailOk) { Text("Inloggen met e-mailcode") }
+            TextButton(onClick = { vm.requestPasswordReset(email) }, enabled = emailOk) { Text("Wachtwoord vergeten?") }
+        }
+        Text("of", style = MaterialTheme.typography.bodySmall, modifier = Modifier.align(Alignment.CenterHorizontally))
+        OutlinedButton(onClick = onGoogleSignIn, enabled = !vm.busy, modifier = Modifier.fillMaxWidth()) { Text("Inloggen met Google") }
+    }
+}
+
+// ---------------- Code uit de e-mail ----------------
+@Composable
+private fun CodeScreen(vm: MainViewModel, step: AuthStep.Code) {
+    var code by rememberSaveable(step) { mutableStateOf("") }
+    val title = when (step.type) {
+        "signup" -> "Bevestig je e-mailadres"
+        "recovery" -> "Nieuw wachtwoord"
+        else -> "Inloggen met code"
+    }
+    Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Spacer(Modifier.height(32.dp))
+        Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("We hebben een code van 6 cijfers gestuurd naar ${step.email}. Vul die hieronder in.")
+        OutlinedTextField(code, { v -> code = v.filter(Char::isDigit).take(6) }, label = { Text("Code") }, singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { if (code.length == 6) vm.verifyCode(code) }),
+            modifier = Modifier.fillMaxWidth())
+        Button(onClick = { vm.verifyCode(code) }, enabled = code.length == 6 && !vm.busy, modifier = Modifier.fillMaxWidth()) { Text("Bevestigen") }
+        Row {
+            TextButton(onClick = vm::resendCode, enabled = !vm.busy) { Text("Code opnieuw sturen") }
+            TextButton(onClick = vm::backToLogin) { Text("Terug") }
+        }
+    }
+}
+
+@Composable
+private fun NewPasswordScreen(vm: MainViewModel) {
+    var pw by rememberSaveable { mutableStateOf("") }
+    var pw2 by rememberSaveable { mutableStateOf("") }
+    Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Spacer(Modifier.height(32.dp))
+        Text("Kies een nieuw wachtwoord", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        OutlinedTextField(pw, { pw = it }, label = { Text("Nieuw wachtwoord (min. 8 tekens)") }, singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(pw2, { pw2 = it }, label = { Text("Herhaal wachtwoord") }, singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            isError = pw2.isNotEmpty() && pw2 != pw,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth())
+        Button(onClick = { vm.setNewPassword(pw) }, enabled = pw.length >= 8 && pw == pw2 && !vm.busy,
+            modifier = Modifier.fillMaxWidth()) { Text("Opslaan") }
     }
 }
 
 // ---------------- AVG-toestemming ----------------
 @Composable
-private fun ConsentScreen(vm: MainViewModel) {
+private fun ConsentScreen(vm: MainViewModel, onSignOut: () -> Unit) {
     var agreed by remember { mutableStateOf(false) }
     Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("Toestemming", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
@@ -157,14 +218,21 @@ private fun ConsentScreen(vm: MainViewModel) {
             Text("Ik geef uitdrukkelijk toestemming voor het verwerken van mijn gezondheidsgegevens.")
         }
         Button(onClick = vm::giveConsent, enabled = agreed && !vm.busy, modifier = Modifier.fillMaxWidth()) { Text("Doorgaan") }
-        TextButton(onClick = vm::signOut) { Text("Niet nu, uitloggen") }
+        TextButton(onClick = onSignOut) { Text("Niet nu, uitloggen") }
     }
 }
 
 // ---------------- Dashboard ----------------
 @Composable
-private fun HomeScreen(vm: MainViewModel, onRequestHc: () -> Unit, onOpenUrl: (String) -> Unit) {
+private fun HomeScreen(
+    vm: MainViewModel,
+    onRequestHc: () -> Unit,
+    onOpenUrl: (String) -> Unit,
+    onShare: (String) -> Unit,
+    onSignOut: () -> Unit,
+) {
     var confirmDelete by remember { mutableStateOf(false) }
+    var disconnecting by remember { mutableStateOf<String?>(null) }
     val rows = remember(vm.prefs) {
         // Brede tegels krijgen een eigen rij, kleine tegels gaan per twee
         val out = mutableListOf<List<Pref>>(); var pair = mutableListOf<Pref>()
@@ -197,13 +265,28 @@ private fun HomeScreen(vm: MainViewModel, onRequestHc: () -> Unit, onOpenUrl: (S
         }
         item { Text("Koppelingen", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp)) }
         item { HealthConnectCard(vm, onRequestHc) }
-        item { GarminCard(vm, onOpenUrl) }
+        item { CloudCard(vm, "google_health", onOpenUrl) { disconnecting = it } }
+        item { CloudCard(vm, "garmin", onOpenUrl) { disconnecting = it } }
+        item { Text("Account", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp)) }
         item {
-            Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = vm::signOut) { Text("Uitloggen") }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = onSignOut) { Text("Uitloggen") }
+                    OutlinedButton(onClick = { vm.exportData(onShare) }, enabled = !vm.busy) { Text("Mijn data exporteren") }
+                }
                 TextButton(onClick = { confirmDelete = true }) { Text("Account verwijderen") }
             }
         }
+    }
+
+    disconnecting?.let { provider ->
+        AlertDialog(
+            onDismissRequest = { disconnecting = null },
+            title = { Text("${providerName(provider)} ontkoppelen?") },
+            text = { Text("Vitaal haalt geen nieuwe data meer op en trekt de toestemming in. Wil je de al opgehaalde data ook verwijderen?") },
+            confirmButton = { TextButton(onClick = { disconnecting = null; vm.disconnect(provider, deleteData = true) }) { Text("Ontkoppelen en data wissen") } },
+            dismissButton = { TextButton(onClick = { disconnecting = null; vm.disconnect(provider, deleteData = false) }) { Text("Alleen ontkoppelen") } },
+        )
     }
 
     if (confirmDelete) AlertDialog(
@@ -300,15 +383,32 @@ private fun HealthConnectCard(vm: MainViewModel, onRequestHc: () -> Unit) {
     }
 }
 
+private fun providerName(p: String) = if (p == "garmin") "Garmin Connect" else "Google Health"
+
 @Composable
-private fun GarminCard(vm: MainViewModel, onOpenUrl: (String) -> Unit) {
+private fun CloudCard(vm: MainViewModel, provider: String, onOpenUrl: (String) -> Unit, onDisconnect: (String) -> Unit) {
+    val c = vm.connections[provider]
+    val status = when {
+        c == null || c.status == "revoked" -> if (provider == "garmin") "Niet gekoppeld." else "Niet gekoppeld. Voor data van Fitbit, Pixel Watch en Google Health."
+        c.status == "error" -> "Koppeling werkt niet meer. Koppel opnieuw."
+        provider == "garmin" -> "Gekoppeld. Garmin stuurt nieuwe data na elke synchronisatie van je horloge."
+        else -> "Gekoppeld. Wordt elk uur opgehaald."
+    }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Garmin Connect", style = MaterialTheme.typography.titleMedium)
-            Text(if (vm.garminConnected) "Gekoppeld. Garmin stuurt nieuwe data na elke synchronisatie van je horloge."
-                 else "Niet gekoppeld.", style = MaterialTheme.typography.bodyMedium)
-            if (vm.garminConnected) OutlinedButton(onClick = vm::garminDisconnect, enabled = !vm.busy) { Text("Ontkoppelen") }
-            else Button(onClick = { vm.garminConnect(onOpenUrl) }, enabled = !vm.busy) { Text("Koppelen") }
+            Text(providerName(provider), style = MaterialTheme.typography.titleMedium)
+            Text(status, style = MaterialTheme.typography.bodyMedium)
+            c?.takeIf { it.status != "revoked" }?.lastError?.let {
+                Text("Laatste fout: ${it.take(140)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (vm.isConnected(provider)) {
+                    if (provider == "google_health") Button(onClick = vm::googleHealthSyncNow, enabled = !vm.busy) { Text("Nu ophalen") }
+                    OutlinedButton(onClick = { onDisconnect(provider) }, enabled = !vm.busy) { Text("Ontkoppelen") }
+                } else {
+                    Button(onClick = { vm.connect(provider, onOpenUrl) }, enabled = !vm.busy) { Text(if (c?.status == "error") "Opnieuw koppelen" else "Koppelen") }
+                }
+            }
         }
     }
 }
@@ -359,9 +459,12 @@ private fun EditRow(vm: MainViewModel, p: Pref) {
             }
             Text("Bron", style = MaterialTheme.typography.labelLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Choice("Auto", p.preferredSource == null) { vm.save(p.copy(preferredSource = null)) }
+                Choice("Automatisch", p.preferredSource == null) { vm.save(p.copy(preferredSource = null)) }
                 Choice("Garmin", p.preferredSource == "garmin") { vm.save(p.copy(preferredSource = "garmin")) }
-                Choice("Health C.", p.preferredSource == "health_connect") { vm.save(p.copy(preferredSource = "health_connect")) }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Choice("Google Health", p.preferredSource == "google_health") { vm.save(p.copy(preferredSource = "google_health")) }
+                Choice("Health Connect", p.preferredSource == "health_connect") { vm.save(p.copy(preferredSource = "health_connect")) }
             }
             OutlinedTextField(
                 value = goal,

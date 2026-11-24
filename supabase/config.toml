@@ -1,0 +1,71 @@
+# Supabase-configuratie voor Vitaal.
+# Lokaal: `supabase start`. Naar het gehoste project: `supabase link --project-ref qtythirnpokfptchavgy`
+# en daarna `supabase config push` (let op: dat overschrijft de auth-instellingen in het dashboard).
+project_id = "vitaal"
+
+[api]
+enabled = true
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+major_version = 17
+
+[auth]
+enabled = true
+# Zet hier de website van Vitaal zodra die er is. Zolang dit localhost is,
+# bevatten de mails alleen een code (de app werkt met codes) en geen link.
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["vitaal://login"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+minimum_password_length = 8
+password_requirements = "letters_digits"
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+double_confirm_changes = true
+secure_password_change = true
+otp_length = 6
+otp_expiry = 3600
+max_frequency = "1m0s"
+
+# Inloggen met Google (Android via Credential Manager → signInWithIdToken).
+# client_id = de Web-client uit Google Cloud; het ID-token van de app heeft die als audience.
+[auth.external.google]
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+skip_nonce_check = false
+
+# Alle account-mails via de edge function send-email (Nederlands, via Resend).
+[auth.hook.send_email]
+enabled = true
+uri = "https://qtythirnpokfptchavgy.supabase.co/functions/v1/send-email"
+secrets = "env(SEND_EMAIL_HOOK_SECRET)"
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+deno_version = 2
+
+# Functies die van buiten worden aangeroepen (browser-redirects, Garmin, cron, Auth-hook)
+# doen hun eigen controle en hebben geen gebruikers-JWT.
+[functions.garmin-auth-callback]
+verify_jwt = false
+
+[functions.garmin-webhook]
+verify_jwt = false
+
+[functions.google-health-auth-callback]
+verify_jwt = false
+
+[functions.google-health-sync]
+verify_jwt = false
+
+[functions.send-email]
+verify_jwt = false

@@ -9,14 +9,15 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -37,13 +38,24 @@ data class Pref(
 
 data class DayValue(val value: Double, val source: String)
 
+data class Connection(val status: String, val lastSync: String?, val lastError: String?)
+
 enum class HcStatus { UNKNOWN, UNAVAILABLE, UPDATE_REQUIRED, NO_PERMISSION, FOREGROUND_ONLY, OK }
+
+/** Stappen in het inlogscherm. */
+sealed interface AuthStep {
+    data object Login : AuthStep
+    /** type: signup, email (inlogcode) of recovery */
+    data class Code(val email: String, val type: String) : AuthStep
+    data object NewPassword : AuthStep
+}
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val api = Api(app)
     private val hc = HealthSync(app, api)
 
     var signedIn by mutableStateOf(api.isSignedIn); private set
+    var authStep by mutableStateOf<AuthStep>(AuthStep.Login); private set
     var needsConsent by mutableStateOf(false); private set
     var busy by mutableStateOf(false); private set
     var message by mutableStateOf<String?>(null)
@@ -52,15 +64,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var metrics by mutableStateOf<Map<String, MetricInfo>>(emptyMap()); private set
     var prefs by mutableStateOf<Map<String, Pref>>(emptyMap()); private set
     var today by mutableStateOf<Map<String, DayValue>>(emptyMap()); private set
+    var connections by mutableStateOf<Map<String, Connection>>(emptyMap()); private set
     var hcStatus by mutableStateOf(HcStatus.UNKNOWN); private set
-    var garminConnected by mutableStateOf(false); private set
     var lastSync by mutableStateOf(hc.lastSync); private set
 
     val visible: List<Pref> get() = prefs.values.filter { it.visible }.sortedBy { it.position }
-
-    /** Alle metrics voor het aanpasscherm: zichtbare op volgorde, daarna de rest. */
     val allForEdit: List<Pref>
         get() = visible + metrics.keys.filter { prefs[it]?.visible != true }.map { prefs[it] ?: Pref(it) }
+
+    fun isConnected(provider: String) = connections[provider]?.status == "active"
 
     init { if (signedIn) load() }
 
@@ -69,16 +81,65 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         try { block() } catch (e: Exception) { message = e.message ?: "Er ging iets mis" } finally { busy = false }
     }
 
-    // ---------- Account ----------
-    fun signIn(email: String, password: String) = task {
-        api.signIn(email.trim(), password)
+    // ---------- Inloggen ----------
+    private suspend fun afterSignIn() {
         signedIn = true
+        authStep = AuthStep.Login
         loadNow()
     }
 
+    fun signIn(email: String, password: String) = task {
+        api.signIn(email.trim(), password)
+        afterSignIn()
+    }
+
     fun signUp(email: String, password: String) = task {
-        if (api.signUp(email.trim(), password)) { signedIn = true; loadNow() }
-        else message = "Bevestig je e-mailadres via de link in je mail en log daarna in."
+        val e = email.trim()
+        if (api.signUp(e, password)) afterSignIn()
+        else { authStep = AuthStep.Code(e, "signup"); message = "We hebben een code naar $e gestuurd." }
+    }
+
+    fun requestLoginCode(email: String) = task {
+        val e = email.trim()
+        api.sendLoginCode(e)
+        authStep = AuthStep.Code(e, "email")
+        message = "We hebben een inlogcode naar $e gestuurd."
+    }
+
+    fun requestPasswordReset(email: String) = task {
+        val e = email.trim()
+        api.sendRecovery(e)
+        authStep = AuthStep.Code(e, "recovery")
+        message = "Als dit adres bij ons bekend is, ontvang je een herstelcode."
+    }
+
+    fun verifyCode(code: String) = task {
+        val step = authStep as? AuthStep.Code ?: return@task
+        api.verifyCode(step.email, code.trim(), step.type)
+        if (step.type == "recovery") authStep = AuthStep.NewPassword else afterSignIn()
+    }
+
+    fun resendCode() = task {
+        val step = authStep as? AuthStep.Code ?: return@task
+        when (step.type) {
+            "signup" -> api.resendSignup(step.email)
+            "recovery" -> api.sendRecovery(step.email)
+            else -> api.sendLoginCode(step.email)
+        }
+        message = "Nieuwe code verstuurd."
+    }
+
+    fun setNewPassword(password: String) = task {
+        api.updatePassword(password)
+        message = "Je wachtwoord is gewijzigd."
+        afterSignIn()
+    }
+
+    fun backToLogin() { authStep = AuthStep.Login }
+
+    fun signInWithGoogle(idToken: String, rawNonce: String) = task {
+        api.signInWithGoogle(idToken, rawNonce)
+        afterSignIn()
     }
 
     fun giveConsent() = task {
@@ -91,13 +152,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun signOut() {
         api.signOut(); hc.reset()
-        signedIn = false; prefs = emptyMap(); today = emptyMap()
+        signedIn = false; authStep = AuthStep.Login
+        prefs = emptyMap(); today = emptyMap(); connections = emptyMap()
     }
 
     fun deleteAccount() = task {
         api.function("delete-account")
         signOut()
         message = "Je account en alle data zijn verwijderd."
+    }
+
+    /** AVG-inzage: alle eigen data als JSON. */
+    fun exportData(share: (String) -> Unit) = task {
+        val data = api.rpc("export_my_data", JsonObject(emptyMap()))
+        share(Json { prettyPrint = true }.encodeToString(JsonElement.serializer(), data))
     }
 
     // ---------- Data ----------
@@ -116,7 +184,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 visible = o["visible"]?.jsonPrimitive?.booleanOrNull == true,
                 position = o["position"]?.jsonPrimitive?.intOrNull ?: 0,
                 size = o.str("size").ifEmpty { "s" },
-                preferredSource = o["preferred_source"]?.takeIf { it != JsonNull }?.jsonPrimitive?.content,
+                preferredSource = o.str("preferred_source").ifEmpty { null },
                 goal = o["goal"]?.takeIf { it != JsonNull }?.jsonPrimitive?.doubleOrNull,
                 inRings = o["in_rings"]?.jsonPrimitive?.booleanOrNull == true,
             )
@@ -124,8 +192,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         needsConsent = api.select("profiles?select=consent_health_at")
             .firstOrNull()?.jsonObject?.get("consent_health_at").let { it == null || it == JsonNull }
-        garminConnected = api.select("connections?select=provider,status&provider=eq.garmin")
-            .any { it.jsonObject.str("status") == "active" }
+        connections = api.select("connections?select=provider,status,last_sync_at,last_error").associate {
+            val o = it.jsonObject
+            o.str("provider") to Connection(o.str("status"), o.str("last_sync_at").ifEmpty { null }, o.str("last_error").ifEmpty { null })
+        }
         val d = LocalDate.now().toString()
         today = (api.rpc("resolved_daily", buildJsonObject { put("p_from", d); put("p_to", d) }) as? JsonArray)
             .orEmpty().associate {
@@ -170,23 +240,36 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         loadNow()
     }
 
-    // ---------- Garmin ----------
-    fun garminConnect(open: (String) -> Unit) = task {
-        val url = api.function("garmin-auth-start")["url"]?.jsonPrimitive?.content
-        if (url == null) message = "Garmin-koppeling is nog niet ingericht op de server." else open(url)
+    // ---------- Cloudkoppelingen (Garmin, Google Health) ----------
+    fun connect(provider: String, open: (String) -> Unit) = task {
+        val fn = if (provider == "garmin") "garmin-auth-start" else "google-health-auth-start"
+        val res = api.function(fn)
+        val url = res["url"]?.jsonPrimitive?.content
+        if (url == null) message = "Deze koppeling is nog niet ingericht op de server." else open(url)
     }
 
-    fun onGarminReturn(status: String?) {
+    fun onConnectReturn(provider: String, status: String?) {
+        val name = if (provider == "garmin") "Garmin Connect" else "Google Health"
         message = when (status) {
-            "ok" -> "Garmin Connect is gekoppeld. Nieuwe data komt binnen zodra je horloge synchroniseert."
-            "cancelled" -> "Koppelen met Garmin is afgebroken."
-            else -> "Koppelen met Garmin is mislukt ($status)."
+            "ok" -> if (provider == "garmin") "$name is gekoppeld. Nieuwe data komt binnen zodra je horloge synchroniseert."
+                    else "$name is gekoppeld. De afgelopen 30 dagen worden opgehaald."
+            "cancelled" -> "Koppelen met $name is afgebroken."
+            "not_linked" -> "Je Google-account heeft nog geen Google Health-gegevens. Open eerst de Fitbit- of Google Health-app."
+            "expired" -> "Het koppelen duurde te lang. Probeer het opnieuw."
+            else -> "Koppelen met $name is mislukt."
         }
         load()
     }
 
-    fun garminDisconnect() = task {
-        api.function("garmin-disconnect")
+    fun googleHealthSyncNow() = task {
+        val res = api.function("google-health-sync")
+        val rows = res["rows"]?.jsonPrimitive?.intOrNull ?: 0
+        message = "Google Health: $rows dagwaarden bijgewerkt."
+        loadNow()
+    }
+
+    fun disconnect(provider: String, deleteData: Boolean) = task {
+        api.function("disconnect", buildJsonObject { put("provider", provider); put("delete_data", deleteData) })
         loadNow()
     }
 

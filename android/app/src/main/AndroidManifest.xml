@@ -38,12 +38,13 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Terugkeer na Garmin-login: vitaal://garmin?status=ok -->
+            <!-- Terugkeer na koppelen: vitaal://garmin?status=ok en vitaal://google?status=ok -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="vitaal" android:host="garmin" />
+                <data android:scheme="vitaal" android:host="google" />
             </intent-filter>
         </activity>
 
