@@ -41,6 +41,13 @@ export function admin(): SupabaseClient {
 
 export const fnUrl = (name: string) => `${env("SUPABASE_URL")}/functions/v1/${name}`;
 
+/**
+ * Terugkeeradres na de Google-toestemming. Met het geheim GOOGLE_REDIRECT_URI (https://app.vital-connect.nl/koppelen/google/)
+ * staat alleen het eigen domein in Google Cloud; die pagina stuurt door naar google-health-auth-callback.
+ * Zonder geheim: het oude adres op supabase.co. Het moet exact gelijk zijn in het verzoek en bij het inwisselen.
+ */
+export const googleRedirectUri = () => Deno.env.get("GOOGLE_REDIRECT_URI") || fnUrl("google-health-auth-callback");
+
 export function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }

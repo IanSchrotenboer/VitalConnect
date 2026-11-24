@@ -384,7 +384,7 @@ function renderAuth(){
     ${showEmail?`<div class="card"><h3>Met je e-mailadres</h3><label class="fld" for="a-mail">E-mailadres<input id="a-mail" type="email" autocomplete="email" style="width:14em;text-align:left"></label><label class="fld" for="a-pw">Wachtwoord<input id="a-pw" type="password" autocomplete="current-password" style="width:14em;text-align:left"></label>
     <div class="row"><button class="btn pri" data-act="google">Inloggen</button><button class="btn" data-act="google">Account maken</button></div><span class="gl">In de preview werkt elk adres.</span></div>`
     :`<button class="btn big" data-act="email">Inloggen met e-mail</button>`}
-    <a class="lnk" href="https://ianschrotenboer.github.io/VitalConnect/privacy.html" style="color:var(--mut);text-decoration:none">Privacyverklaring</a></div>`;
+    <a class="lnk" href="https://app.vital-connect.nl/privacy.html" style="color:var(--mut);text-decoration:none">Privacyverklaring</a></div>`;
   } else if(S.onb==='consent'){
     h=ah('Toestemming','Voordat we beginnen.',1)+`<div class="pad stack" style="margin-top:20px">
     <p style="margin:0">Vital Connect verwerkt gezondheidsgegevens: stappen, hartslag, slaap, gewicht en vergelijkbare metingen. Dat zijn bijzondere persoonsgegevens volgens de AVG.</p>
@@ -442,7 +442,7 @@ function profileHtml(){
   ${S.sync===0?'<span class="gl">Zet synchroniseren op de achtergrond aan (Koppelingen) om deze melding te gebruiken.</span>':''}</div>
   <div class="sh" style="margin-bottom:0"><h2>Account</h2></div>
   <div class="card"><span class="gl">Je data is van jou. Je kunt alles exporteren of je account met alle data verwijderen.</span>
-  <div class="row"><button class="btn">Mijn data exporteren</button><button class="btn" data-act="logout">Uitloggen</button></div><a class="lnk" style="padding:0;text-decoration:none" href="https://ianschrotenboer.github.io/VitalConnect/privacy.html">Privacyverklaring</a><button class="lnk" style="color:var(--bad);padding:0">Account verwijderen</button></div>
+  <div class="row"><button class="btn">Mijn data exporteren</button><button class="btn" data-act="logout">Uitloggen</button></div><a class="lnk" style="padding:0;text-decoration:none" href="https://app.vital-connect.nl/privacy.html">Privacyverklaring</a><button class="lnk" style="color:var(--bad);padding:0">Account verwijderen</button></div>
   <p class="gl" style="margin:4px">Vital Connect 1.8.0 · preview</p>`;
 }
 const SRCS={hc:['hc','H','var(--src-hc)','Health Connect','Data van apps op deze telefoon, zoals Google Fit, Samsung Health en de Suunto-app.','@sync'],

@@ -1,6 +1,7 @@
 name: Website publiceren
 
-# Publiceert de map site/ op GitHub Pages: https://ianschrotenboer.github.io/VitalConnect/
+# Publiceert de map site/ op GitHub Pages: https://app.vital-connect.nl/ (eigen domein, net als app.boaparaat.nl:
+# bij STRATO een CNAME van app.vital-connect.nl naar ianschrotenboer.github.io; in Settings → Pages het eigen domein).
 # (privacyverklaring en accountverwijdering, nodig voor de Play Store en het Google-toestemmingsscherm).
 # Eenmalig: Settings → Pages → Source: GitHub Actions.
 

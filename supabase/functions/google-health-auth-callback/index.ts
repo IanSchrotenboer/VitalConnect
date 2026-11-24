@@ -1,6 +1,6 @@
 // GET /google-health-auth-callback?code=...&state=...  (Google stuurt de browser hierheen)
 // Wisselt de code in, legt de Google Health-gebruiker vast, haalt direct 30 dagen op en stuurt terug naar de app.
-import { admin, fnUrl, GOOGLE, storeTokens, takeOAuthState, toApp, tokenRequest } from "../_shared/shared.ts";
+import { admin, GOOGLE, googleRedirectUri, storeTokens, takeOAuthState, toApp, tokenRequest } from "../_shared/shared.ts";
 import { syncUser } from "../_shared/google-health.ts";
 
 Deno.serve(async (req) => {
@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
       grant_type: "authorization_code",
       code,
       code_verifier: st.code_verifier,
-      redirect_uri: fnUrl("google-health-auth-callback"),
+      redirect_uri: googleRedirectUri(),
     });
     if (!tokens.refresh_token) console.warn("Geen refresh token ontvangen; sync werkt tot het access token verloopt");
 

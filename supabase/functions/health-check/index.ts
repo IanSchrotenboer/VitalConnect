@@ -1,7 +1,7 @@
 // POST /health-check  (header x-cron-secret, alleen voor beheer)
 // Controleert de configuratie zonder geheimen te tonen: welke secrets er staan,
 // of TOKEN_ENC_KEY werkt en of de Google-clientgegevens door Google worden geaccepteerd.
-import { admin, decrypt, encrypt, fnUrl, GOOGLE, isCron, json } from "../_shared/shared.ts";
+import { admin, decrypt, encrypt, GOOGLE, googleRedirectUri, isCron, json } from "../_shared/shared.ts";
 
 const SECRETS = [
   "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "TOKEN_ENC_KEY",
@@ -18,6 +18,8 @@ Deno.serve(async (req) => {
 
   // Google client-ID is niet geheim: tonen zodat je hem kunt vergelijken
   out.google_client_id = Deno.env.get("GOOGLE_CLIENT_ID") ?? null;
+  // Terugkeeradres na Google-toestemming: moet exact zo in Google Cloud staan (Clients → Authorized redirect URIs)
+  out.google_redirect_uri = googleRedirectUri();
 
   // TOKEN_ENC_KEY: 32 bytes en een versleutel/ontsleutel-rondje
   try {
@@ -36,7 +38,7 @@ Deno.serve(async (req) => {
         code: "vitaal-health-check",
         client_id: Deno.env.get("GOOGLE_CLIENT_ID")!,
         client_secret: Deno.env.get("GOOGLE_CLIENT_SECRET")!,
-        redirect_uri: fnUrl("google-health-auth-callback"),
+        redirect_uri: googleRedirectUri(),
       }),
     });
     const body = await r.json().catch(() => ({}));

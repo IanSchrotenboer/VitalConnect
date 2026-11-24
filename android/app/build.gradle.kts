@@ -14,7 +14,7 @@ android {
         targetSdk = 36
         // In GitHub Actions telt het buildnummer op, zodat elke APK over de vorige heen te installeren is
         versionCode = System.getenv("BUILD_NUMBER")?.toIntOrNull() ?: 2
-        versionName = "1.8.0"
+        versionName = "1.8.1"
     }
 
     // Release-ondertekening: GitHub Actions zet de sleutel klaar (vaste sleutel uit de geheimen,

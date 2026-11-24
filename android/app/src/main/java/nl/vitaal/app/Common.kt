@@ -58,7 +58,7 @@ import kotlin.math.roundToLong
 
 val NL: Locale = Locale.forLanguageTag("nl-NL")
 const val APP_NAME = "Vital Connect"
-const val PRIVACY_URL = "https://ianschrotenboer.github.io/VitalConnect/privacy.html"
+const val PRIVACY_URL = "https://app.vital-connect.nl/privacy.html"
 
 // ---------- Getallen ----------
 fun fmt(metric: String, v: Double): String = when (metric) {

@@ -40,8 +40,11 @@ Daarna maakt elke push naar `main` een ondertekende `VitalConnect.apk` en `Vital
 De privacyverklaring en de pagina voor accountverwijdering staan in `site/`. Zet ze online:
 **Settings → Pages → Source: GitHub Actions.** De taak **Website publiceren** zet ze dan op:
 
-- https://ianschrotenboer.github.io/VitalConnect/privacy.html
-- https://ianschrotenboer.github.io/VitalConnect/verwijderen.html
+- https://app.vital-connect.nl/privacy.html
+- https://app.vital-connect.nl/verwijderen.html
+
+Eigen domein, net als bij BOA Paraat: bij STRATO het subdomein `app` met een CNAME naar `ianschrotenboer.github.io`,
+en in **Settings → Pages → Custom domain** `app.vital-connect.nl` met **Enforce HTTPS**.
 
 Vul de privacy-URL ook in bij Google Cloud: **Google Auth Platform → Branding → Privacy policy link**.
 
@@ -52,13 +55,18 @@ Vul de privacy-URL ook in bij Google Cloud: **Google Auth Platform → Branding 
 | App name | `Vital Connect` |
 | User support email | `ian.schrotenboer@proton.me` |
 | App logo | `brand/logo-120.png` (120 × 120) |
-| Application home page | `https://ianschrotenboer.github.io/VitalConnect/` |
-| Application privacy policy link | `https://ianschrotenboer.github.io/VitalConnect/privacy.html` |
-| Application terms of service link | `https://ianschrotenboer.github.io/VitalConnect/voorwaarden.html` |
-| Authorized domains | `ianschrotenboer.github.io` en `supabase.co` |
+| Application home page | `https://app.vital-connect.nl/` |
+| Application privacy policy link | `https://app.vital-connect.nl/privacy.html` |
+| Application terms of service link | `https://app.vital-connect.nl/voorwaarden.html` |
+| Authorized domains | `vital-connect.nl` (de site en de doorstuurpagina voor Google Health staan op app.vital-connect.nl) |
 | Developer contact information | `ian.schrotenboer@proton.me` |
 
-Daarna **Audience → Publish app**. Met een logo vraagt Google om merkverificatie; de naam "Vital Connect" verschijnt op het toestemmingsscherm zodra die rond is. Daarvoor moet je de domeinen zelf bezitten: later een eigen domein (zoals bij BOA Paraat `app.boaparaat.nl`).
+Daarna **Audience → Publish app**. Met een logo vraagt Google om merkverificatie; de naam "Vital Connect" verschijnt op het toestemmingsscherm zodra die rond is. Daarvoor moet je het domein zelf bezitten: voeg `vital-connect.nl` toe in Google Search Console (DNS-record TXT bij STRATO) met hetzelfde Google-account.
+
+**Redirect-URI (Clients → de webclient → Authorized redirect URIs):** `https://app.vital-connect.nl/koppelen/google/`.
+Die pagina (`site/koppelen/google/index.html`) stuurt de code en state door naar de edge function
+`google-health-auth-callback`. De functies gebruiken dit adres zodra het geheim `GOOGLE_REDIRECT_URI` in Supabase
+op deze waarde staat; zonder dat geheim gebruiken ze nog het oude adres op supabase.co.
 
 ## Stap 3. Inloggen met Google voor de release-versie
 
@@ -79,7 +87,7 @@ Let op: is je ontwikkelaarsaccount een **persoonlijk account** dat na november 2
 ## Stap 5. Formulieren in Play Console (App-content)
 
 ### Privacybeleid
-`https://ianschrotenboer.github.io/VitalConnect/privacy.html`
+`https://app.vital-connect.nl/privacy.html`
 
 ### App-toegang
 De app vraagt om in te loggen. Kies **Alle of een deel van de functies is beperkt** en geef een demo-account
@@ -105,7 +113,7 @@ Bij **Gezondheidsapps**: kies **Activiteit en fitness** en **Slaap**. De app is 
 |---|---|
 | Verzamelt of deelt de app gebruikersgegevens? | Ja, verzameld; niet gedeeld |
 | Versleuteld tijdens overdracht? | Ja (HTTPS) |
-| Kunnen gebruikers verwijdering aanvragen? | Ja, in de app en via https://ianschrotenboer.github.io/VitalConnect/verwijderen.html |
+| Kunnen gebruikers verwijdering aanvragen? | Ja, in de app en via https://app.vital-connect.nl/verwijderen.html |
 
 | Gegevenstype | Verzameld | Gedeeld | Verplicht | Doel |
 |---|---|---|---|---|
