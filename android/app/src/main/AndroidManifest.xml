@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Meldingen: doel gehaald en de stille melding dat de app meesynchroniseert (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Health Connect: alleen lezen, alleen wat het dashboard toont -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />

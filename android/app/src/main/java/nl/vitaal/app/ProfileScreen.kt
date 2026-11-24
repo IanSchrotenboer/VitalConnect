@@ -1,6 +1,9 @@
 package nl.vitaal.app
 
 import androidx.compose.foundation.background
+import androidx.compose.material3.Switch
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,6 +61,7 @@ fun ProfileScreen(
     onOpenUrl: (String) -> Unit,
     onShare: (String) -> Unit,
     onSignOut: () -> Unit,
+    onRequestNotifications: () -> Unit,
 ) {
     val p = LocalPalette.current
     var disconnecting by remember { mutableStateOf<String?>(null) }
@@ -80,6 +84,8 @@ fun ProfileScreen(
                 item { PersonalCard(vm) }
                 item { SectionTitle("Weergave", Modifier.padding(start = 4.dp, top = 12.dp)) }
                 item { ThemeCard(vm) }
+                item { SectionTitle("Meldingen", Modifier.padding(start = 4.dp, top = 12.dp)) }
+                item { NotificationsCard(vm, onRequestNotifications) }
                 item { SectionTitle("Account", Modifier.padding(start = 4.dp, top = 12.dp)) }
                 item { AccountCard(vm, onOpenUrl, onShare, onSignOut) }
                 item {
@@ -96,6 +102,7 @@ fun ProfileScreen(
                     Text("Kies welke bronnen je data leveren. Per metric stel je de voorkeursbron in onder Vandaag → Aanpassen.",
                         style = MaterialTheme.typography.bodyMedium, color = p.muted, modifier = Modifier.padding(horizontal = 4.dp))
                 }
+                item { SyncCard(vm) }
                 item { SectionTitle("Gekoppeld · ${on.size}", Modifier.padding(start = 4.dp, top = 8.dp), dot = p.good) }
                 if (on.isEmpty()) item {
                     Text("Nog niets gekoppeld. Kies hieronder een bron om je dashboard te vullen.",
@@ -235,6 +242,56 @@ private fun ThemeCard(vm: MainViewModel) {
     }
 }
 
+/** Hoe vaak alle bronnen op de achtergrond worden bijgewerkt. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SyncCard(vm: MainViewModel) {
+    val p = LocalPalette.current
+    VCard(Modifier.fillMaxWidth()) {
+        Text("Synchroniseren", style = MaterialTheme.typography.titleMedium, color = p.ink)
+        Text("Hoe vaak $APP_NAME Health Connect en Google Health bijwerkt, ook als de app dicht is. " +
+            "Garmin stuurt nieuwe data zelf na elke sync van je horloge. Vaker kost iets meer batterij; Android kan een ronde soms iets uitstellen.",
+            style = MaterialTheme.typography.bodySmall, color = p.muted)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SYNC_CHOICES.forEach { (min, label) -> Pill(label, vm.syncMinutes == min) { vm.setSyncInterval(min) } }
+        }
+        Text("Nu: ${syncLabel(vm.syncMinutes)}.", style = MaterialTheme.typography.labelMedium, color = p.ink)
+    }
+}
+
+/** Meldingen bij gehaalde doelen en de stille melding dat de app meedraait. */
+@Composable
+private fun NotificationsCard(vm: MainViewModel, onRequestNotifications: () -> Unit) {
+    val p = LocalPalette.current
+    VCard(Modifier.fillMaxWidth()) {
+        SwitchRow("Doel gehaald", "Een melding als je een dagdoel haalt, zoals je stappendoel. Eén keer per doel per dag.", vm.notifyGoals) {
+            if (vm.setNotify(goals = it)) onRequestNotifications()
+        }
+        SwitchRow("Draait op de achtergrond", "Een stille, vaste melding die laat zien dat $APP_NAME meesynchroniseert en wanneer voor het laatst.",
+            vm.notifyStatus && vm.syncMinutes != 0, enabled = vm.syncMinutes != 0) {
+            if (vm.setNotify(status = it)) onRequestNotifications()
+        }
+        if (vm.syncMinutes == 0) Text("Zet synchroniseren op de achtergrond aan (Koppelingen) om deze melding te gebruiken.",
+            style = MaterialTheme.typography.bodySmall, color = p.muted)
+        if ((vm.notifyGoals || vm.notifyStatus) && !vm.notificationsAllowed) {
+            Text("Meldingen staan uit voor $APP_NAME.", style = MaterialTheme.typography.bodySmall, color = p.bad)
+            OutlinedButton(onClick = onRequestNotifications) { Text("Meldingen toestaan") }
+        }
+    }
+}
+
+@Composable
+private fun SwitchRow(title: String, text: String, checked: Boolean, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
+    val p = LocalPalette.current
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, color = if (enabled) p.ink else p.muted)
+            Text(text, style = MaterialTheme.typography.bodySmall, color = p.muted)
+        }
+        Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
+    }
+}
+
 @Composable
 private fun AccountCard(vm: MainViewModel, onOpenUrl: (String) -> Unit, onShare: (String) -> Unit, onSignOut: () -> Unit) {
     val p = LocalPalette.current
@@ -306,7 +363,7 @@ private fun HealthConnectCard(vm: MainViewModel, onRequestHc: () -> Unit) {
         HcStatus.UPDATE_REQUIRED -> "Installeer of update Health Connect"
         HcStatus.NO_PERMISSION -> "Nog geen toegang gegeven"
         HcStatus.FOREGROUND_ONLY -> "Alleen als de app open is" + (synced?.let { " · $it" } ?: "")
-        HcStatus.OK -> "Elk uur op de achtergrond" + (synced?.let { " · $it" } ?: "")
+        HcStatus.OK -> "Bijwerken: ${syncLabel(vm.syncMinutes)}" + (synced?.let { " · $it" } ?: "")
     }
     VCard(Modifier.fillMaxWidth()) {
         SourceHeader("H", Color(0xFF2F7D6E), "Health Connect", status, ok)
@@ -332,11 +389,27 @@ private fun CloudCard(vm: MainViewModel, provider: String, onOpenUrl: (String) -
     val c = vm.connections[provider]
     val connected = vm.isConnected(provider)
     val synced = syncedText(c?.lastSync)
+    var disclose by remember { mutableStateOf(false) }
+    // Verplichte uitleg (Google API-beleid, Limited Use) vóórdat het toestemmingsscherm van de bron opent
+    if (disclose) AlertDialog(
+        onDismissRequest = { disclose = false },
+        title = { Text("${providerName(provider)} koppelen") },
+        text = {
+            Text(
+                "$APP_NAME leest uit ${providerName(provider)} je activiteit (stappen, afstand, calorieën, actieve minuten), " +
+                    "hart en herstel (rusthartslag, HRV, zuurstof, ademhaling), slaap en lichaamsmetingen (gewicht, VO2max). " +
+                    "We gebruiken deze gegevens alleen om jouw dashboard, grafieken en statistieken te tonen. " +
+                    "We delen of verkopen ze niet en gebruiken ze niet voor advertenties. Je kunt de koppeling altijd intrekken en je gegevens verwijderen.",
+            )
+        },
+        confirmButton = { TextButton(onClick = { disclose = false; vm.connect(provider, onOpenUrl) }) { Text("Doorgaan") } },
+        dismissButton = { TextButton(onClick = { disclose = false }) { Text("Annuleren") } },
+    )
     val status = when {
         c == null || c.status == "revoked" -> "Niet gekoppeld"
         c.status == "error" -> "Werkt niet meer · koppel opnieuw"
         provider == "garmin" -> "Na elke sync van je horloge" + (synced?.let { " · $it" } ?: "")
-        else -> "Elk uur opgehaald" + (synced?.let { " · $it" } ?: "")
+        else -> "Bijwerken: ${syncLabel(vm.syncMinutes)}" + (synced?.let { " · $it" } ?: "")
     }
     VCard(Modifier.fillMaxWidth()) {
         SourceHeader(if (provider == "garmin") "G" else "F", if (provider == "garmin") Color(0xFF2B5FA8) else Color(0xFF3F7F4A),
@@ -351,7 +424,7 @@ private fun CloudCard(vm: MainViewModel, provider: String, onOpenUrl: (String) -
                 if (provider == "google_health") Button(onClick = vm::googleHealthSyncNow, enabled = !vm.busy) { Text("Nu ophalen") }
                 OutlinedButton(onClick = { onDisconnect(provider) }, enabled = !vm.busy) { Text("Ontkoppelen") }
             } else {
-                Button(onClick = { vm.connect(provider, onOpenUrl) }, enabled = !vm.busy) {
+                Button(onClick = { disclose = true }, enabled = !vm.busy) {
                     Text(if (c?.status == "error") "Opnieuw koppelen" else "Koppelen")
                 }
             }

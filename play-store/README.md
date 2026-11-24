@@ -45,6 +45,21 @@ De privacyverklaring en de pagina voor accountverwijdering staan in `site/`. Zet
 
 Vul de privacy-URL ook in bij Google Cloud: **Google Auth Platform → Branding → Privacy policy link**.
 
+## Stap 2b. Branding in Google Cloud (Google Auth Platform → Branding)
+
+| Veld | Waarde |
+|---|---|
+| App name | `Vital Connect` |
+| User support email | `ian.schrotenboer@proton.me` |
+| App logo | `brand/logo-120.png` (120 × 120) |
+| Application home page | `https://ianschrotenboer.github.io/VitalConnect/` |
+| Application privacy policy link | `https://ianschrotenboer.github.io/VitalConnect/privacy.html` |
+| Application terms of service link | `https://ianschrotenboer.github.io/VitalConnect/voorwaarden.html` |
+| Authorized domains | `ianschrotenboer.github.io` en `supabase.co` |
+| Developer contact information | `ian.schrotenboer@proton.me` |
+
+Daarna **Audience → Publish app**. Met een logo vraagt Google om merkverificatie; de naam "Vital Connect" verschijnt op het toestemmingsscherm zodra die rond is. Daarvoor moet je de domeinen zelf bezitten: later een eigen domein (zoals bij BOA Paraat `app.boaparaat.nl`).
+
 ## Stap 3. Inloggen met Google voor de release-versie
 
 De Play Store ondertekent de app opnieuw met een eigen sleutel (Play App Signing). Voeg daarom in Google Cloud

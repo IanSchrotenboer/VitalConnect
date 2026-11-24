@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Vital Connect</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 108 108'>  <rect width='108' height='108' rx='24' fill='%23123430'/>  <g transform='translate(54 54) scale(0.86) translate(-54 -54)' stroke='%23123430' stroke-width='2.6' stroke-linejoin='round' paint-order='stroke'>    <circle cx='55' cy='29.5' r='7.2' fill='%23DDB15A' stroke='none'/>    <path d='M25 41.5 C38 37.5 50 43.5 54 54 C57 62.5 55 72 50.5 80.5 C47.5 70.5 43 60.5 37 52.5 C33 47 29.5 43.5 25 41.5 Z' fill='%23F5935A'/>    <path d='M84.5 31.5 C70.5 33.5 60 43.5 57 56 C55 66 51.5 74.5 43.5 82.5 C58.5 78 66.5 67 71.5 55.5 C75.5 46.5 79 37.5 84.5 31.5 Z' fill='%234CC3B3'/>    <path d='M83 51.5 C81 66.5 70.5 80 50 82.5 C56.5 76 61 70 65.5 63.5 C70.5 56.5 76 53 83 51.5 Z' fill='%238C97F2'/>  </g></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -119,6 +120,7 @@ button,input,select{font:inherit;color:inherit}button{cursor:pointer}
 .sw:checked{background:var(--pri)}.sw:checked::before{transform:translateX(20px)}
 .fld{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:15px}
 .fld input{width:8em;min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 10px;font-size:16px;text-align:right}
+.fld input.sw{width:48px;min-height:28px;height:28px;padding:0;border:0;border-radius:14px;background:var(--line)}.fld input.sw:checked{background:var(--pri)}
 .note{color:var(--bad);font-size:14px;min-height:1.2em;margin:0 4px}
 [hidden]{display:none!important}
 @media(max-width:380px){.dmid{grid-template-columns:120px minmax(0,1fr);gap:14px}.tv .num{font-size:24px}}
@@ -195,7 +197,7 @@ for(let i=0;i<N;i++){const n=(r()+r()+r()-1.5)/.75;w=.5*w+.5*n;const wk=Math.sin
 const dd=i=>new Date(NOW.getTime()-(N-1-i)*DAY);
 
 const KEY='vitalconnect.preview.v1';
-const fresh=()=>({order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},goal:{},rings:['steps','active','sleep'],conn:{hc:true,google:true,garmin:false},theme:'system',onb:'login',prof:{name:'Sam de Vries',birth:'1991-04-18',sex:null,h:null,w:null}});
+const fresh=()=>({order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},goal:{},rings:['steps','active','sleep'],conn:{hc:true,google:true,garmin:false},theme:'system',onb:'login',sync:60,nGoals:true,nStatus:false,prof:{name:'Sam de Vries',birth:'1991-04-18',sex:null,h:null,w:null}});
 let S;try{S=Object.assign(fresh(),JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S=fresh()}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const applyTheme=()=>{const r=document.documentElement;if(S.theme==='light'||S.theme==='dark')r.dataset.theme=S.theme;else delete r.dataset.theme};applyTheme();
@@ -326,7 +328,7 @@ function renderDetail(){
 }
 
 // ---------- Inloggen en kennismaking ----------
-const RINGS_SVG=`<svg viewBox="0 0 108 108" width="72" height="72" aria-hidden="true"><g fill="none" stroke-width="8" stroke-linecap="round"><circle cx="54" cy="54" r="40" stroke="#f5935a" stroke-opacity=".28"/><path d="M54 14 A40 40 0 1 1 21.6 77.5" stroke="#f5935a"/><circle cx="54" cy="54" r="27" stroke="#4cc3b3" stroke-opacity=".28"/><path d="M54 27 A27 27 0 1 1 28.3 62.3" stroke="#4cc3b3"/><circle cx="54" cy="54" r="14" stroke="#8c97f2" stroke-opacity=".28"/><path d="M54 40 A14 14 0 1 1 48.8 67" stroke="#8c97f2"/></g></svg>`;
+const RINGS_SVG=`<svg viewBox="0 0 108 108" width="76" height="76" aria-hidden="true">  <g transform="translate(54 54) scale(1.0) translate(-54 -54)" stroke="#123430" stroke-width="2.6" stroke-linejoin="round" paint-order="stroke">    <circle cx="55" cy="29.5" r="7.2" fill="#DDB15A" stroke="none"/>    <path d="M25 41.5 C38 37.5 50 43.5 54 54 C57 62.5 55 72 50.5 80.5 C47.5 70.5 43 60.5 37 52.5 C33 47 29.5 43.5 25 41.5 Z" fill="#F5935A"/>    <path d="M84.5 31.5 C70.5 33.5 60 43.5 57 56 C55 66 51.5 74.5 43.5 82.5 C58.5 78 66.5 67 71.5 55.5 C75.5 46.5 79 37.5 84.5 31.5 Z" fill="#4CC3B3"/>    <path d="M83 51.5 C81 66.5 70.5 80 50 82.5 C56.5 76 61 70 65.5 63.5 C70.5 56.5 76 53 83 51.5 Z" fill="#8C97F2"/>  </g></svg>`;
 const ah=(t,sub,step)=>`<header class="ah">${RINGS_SVG}${step?`<small>Stap ${step} van 3</small>`:''}<h1>${t}</h1><p>${sub}</p></header>`;
 let showEmail=false,agreed=false;
 function renderAuth(){
@@ -391,24 +393,38 @@ function profileHtml(){
   return personalCard('Opslaan',false)+`
   <div class="sh" style="margin-bottom:0"><h2>Weergave</h2></div>
   <div class="card"><span class="gl">Kies licht of donker, of laat het je telefoon volgen.</span><div class="row">${th('system','Systeem')}${th('light','Licht')}${th('dark','Donker')}</div></div>
+  <div class="sh" style="margin-bottom:0"><h2>Meldingen</h2></div>
+  <div class="card">${sw('nGoals','Doel gehaald','Een melding als je een dagdoel haalt, zoals je stappendoel. Eén keer per doel per dag.',S.nGoals,false)}
+  ${sw('nStatus','Draait op de achtergrond','Een stille, vaste melding die laat zien dat Vital Connect meesynchroniseert en wanneer voor het laatst.',S.nStatus&&S.sync>0,S.sync===0)}
+  ${S.sync===0?'<span class="gl">Zet synchroniseren op de achtergrond aan (Koppelingen) om deze melding te gebruiken.</span>':''}</div>
   <div class="sh" style="margin-bottom:0"><h2>Account</h2></div>
   <div class="card"><span class="gl">Je data is van jou. Je kunt alles exporteren of je account met alle data verwijderen.</span>
   <div class="row"><button class="btn">Mijn data exporteren</button><button class="btn" data-act="logout">Uitloggen</button></div><a class="lnk" style="padding:0;text-decoration:none" href="https://ianschrotenboer.github.io/VitalConnect/privacy.html">Privacyverklaring</a><button class="lnk" style="color:var(--bad);padding:0">Account verwijderen</button></div>
-  <p class="gl" style="margin:4px">Vital Connect 1.2.0 · preview</p>`;
+  <p class="gl" style="margin:4px">Vital Connect 1.3.0 · preview</p>`;
 }
-const SRCS={hc:['hc','H','#2f7d6e','Health Connect','Data van apps op deze telefoon, zoals Google Fit, Samsung Health en de Suunto-app.','Elk uur op de achtergrond'],
-  google:['google','F','#3f7f4a','Google Health','Data van Fitbit, Pixel Watch en de Google Health-app.','Elk uur opgehaald'],
+const SRCS={hc:['hc','H','#2f7d6e','Health Connect','Data van apps op deze telefoon, zoals Google Fit, Samsung Health en de Suunto-app.','@sync'],
+  google:['google','F','#3f7f4a','Google Health','Data van Fitbit, Pixel Watch en de Google Health-app.','@sync'],
   garmin:['garmin','G','#2b5fa8','Garmin Connect','Data van je Garmin-horloge via Garmin Connect.','Na elke sync van je horloge']};
 function srcCard([k,l,c,name,desc,okText]){
   const on=S.conn[k],b=busy===k,t=syncedAt.toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'});
-  return`<div class="card"><div class="src"><span class="mk" style="background:${c}">${l}</span><div><h3>${name}</h3><span class="${on?'ok':'mut'}" style="font-size:14px">${on?`${okText} · bijgewerkt om ${t}`:'Niet gekoppeld'}</span></div></div>
+  return`<div class="card"><div class="src"><span class="mk" style="background:${c}">${l}</span><div><h3>${name}</h3><span class="${on?'ok':'mut'}" style="font-size:14px">${on?`${okText==='@sync'?'Bijwerken: '+syncLabel(S.sync):okText} · bijgewerkt om ${t}`:'Niet gekoppeld'}</span></div></div>
   <span class="gl">${desc}</span><div class="row">${on?`<button class="btn pri" data-act="sync">${k==='hc'?'Nu synchroniseren':'Nu ophalen'}</button>${k==='hc'?'':`<button class="btn" data-conn="${k}">Ontkoppelen</button>`}`:`<button class="btn pri" data-conn="${k}" ${b?'disabled':''}>${b?'Verbinden…':'Koppelen'}</button>`}</div>
   ${on&&k==='hc'?`<span class="gl">Ontkoppelen doe je in de Health Connect-instellingen van je telefoon. <button class="lnk" style="min-height:0;padding:0;font-size:13px" data-conn="hc">Demo: ontkoppel</button></span>`:''}</div>`}
+const SYNC_CHOICES=[[15,'15 min'],[30,'30 min'],[60,'1 uur'],[180,'3 uur'],[360,'6 uur'],[0,'Handmatig']];
+const syncLabel=m=>m===0?'alleen als je de app opent':m<60?`elke ${m} minuten`:m===60?'elk uur':`elke ${m/60} uur`;
+const sw=(k,t,d,on,dis)=>`<label class="fld" style="flex-wrap:nowrap;align-items:center;gap:12px"><span style="flex:1"><b style="font-weight:600;${dis?'color:var(--mut)':''}">${t}</b><br><span class="gl">${d}</span></span><input type="checkbox" class="sw" data-ntf="${k}" ${on?'checked':''} ${dis?'disabled':''} aria-label="${t}"></label>`;
+// Nagebootste melding bovenin het scherm
+function notify(title,text){const e=document.createElement('div');e.setAttribute('role','status');
+  e.style.cssText='position:fixed;top:12px;left:50%;transform:translateX(-50%);width:min(92vw,420px);background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:12px 16px;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:30;font-size:14px';
+  e.innerHTML=`<b>${title}</b><br><span class="gl">${text}</span>`;document.body.appendChild(e);setTimeout(()=>e.remove(),3500)}
 function connHtml(){
   const src=['hc','google','garmin'].map(k=>SRCS[k]);
   const on=src.filter(x=>S.conn[x[0]]),off=src.filter(x=>!S.conn[x[0]]);
   const head=(t,n,c)=>`<div class="sh" style="margin-bottom:0"><h2 style="display:flex;align-items:center;gap:10px"><i class="dot" style="background:${c}"></i>${t} · ${n}</h2></div>`;
   return`<p class="mut" style="margin:0 4px">Kies welke bronnen je data leveren. Per metric stel je de voorkeursbron in onder Vandaag → Aanpassen.</p>
+  <div class="card"><h3>Synchroniseren</h3><span class="gl">Hoe vaak Vital Connect Health Connect en Google Health bijwerkt, ook als de app dicht is. Garmin stuurt nieuwe data zelf na elke sync van je horloge. Vaker kost iets meer batterij; Android kan een ronde soms iets uitstellen.</span>
+  <div class="row">${SYNC_CHOICES.map(([m,l])=>`<button class="pill" data-sync="${m}" aria-pressed="${S.sync===m}">${l}</button>`).join('')}</div>
+  <span style="font-size:14px;font-weight:500">Nu: ${syncLabel(S.sync)}.</span></div>
   ${head('Gekoppeld',on.length,'var(--good)')}${on.length?on.map(srcCard).join(''):'<p class="mut" style="margin:0 4px">Nog niets gekoppeld. Kies hieronder een bron om je dashboard te vullen.</p>'}
   ${off.length?head('Niet gekoppeld',off.length,'var(--mut)')+off.map(srcCard).join(''):''}`;
 }
@@ -453,8 +469,10 @@ document.addEventListener('click',e=>{
   else if(d.act==='logout'){S=fresh();S.conn={hc:false,google:false,garmin:false};save();applyTheme();tab='today';detail=null;settings=false;editing=false;draft=null;showEmail=false;renderAll();show()}
   else if(d.act==='edit'){editing=true;renderEdit();show()}
   else if(d.act==='done'){editing=false;save();renderAll();show()}
-  else if(d.act==='sync'){const b=$('#syncBtn');b&&b.classList.add('spin');setTimeout(()=>{syncedAt=new Date();renderToday();rr()},900)}
-  else if(d.conn){const k=d.conn;if(S.conn[k]){S.conn[k]=false;save();rr()}else{busy=k;rr();setTimeout(()=>{S.conn[k]=true;busy=null;save();rr()},1100)}}
+  else if(d.act==='sync'){const b=$('#syncBtn');b&&b.classList.add('spin');setTimeout(()=>{syncedAt=new Date();renderToday();rr();if(S.nGoals&&today('steps')>=goal('steps'))notify('Doel gehaald: stappen',`${fmt('steps',today('steps'))} stappen vandaag. Mooi werk!`)},900)}
+  else if(d.conn){const k=d.conn;if(S.conn[k]){S.conn[k]=false;save();rr()}else if(k!=='hc'&&!d.ok){disclose(k)}else{closeDisc();busy=k;rr();setTimeout(()=>{S.conn[k]=true;busy=null;save();rr()},1100)}}
+  else if(d.act==='discClose'){closeDisc()}
+  else if(d.sync!=null){S.sync=+d.sync;save();rr()}
   else if(d.exp){openEdit=openEdit===d.exp?null:d.exp;renderEdit()}
   else if(d.size){const[id,v]=d.size.split(':');S.size[id]=v;renderEdit()}
   else if(d.mv){const[id,dir]=d.mv.split(':'),i=S.order.indexOf(id),j=i+Number(dir);if(i>=0&&j>=0&&j<S.order.length){[S.order[i],S.order[j]]=[S.order[j],S.order[i]];renderEdit()}}
@@ -466,11 +484,18 @@ document.addEventListener('change',e=>{
   const t=e.target,d=t.dataset;
   if(d.tog){const id=d.tog;if(t.checked){if(!S.order.includes(id))S.order.push(id)}else{S.order=S.order.filter(x=>x!==id);S.rings=S.rings.filter(x=>x!==id)}later(renderEdit)}
   else if(d.prof){setProf(t);if(d.prof==='birth')later(rr)}
+  else if(d.ntf){S[d.ntf]=t.checked;save();later(rr)}
   else if(t.id==='agree'){agreed=t.checked;const b=document.querySelector('[data-act=consent]');if(b)b.disabled=!agreed}
   else if(d.goal){const v=parseFloat(String(t.value).replace(',','.'));S.goal[d.goal]=isFinite(v)&&v>0?v:null;if(!S.goal[d.goal])S.rings=S.rings.filter(x=>x!==d.goal);later(renderEdit)}
   else if(d.ring){const id=d.ring;if(t.checked){if(S.rings.length>=3){t.checked=false;note('Er passen drie doelen in de ringen. Zet er eerst één uit.');return}S.rings.push(id)}else S.rings=S.rings.filter(x=>x!==id)}
 });
 document.addEventListener('input',e=>{if(e.target.dataset.prof)setProf(e.target)});
+// Verplichte uitleg vóór het toestemmingsscherm van Google Health of Garmin (zoals in de app)
+function disclose(k){closeDisc();const n=SRCS[k][3],el=document.createElement('div');el.id='disc';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');
+  el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:24px;z-index:20';
+  el.innerHTML=`<div class="card" style="max-width:420px"><h3 style="font-size:20px">${n} koppelen</h3><p style="margin:0">Vital Connect leest uit ${n} je activiteit (stappen, afstand, calorieën, actieve minuten), hart en herstel (rusthartslag, HRV, zuurstof, ademhaling), slaap en lichaamsmetingen (gewicht, VO2max). We gebruiken deze gegevens alleen om jouw dashboard, grafieken en statistieken te tonen. We delen of verkopen ze niet en gebruiken ze niet voor advertenties. Je kunt de koppeling altijd intrekken en je gegevens verwijderen.</p><div class="row" style="justify-content:flex-end"><button class="btn" data-act="discClose">Annuleren</button><button class="btn pri" data-conn="${k}" data-ok="1">Doorgaan</button></div></div>`;
+  document.body.appendChild(el);el.querySelector('[data-ok]').focus()}
+function closeDisc(){const e=document.getElementById('disc');if(e)e.remove()}
 function checkProf(){const okH=draft.h==null||(draft.h>=50&&draft.h<=260),okW=draft.w==null||(draft.w>=20&&draft.w<=400);if(!okH||!okW){$('#pnote').textContent='Vul een lengte tussen 50 en 260 cm en een gewicht tussen 20 en 400 kg in.'}return okH&&okW}
 function setProf(t){const k=t.dataset.prof;let v=t.value;if(k==='h'||k==='w'){v=parseFloat(String(v).replace(',','.'));v=isFinite(v)?v:null}else if(k==='birth')v=v||null;draft[k]=v;
   const b=document.querySelector('[data-act=psave]');if(b)b.disabled=JSON.stringify(draft)===JSON.stringify(S.prof);const n=$('#pnote');if(n){n.textContent='';n.style.color=''}}

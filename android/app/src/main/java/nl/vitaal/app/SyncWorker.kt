@@ -11,43 +11,58 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-/** Synchroniseert elk uur op de achtergrond, als de gebruiker daar toestemming voor gaf. */
+/**
+ * Synchroniseert op de achtergrond met het interval dat de gebruiker koos (Profiel → Koppelingen):
+ * Health Connect (als daar achtergrondtoegang voor is) en Google Health (als die gekoppeld is).
+ * Garmin stuurt nieuwe data zelf na elke sync van het horloge. Daarna: meldingen voor gehaalde doelen
+ * en de stille statusmelding bijwerken.
+ */
 class SyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
 
     override suspend fun doWork(): Result {
-        val api = Api(applicationContext)
+        val ctx = applicationContext
+        val api = Api(ctx)
         if (!api.isSignedIn) return Result.success()
-        if (HealthSync.sdkStatus(applicationContext) != HealthConnectClient.SDK_AVAILABLE) return Result.success()
-
-        val sync = HealthSync(applicationContext, api)
+        val hc = HealthSync(ctx, api)
         return try {
-            if (HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND !in sync.granted()) {
-                return Result.success() // alleen synchroniseren als de app open is
+            if (HealthSync.sdkStatus(ctx) == HealthConnectClient.SDK_AVAILABLE &&
+                HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND in hc.granted()
+            ) {
+                Log.i(TAG, "Health Connect: ${hc.sync()} dagwaarden")
             }
-            val n = sync.sync()
-            Log.i(TAG, "Achtergrondsync: $n dagwaarden")
+            val googleActive = api.select("connections?select=status&provider=eq.google_health")
+                .any { it.jsonObject["status"]?.jsonPrimitive?.content == "active" }
+            if (googleActive) api.function("google-health-sync")
+            Notifier.checkGoalsFromServer(ctx, api)
+            Notifier.updateStatus(ctx, justSynced = true)
             Result.success()
         } catch (e: IOException) {
-            Log.w(TAG, "Netwerkfout, later opnieuw", e)
+            Log.w(TAG, "Netwerkfout, later opnieuw")
             Result.retry()
         } catch (e: Exception) {
-            Log.e(TAG, "Sync mislukt", e)
+            Log.e(TAG, "Sync mislukt: ${e.javaClass.simpleName}")
             Result.failure()
         }
     }
 
     companion object {
         private const val TAG = "VitaalSync"
+        private const val NAME = "health-connect-sync"
 
-        fun schedule(ctx: Context) {
-            val request = PeriodicWorkRequestBuilder<SyncWorker>(1, TimeUnit.HOURS)
+        /** Plant de achtergrondtaak volgens de instelling; 0 minuten = geen achtergrondsync. */
+        fun schedule(ctx: Context, replace: Boolean = false) {
+            val wm = WorkManager.getInstance(ctx)
+            val minutes = DeviceSettings(ctx).syncMinutes
+            if (minutes == 0) { wm.cancelUniqueWork(NAME); return }
+            val request = PeriodicWorkRequestBuilder<SyncWorker>(maxOf(15, minutes).toLong(), TimeUnit.MINUTES)
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                 .build()
-            WorkManager.getInstance(ctx)
-                .enqueueUniquePeriodicWork("health-connect-sync", ExistingPeriodicWorkPolicy.KEEP, request)
+            wm.enqueueUniquePeriodicWork(NAME, if (replace) ExistingPeriodicWorkPolicy.UPDATE else ExistingPeriodicWorkPolicy.KEEP, request)
         }
     }
 }

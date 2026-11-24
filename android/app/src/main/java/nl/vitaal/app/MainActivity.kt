@@ -1,6 +1,11 @@
 package nl.vitaal.app
 
+import android.Manifest
 import android.content.ActivityNotFoundException
+import android.content.pm.PackageManager
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.result.contract.ActivityResultContracts
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -24,6 +29,9 @@ class MainActivity : ComponentActivity() {
             vm.onHcPermissionsResult(granted)
         }
 
+    private val notificationPermission: ActivityResultLauncher<String> =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> vm.onNotificationPermission(granted) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -44,6 +52,7 @@ class MainActivity : ComponentActivity() {
                     onGoogleSignIn = ::googleSignIn,
                     onShare = ::shareText,
                     onSignOut = ::signOut,
+                    onRequestNotifications = ::requestNotifications,
                 )
             }
         }
@@ -57,6 +66,25 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         vm.refreshHcStatus()
+        vm.refreshNotificationPermission()
+    }
+
+    private var askedNotifications = false
+
+    /** Android 13+: één keer om toestemming vragen; daarna (of op oudere Android) naar de meldingsinstellingen van de app. */
+    private fun requestNotifications() {
+        val needsPermission = Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        if (needsPermission && !askedNotifications) {
+            askedNotifications = true
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            try {
+                startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
+            } catch (_: ActivityNotFoundException) {
+                vm.message = "Open de Android-instellingen om meldingen voor $APP_NAME aan te zetten."
+            }
+        }
     }
 
     /** vitaal://garmin?status=… en vitaal://google?status=… na het koppelen in de browser. */

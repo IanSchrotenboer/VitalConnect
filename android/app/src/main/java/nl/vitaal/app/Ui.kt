@@ -45,6 +45,7 @@ fun VitaalRoot(
     onGoogleSignIn: () -> Unit,
     onShare: (String) -> Unit,
     onSignOut: () -> Unit,
+    onRequestNotifications: () -> Unit,
 ) {
     val p = LocalPalette.current
     val width = currentWidthClass()
@@ -118,7 +119,7 @@ fun VitaalRoot(
                             vm.onboarding == Onboarding.Profile -> OnboardingProfileScreen(vm)
                             vm.editing -> EditScreen(vm)
                             vm.detailMetric != null -> DetailScreen(vm)
-                            vm.showSettings -> ProfileScreen(vm, onRequestHc, onOpenUrl, onShare, onSignOut)
+                            vm.showSettings -> ProfileScreen(vm, onRequestHc, onOpenUrl, onShare, onSignOut, onRequestNotifications)
                             vm.tab == Tab.Health -> HealthScreen(vm)
                             vm.tab == Tab.Sleep -> SleepScreen(vm)
                             else -> TodayScreen(vm)

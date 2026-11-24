@@ -109,6 +109,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Weergave: lokaal bewaard (direct bij het opstarten) en in het profiel (gelijk op al je toestellen). */
     private val ui = app.getSharedPreferences("vitaal_ui", android.content.Context.MODE_PRIVATE)
     var themeMode by mutableStateOf(ThemeMode.of(ui.getString("theme", null))); private set
+
+    // Synchroniseren en meldingen (instellingen van dit toestel)
+    private val device = DeviceSettings(app)
+    var syncMinutes by mutableStateOf(device.syncMinutes); private set
+    var notifyGoals by mutableStateOf(device.notifyGoals); private set
+    var notifyStatus by mutableStateOf(device.notifyStatus); private set
+    var notificationsAllowed by mutableStateOf(Notifier.allowed(app)); private set
     /** Metric waarvan het detailscherm (grafiek) open staat. */
     var detailMetric by mutableStateOf<String?>(null); private set
     var stats by mutableStateOf<Map<String, MetricStats>>(emptyMap()); private set
@@ -215,7 +222,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun signOut() {
-        api.signOut(); hc.reset()
+        api.signOut(); hc.reset(); Notifier.clear(getApplication())
         signedIn = false; authStep = AuthStep.Login
         tab = Tab.Today; showSettings = false; detailMetric = null; editing = false
         profile = Profile(); profileTab = ProfileTab.Profile; onboarding = null
@@ -267,6 +274,31 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         onboarding = null
         tab = Tab.Today
     }
+
+    fun setSyncInterval(minutes: Int) {
+        device.syncMinutes = minutes
+        syncMinutes = minutes
+        SyncWorker.schedule(getApplication(), replace = true)
+        Notifier.updateStatus(getApplication())
+        message = if (minutes == 0) "Synchroniseren op de achtergrond staat uit." else "Je gegevens worden ${syncLabel(minutes)} bijgewerkt."
+    }
+
+    /** Zet een melding aan of uit. true = aan, maar eerst toestemming nodig (de UI vraagt die dan). */
+    fun setNotify(goals: Boolean? = null, status: Boolean? = null): Boolean {
+        goals?.let { device.notifyGoals = it; notifyGoals = it }
+        status?.let { device.notifyStatus = it; notifyStatus = it }
+        Notifier.updateStatus(getApplication())
+        return (goals == true || status == true) && !Notifier.allowed(getApplication())
+    }
+
+    fun onNotificationPermission(granted: Boolean) {
+        notificationsAllowed = Notifier.allowed(getApplication())
+        if (!granted) message = "Zonder toestemming kan $APP_NAME geen meldingen tonen. Je kunt dit aanzetten in de Android-instellingen."
+        Notifier.updateStatus(getApplication())
+        Notifier.checkGoals(getApplication(), prefs.values, today, metrics)
+    }
+
+    fun refreshNotificationPermission() { notificationsAllowed = Notifier.allowed(getApplication()) }
 
     fun setTheme(mode: ThemeMode) {
         applyTheme(mode)
@@ -351,6 +383,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         lastLoaded = Instant.now()
         refreshHcStatusNow()
+        Notifier.checkGoals(getApplication(), prefs.values, today, metrics)
+        Notifier.updateStatus(getApplication(), justSynced = true)
     }
 
     // ---------- Detailgrafiek ----------

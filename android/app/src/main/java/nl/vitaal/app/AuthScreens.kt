@@ -1,5 +1,6 @@
 package nl.vitaal.app
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -48,11 +50,7 @@ private fun AuthHeader(title: String, subtitle: String, step: Pair<Int, Int>? = 
             .padding(start = 24.dp, end = 24.dp, top = 40.dp, bottom = 28.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Rings(
-            listOf(0.82f to d.activity, 0.64f to d.sleep, 0.9f to d.recovery),
-            center = "",
-            modifier = Modifier.size(72.dp),
-        )
+        Image(painterResource(R.drawable.logo_mark), contentDescription = null, modifier = Modifier.size(76.dp))
         Spacer(Modifier.height(4.dp))
         step?.let { (n, total) ->
             Text("Stap $n van $total", style = MaterialTheme.typography.labelMedium, color = d.dialMuted)
