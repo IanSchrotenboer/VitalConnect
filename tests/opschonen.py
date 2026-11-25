@@ -26,8 +26,8 @@ def meld(soort: str, tekst: str) -> None:
 
 
 def zonder_commentaar(code: str) -> str:
-    code = re.sub(r"/\*.*?\*/", "", code, flags=re.S)
-    return re.sub(r"//[^\n]*", "", code)
+    # Tekst tussen aanhalingstekens blijft staan, zodat bijvoorbeeld "*/*" of "https://" geen commentaar lijkt
+    return re.sub(r'"(?:\\.|[^"\\\n])*"|/\*.*?\*/|//[^\n]*', lambda m: m.group(0) if m.group(0).startswith('"') else "", code, flags=re.S)
 
 
 # ---------- Opschonen ----------

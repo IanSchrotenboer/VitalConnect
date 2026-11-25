@@ -1,6 +1,6 @@
 // Google Health (Fitbit, Pixel Watch, Google Health-app): koppelen met OAuth + PKCE, ophalen (pull).
 // Veldnamen volgen de Google Health API v4-referentie (dailyRollUp en list).
-import { ConnectError, type CloudProvider, type Row } from "./types.ts";
+import { ConnectError, type CloudProvider, type Row, type WorkoutRow } from "./types.ts";
 
 const API = "https://health.googleapis.com/v4";
 type GDate = { year: number; month: number; day: number };
@@ -141,6 +141,62 @@ async function lists(token: string, uid: string, days: number): Promise<Row[]> {
   return out;
 }
 
+// Trainingen: datatype exercise (exerciseType, interval, activeDuration, metricsSummary)
+const SPORT_OF: [RegExp, string][] = [
+  [/RUN/, "running"], [/HIK/, "hiking"], [/WALK/, "walking"], [/BIK|CYCL|SPINNING/, "cycling"], [/SWIM/, "swimming"],
+  [/STRENGTH|WEIGHT|CALISTHENIC|CROSSFIT|CIRCUIT/, "strength"], [/INTERVAL|HIIT|BOOT_CAMP/, "hiit"],
+  [/YOGA|PILATES|STRETCH/, "yoga"], [/ROWING/, "rowing"], [/ELLIPTICAL|STAIR/, "elliptical"],
+  [/SOCCER|FOOTBALL|BASKETBALL|VOLLEYBALL|HOCKEY|HANDBALL|RUGBY|CRICKET|BASEBALL|SOFTBALL/, "team"],
+  [/TENNIS|BADMINTON|SQUASH|PADEL|PICKLEBALL|RACQUET/, "racket"], [/DANC|ZUMBA|BARRE/, "dance"],
+  [/BOX|KARATE|JIU|JUDO|MARTIAL|TAEKWONDO|KICKBOX/, "martial"], [/SKI|SNOWBOARD|SKAT/, "winter"],
+];
+const sportOf = (t?: string) => SPORT_OF.find(([re]) => re.test(t ?? ""))?.[1] ?? "other";
+/** "1800s" of "1800.5s" → seconden */
+const secs = (d?: string) => { const n = num(d?.replace(/s$/, "")); return n; };
+
+async function exercises(token: string, uid: string, days: number): Promise<WorkoutRow[]> {
+  const out: WorkoutRow[] = [];
+  const from = daysAgo(days - 1).toISOString();
+  let pageToken: string | undefined;
+  let useFilter = true;
+  for (let page = 0; page < 10; page++) {
+    const q = new URLSearchParams({ pageSize: "100" });
+    if (useFilter) q.set("filter", `exercise.interval.start_time >= "${from}"`);
+    if (pageToken) q.set("pageToken", pageToken);
+    let res;
+    try {
+      res = await call(token, `/users/me/dataTypes/exercise/dataPoints?${q}`);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 400 && useFilter) { useFilter = false; page--; continue; }
+      if (e instanceof ApiError && e.status === 401) throw e;
+      console.warn("exercise", String(e));
+      break;
+    }
+    for (const dp of res.dataPoints ?? []) {
+      const ex = dp.exercise;
+      const start = ex?.interval?.startTime as string | undefined;
+      if (!start || start < from) continue;
+      const end = ex.interval.endTime as string | undefined;
+      const dur = secs(ex.activeDuration) ?? (end ? (Date.parse(end) - Date.parse(start)) / 1000 : undefined);
+      if (!dur) continue;
+      // Lokale dag van de start: tijd + UTC-verschuiving
+      const off = (secs(ex.interval.startUtcOffset) ?? 0) * 1000;
+      const day = new Date(Date.parse(start) + off).toISOString().slice(0, 10);
+      const m = ex.metricsSummary ?? {};
+      const mm = (v: unknown) => { const n = num(v); return n === undefined ? null : n / 1000; };
+      out.push({
+        user_id: uid, external_id: String(dp.name ?? "").split("/").pop() || `${start}`, sport: sportOf(ex.exerciseType),
+        title: ex.displayName ?? null, day, started_at: start, duration_s: dur,
+        distance_m: mm(m.distanceMillimeters), kcal: num(m.caloriesKcal) ?? null, avg_hr: num(m.averageHeartRateBeatsPerMinute) ?? null,
+        ascent_m: mm(m.elevationGainMillimeters), origin: dp.dataSource?.platform ?? null,
+      });
+    }
+    pageToken = res.nextPageToken;
+    if (!pageToken) break;
+  }
+  return out;
+}
+
 export const google: CloudProvider = {
   id: "google_health",
   slug: "google",
@@ -178,6 +234,7 @@ export const google: CloudProvider = {
     const [a, b] = await Promise.all([rollups(token, uid, days), lists(token, uid, days)]);
     return [...a, ...b];
   },
+  fetchWorkouts: exercises,
   async revoke({ access, refresh }) {
     const token = refresh ?? access;
     if (!token) return "no_token";

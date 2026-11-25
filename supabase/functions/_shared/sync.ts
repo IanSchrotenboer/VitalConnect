@@ -3,7 +3,7 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { accessTokenFor } from "./oauth.ts";
 import type { CloudProvider } from "./providers/index.ts";
-import { finishRun, startRun, writeDaily } from "./shared.ts";
+import { finishRun, startRun, writeDaily, writeWorkouts } from "./shared.ts";
 
 export type SyncState = { last_data_at: string | null; last_sync_at: string | null } | null;
 
@@ -21,6 +21,13 @@ export async function syncUser(
     const token = await accessTokenFor(sb, uid, p);
     if (!token) throw new Error(`Geen geldig token; koppel ${p.name} opnieuw`);
     const n = await writeDaily(sb, await p.fetchDays(token, uid, days), p.id);
+    if (p.fetchWorkouts) {
+      try {
+        await writeWorkouts(sb, await p.fetchWorkouts(token, uid, Math.max(days, 7)), p.id);
+      } catch (e) {
+        console.warn(`trainingen ${p.id}`, String(e));
+      }
+    }
     const now = new Date().toISOString();
     await sb.from("connections").update({
       last_sync_at: now, ...(n ? { last_data_at: now } : {}), status: "active", last_error: null,

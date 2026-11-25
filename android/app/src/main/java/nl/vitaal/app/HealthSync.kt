@@ -22,6 +22,7 @@ import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.time.Duration
@@ -57,8 +58,9 @@ class HealthSync(context: Context, private val api: Api) {
         if (types.isEmpty()) return 0
 
         val today = LocalDate.now(zone)
-        // "hrv-nacht": sinds 1.10 telt HRV tijdens de slaap; een andere sleutel laat de geschiedenis één keer opnieuw berekenen
-        val typesKey = "hrv-nacht;" + types.joinToString(",") { it.simpleName.orEmpty() }
+        // Een andere sleutel laat de geschiedenis één keer opnieuw uitlezen: "hrv-nacht" (1.10, HRV tijdens de slaap),
+        // "training" (1.11, oefensessies als trainingen)
+        val typesKey = "training;hrv-nacht;" + types.joinToString(",") { it.simpleName.orEmpty() }
         val saved = prefs.getString(CHANGES_TOKEN, null)
         val history = HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY in granted
 
@@ -68,6 +70,7 @@ class HealthSync(context: Context, private val api: Api) {
         }
 
         val days = sortedSetOf<LocalDate>()
+        val deleted = mutableListOf<String>()
         var token: String = saved
         do {
             val resp = client.getChanges(token)
@@ -78,7 +81,7 @@ class HealthSync(context: Context, private val api: Api) {
                 when (change) {
                     is UpsertionChange -> days.addAll(recordDays(change.record))
                     // Een verwijdering zegt niet welke dag; de afgelopen week opnieuw berekenen
-                    is DeletionChange -> (0L..6L).forEach { days.add(today.minusDays(it)) }
+                    is DeletionChange -> { (0L..6L).forEach { days.add(today.minusDays(it)) }; deleted += change.recordId }
                     else -> Unit
                 }
             }
@@ -90,6 +93,12 @@ class HealthSync(context: Context, private val api: Api) {
         // Aaneengesloten reeksen apart uitlezen: één gewijzigde dag van maanden terug haalt niet alles daartussen op
         var n = 0
         runs(days).forEach { (a, b) -> n += upload(types, a, b) }
+        // Een in Health Connect verwijderde oefensessie ook hier weghalen (andere verwijderde records negeert de server)
+        deleted.chunked(1000).forEach { ids ->
+            api.rpc("delete_workouts", buildJsonObject {
+                put("p_source", "health_connect"); put("p_external", JsonArray(ids.map { JsonPrimitive(it) }))
+            })
+        }
         prefs.edit()
             .putString(CHANGES_TOKEN, token)
             .putLong(LAST_SYNC, System.currentTimeMillis())
@@ -122,12 +131,16 @@ class HealthSync(context: Context, private val api: Api) {
         val start = from.atStartOfDay(zone).toInstant()
         val end = to.plusDays(1).atStartOfDay(zone).toInstant()
         val acc = Accumulator(zone)
+        val read = HashMap<KClass<out Record>, List<Record>>()
         for (type in types) {
             // Slaap die 's avonds begint telt voor de dag waarop je wakker wordt; HRV van die nacht ook
             val night = type == SleepSessionRecord::class || type == HeartRateVariabilityRmssdRecord::class
             val readStart = if (night) start.minus(Duration.ofHours(18)) else start
-            readAll(type, readStart, end).forEach(acc::add)
+            val recs = readAll(type, readStart, end)
+            read[type] = recs
+            recs.forEach(acc::add)
         }
+        uploadWorkouts(read, from, to)
         val rows = acc.rows().filter { !it.day.isBefore(from) && !it.day.isAfter(to) }
         var total = 0
         rows.chunked(2000).forEach { chunk ->
@@ -143,6 +156,36 @@ class HealthSync(context: Context, private val api: Api) {
             total += chunk.size
         }
         return total
+    }
+
+    /**
+     * Oefensessies → trainingen (tabel workouts). Afstand en actieve calorieën komen van dezelfde app tijdens de sessie
+     * (naar rato als een meting deels binnen de sessie valt). Hartslag lezen we niet: daar vraagt de app geen toestemming voor.
+     */
+    private suspend fun uploadWorkouts(read: Map<KClass<out Record>, List<Record>>, from: LocalDate, to: LocalDate) {
+        val sessions = read[ExerciseSessionRecord::class].orEmpty().filterIsInstance<ExerciseSessionRecord>()
+            .filter { val d = it.startTime.atZone(zone).toLocalDate(); !d.isBefore(from) && !d.isAfter(to) }
+        if (sessions.isEmpty()) return
+        val distances = read[DistanceRecord::class].orEmpty().filterIsInstance<DistanceRecord>()
+        val calories = read[ActiveCaloriesBurnedRecord::class].orEmpty().filterIsInstance<ActiveCaloriesBurnedRecord>()
+        val rows = sessions.mapNotNull { s ->
+            val dur = Duration.between(s.startTime, s.endTime).seconds.toInt()
+            if (dur !in 60..86400) return@mapNotNull null
+            val origin = s.metadata.dataOrigin.packageName
+            fun part(a: Instant, b: Instant): Double {
+                val overlap = minOf(b, s.endTime).toEpochMilli() - maxOf(a, s.startTime).toEpochMilli()
+                return if (overlap <= 0) 0.0 else overlap / (b.toEpochMilli() - a.toEpochMilli()).coerceAtLeast(1).toDouble()
+            }
+            val dist = distances.filter { it.metadata.dataOrigin.packageName == origin }.sumOf { it.distance.inMeters * part(it.startTime, it.endTime) }
+            val kcal = calories.filter { it.metadata.dataOrigin.packageName == origin }.sumOf { it.energy.inKilocalories * part(it.startTime, it.endTime) }
+            Workout(
+                id = null, source = "health_connect", externalId = s.metadata.id, sport = hcSport(s.exerciseType),
+                title = s.title?.take(80), day = s.startTime.atZone(zone).toLocalDate(), startedAt = s.startTime, durationS = dur,
+                distanceM = dist.takeIf { it > 1 }, kcal = kcal.takeIf { it > 0.5 }, avgHr = null, maxHr = null, ascentM = null,
+                notes = s.notes?.take(1000), origin = origin, load = null,
+            ).toJson()
+        }
+        rows.chunked(500).forEach { api.rpc("save_workouts", buildJsonObject { put("p_rows", JsonArray(it)) }) }
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -269,4 +312,33 @@ class HealthSync(context: Context, private val api: Api) {
 
         fun sdkStatus(ctx: Context): Int = HealthConnectClient.getSdkStatus(ctx)
     }
+}
+
+/** Health Connect-oefentype → vaste sportsleutel (zelfde lijst als de database). */
+internal fun hcSport(t: Int): String = when (t) {
+    ExerciseSessionRecord.EXERCISE_TYPE_RUNNING, ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL -> "running"
+    ExerciseSessionRecord.EXERCISE_TYPE_WALKING -> "walking"
+    ExerciseSessionRecord.EXERCISE_TYPE_HIKING -> "hiking"
+    ExerciseSessionRecord.EXERCISE_TYPE_BIKING, ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY -> "cycling"
+    ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL, ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER -> "swimming"
+    ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING, ExerciseSessionRecord.EXERCISE_TYPE_WEIGHTLIFTING,
+    ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS -> "strength"
+    ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING, ExerciseSessionRecord.EXERCISE_TYPE_BOOT_CAMP -> "hiit"
+    ExerciseSessionRecord.EXERCISE_TYPE_YOGA, ExerciseSessionRecord.EXERCISE_TYPE_PILATES,
+    ExerciseSessionRecord.EXERCISE_TYPE_STRETCHING -> "yoga"
+    ExerciseSessionRecord.EXERCISE_TYPE_ROWING, ExerciseSessionRecord.EXERCISE_TYPE_ROWING_MACHINE,
+    ExerciseSessionRecord.EXERCISE_TYPE_PADDLING -> "rowing"
+    ExerciseSessionRecord.EXERCISE_TYPE_ELLIPTICAL, ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING,
+    ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING_MACHINE -> "elliptical"
+    ExerciseSessionRecord.EXERCISE_TYPE_SOCCER, ExerciseSessionRecord.EXERCISE_TYPE_BASKETBALL, ExerciseSessionRecord.EXERCISE_TYPE_VOLLEYBALL,
+    ExerciseSessionRecord.EXERCISE_TYPE_HANDBALL, ExerciseSessionRecord.EXERCISE_TYPE_RUGBY, ExerciseSessionRecord.EXERCISE_TYPE_ICE_HOCKEY,
+    ExerciseSessionRecord.EXERCISE_TYPE_FOOTBALL_AMERICAN, ExerciseSessionRecord.EXERCISE_TYPE_BASEBALL,
+    ExerciseSessionRecord.EXERCISE_TYPE_SOFTBALL, ExerciseSessionRecord.EXERCISE_TYPE_CRICKET -> "team"
+    ExerciseSessionRecord.EXERCISE_TYPE_TENNIS, ExerciseSessionRecord.EXERCISE_TYPE_BADMINTON, ExerciseSessionRecord.EXERCISE_TYPE_SQUASH,
+    ExerciseSessionRecord.EXERCISE_TYPE_TABLE_TENNIS, ExerciseSessionRecord.EXERCISE_TYPE_RACQUETBALL -> "racket"
+    ExerciseSessionRecord.EXERCISE_TYPE_DANCING -> "dance"
+    ExerciseSessionRecord.EXERCISE_TYPE_MARTIAL_ARTS, ExerciseSessionRecord.EXERCISE_TYPE_BOXING -> "martial"
+    ExerciseSessionRecord.EXERCISE_TYPE_SKIING, ExerciseSessionRecord.EXERCISE_TYPE_SNOWBOARDING,
+    ExerciseSessionRecord.EXERCISE_TYPE_SNOWSHOEING, ExerciseSessionRecord.EXERCISE_TYPE_ICE_SKATING -> "winter"
+    else -> "other"
 }

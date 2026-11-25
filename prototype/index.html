@@ -82,6 +82,10 @@ button,input,select{font:inherit;color:inherit}button{cursor:pointer}
 .uk[open] summary::after{transform:translateY(2px) rotate(-135deg)}.uk[open]>:not(summary){animation:ukIn .2s ease-out}.uk>*+*{margin-top:8px!important}.uk{display:flex;flex-direction:column;gap:8px}.uk p{margin:0 0 8px}
 @keyframes ukIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.uk summary::after{transition:none}.uk[open]>:not(summary){animation:none}}
+.wk{display:flex;flex-direction:column;gap:6px;text-align:left;width:100%}.wkh{display:flex;align-items:center;gap:10px}.wkt{flex:1;min-width:0;display:flex;flex-direction:column}
+.wkt b{font-size:15px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wkh>b{font-size:15px;color:var(--ink)}.wkf{font-size:13px;color:var(--ink)}
+.wkd{font-size:17px;margin:12px 4px 0}.wbars{display:flex;gap:6px;align-items:flex-end;height:72px}.wbars span{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end;height:100%}
+.wbars i{display:block;width:100%;border-radius:4px;background:var(--pri)}.wbars small{font-size:11px;color:var(--mut)}.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.wf .fld{flex-direction:column;align-items:stretch;gap:4px}.wf .fld span{font-size:13px;color:var(--mut)}.wf .fld input,.wf textarea{width:100%;box-sizing:border-box;text-align:left}.wf textarea{min-height:64px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:10px;font:inherit;color:var(--ink)}
 .tile.herst{grid-column:1/-1}.herst{gap:10px}.hct{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;width:100%}.hct>span:first-child{display:flex;flex-direction:column;gap:4px}
 .hl{display:flex;align-items:center;gap:8px;font-weight:600;font-size:17px;color:var(--ink)}.hs{font-size:44px;font-weight:700;line-height:1;color:var(--ink)}.hadv{font-size:15px;color:var(--ink);text-align:left}
 .hf{display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--line);width:100%;text-align:left}.hft{display:flex;justify-content:space-between;gap:8px;font-size:15px;color:var(--ink)}
@@ -132,7 +136,7 @@ button,input,select{font:inherit;color:inherit}button{cursor:pointer}
 .ok{color:var(--good)}
 /* tabbalk */
 .tabs{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
-.tabs div{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.tabs div{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
 .tabs button{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;font-size:13px;font-weight:500;color:var(--mut)}
 .tabs button span{display:grid;place-items:center;width:64px;height:32px;border-radius:16px}
 .tabs button[aria-current=page]{color:var(--pri)}.tabs button[aria-current=page] span{background:color-mix(in srgb,var(--pri) 12%,transparent)}
@@ -183,6 +187,7 @@ button,input,select{font:inherit;color:inherit}button{cursor:pointer}
   <section id="v-today"></section>
   <section id="v-health" hidden></section>
   <section id="v-sleep" hidden></section>
+  <section id="v-training" hidden></section>
   <section id="v-detail" hidden></section>
   <section id="v-settings" hidden></section>
   <section id="v-edit" hidden></section>
@@ -192,6 +197,7 @@ button,input,select{font:inherit;color:inherit}button{cursor:pointer}
   <button data-tab="today"><span><svg viewBox="0 0 24 24"><path d="M4 3h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM15 3h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM4 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1zM15 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1z"/></svg></span>Vandaag</button>
   <button data-tab="health"><span><svg viewBox="0 0 24 24"><path d="M3 12h4l2.5-6 5 12 2.5-6h4"/></svg></span>Gezondheid</button>
   <button data-tab="sleep"><span><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></span>Slaap</button>
+  <button data-tab="training"><span><svg viewBox="0 0 24 24"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg></span>Training</button>
 </div></nav>
 
 <script>
@@ -228,7 +234,8 @@ for(let i=0;i<N;i++){const n=(r()+r()+r()-1.5)/.75;w=.5*w+.5*n;const wk=Math.sin
 const dd=i=>new Date(NOW.getTime()-(N-1-i)*DAY);
 
 const KEY='vitalconnect.preview.v1';
-const fresh=()=>({order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},goal:{},rings:['steps','active','sleep'],conn:{hc:true,google:true,garmin:false},theme:'system',onb:'login',sync:60,lay:{greetName:true,motivation:true,healthTotals:true,healthHidden:[],sleepTiles:['hrv','rhr','resp'],sleepAdvice:true,herstel:true},nGoals:true,nStatus:false,prof:{name:'Sam de Vries',birth:'1991-04-18',sex:null,h:null,w:null}});
+const SPORT_KEYS=new Set(['running','walking','hiking','cycling','swimming','strength','hiit','yoga','rowing','elliptical','team','racket','dance','martial','winter','other']);
+const fresh=()=>({wk:[],order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},goal:{},rings:['steps','active','sleep'],conn:{hc:true,google:true,garmin:false},theme:'system',onb:'login',sync:60,lay:{greetName:true,motivation:true,healthTotals:true,healthHidden:[],sleepTiles:['hrv','rhr','resp'],sleepAdvice:true,herstel:true},nGoals:true,nStatus:false,prof:{name:'Sam de Vries',birth:'1991-04-18',sex:null,h:null,w:null}});
 // Opgeslagen staat wordt veld voor veld gecontroleerd: kapotte, oude of vreemde waarden vallen terug op de standaard.
 function clean(raw){const d=fresh(),o=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
 const ids=a=>Array.isArray(a)?[...new Set(a.filter(x=>x in MI))]:null,obj=x=>x&&typeof x==='object'&&!Array.isArray(x)?x:{};
@@ -245,6 +252,10 @@ const l=obj(o.lay);for(const k of ['greetName','motivation','healthTotals','slee
 const hid=ids(l.healthHidden);if(hid)d.lay.healthHidden=hid;const st=ids(l.sleepTiles);if(st&&st.length)d.lay.sleepTiles=st;
 const pr=obj(o.prof),txt=(x,n)=>typeof x==='string'?x.slice(0,n):null,num=(x,lo,hi)=>Number.isFinite(x)&&x>=lo&&x<=hi?x:null;
 d.prof={name:txt(pr.name,60)??d.prof.name,birth:/^\d{4}-\d{2}-\d{2}$/.test(pr.birth)&&!isNaN(new Date(pr.birth))?pr.birth:null,sex:['female','male','other'].includes(pr.sex)?pr.sex:null,h:num(pr.h,50,260),w:num(pr.w,20,400)};
+const wk=Array.isArray(o.wk)?o.wk:[];d.wk=wk.filter(w=>w&&typeof w==='object'&&typeof w.id==='string'&&SPORT_KEYS.has(w.sport)&&['manual','file'].includes(w.source)
+  &&/^\d{4}-\d{2}-\d{2}$/.test(w.day)&&Number.isFinite(w.start)&&Number.isFinite(w.dur)&&w.dur>=60&&w.dur<=86400).slice(0,500).map(w=>({id:w.id.slice(0,120),source:w.source,sport:w.sport,
+  title:typeof w.title==='string'?w.title.slice(0,80):null,day:w.day,start:w.start,dur:w.dur,dist:num(w.dist,0,1e6),kcal:num(w.kcal,0,2e4),avg:num(w.avg,25,250),max:num(w.max,25,250),asc:num(w.asc,0,2e4),
+  notes:typeof w.notes==='string'?w.notes.slice(0,1000):null,origin:typeof w.origin==='string'?w.origin.slice(0,40):null}));
 return d}
 let S;try{S=clean(JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S=fresh()}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
@@ -273,7 +284,7 @@ sliders:'<svg viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M15 4v4M4 12h3M11 12h9M9
 chev:'<svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>'};
 
 let tab='today',detail=null,period=30,sel=null,settings=false,ptab='profile',editing=null,busy=null,syncedAt=new Date(NOW.getTime()-6e5),refreshing=null;
-const views=['today','health','sleep','detail','settings','edit','auth'];
+const views=['today','health','sleep','training','detail','settings','edit','auth'];
 function show(){const v=S.onb?'auth':editing?'edit':detail?'detail':settings?'settings':tab;views.forEach(n=>$('#v-'+n).hidden=n!==v);$('#tabs').hidden=v!==tab;$('.app').classList.toggle('auth',v==='auth');
 document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false'));window.scrollTo(0,0)}
 
@@ -405,7 +416,7 @@ function renderHerstel(){const h=herstel(),f=h.fit,W=320,H=140,tr=h.trend,all=tr
   const zn=['Herstel','Basis','Tempo','Drempel','Maximaal'];
   $('#v-detail').innerHTML=`<div class="back"><button class="ib" data-act="back" aria-label="Terug">${I.back}</button><div><h2>Herstel en fitheid</h2></div></div>
   <div class="pad stack"><div class="card herst">${herstelHead(h)}${factor('HRV, 7 dagen',h.hrv,'ms',false,false)}${factor('Rusthartslag, 7 dagen',h.rhr,'bpm',true,false)}${sleepF(h.sleep,false)}</div>
-  <div class="card"><h3>HRV, laatste 30 dagen</h3><span class="gl">Lijn: je 7-daagse gemiddelde. Band: je normale bereik.</span>
+  ${bodyCard('herstel')}<div class="card"><h3>HRV, laatste 30 dagen</h3><span class="gl">Lijn: je 7-daagse gemiddelde. Band: je normale bereik.</span>
   <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;overflow:visible" role="img" aria-label="HRV over 30 dagen met je normale bereik"><path d="${area}" fill="color-mix(in srgb,var(--herst) 30%,transparent)"/><path d="${line}" fill="none" stroke="var(--ink)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${x(tr.length-1)}" cy="${y(tr[tr.length-1].v)}" r="4" fill="var(--ink)"/></svg></div>
   <div class="card"><h3>Fitheid</h3>${f.hrmax==null?`<span class="gl">Vul je geboortedatum in bij Profiel. Dan berekenen we je maximale hartslag, je hartslagzones en een schatting van je VO2max.</span>`:`
   <div class="st"><div><small>Max. hartslag (geschat)</small><b>${f.hrmax} bpm</b></div><div><small>Rusthartslag, 7 dagen</small><b>${Math.round(f.rhr7)} bpm</b></div>
@@ -419,6 +430,9 @@ function renderHerstel(){const h=herstel(),f=h.fit,W=320,H=140,tr=h.trend,all=tr
   <span class="gl">Bronnen: Plews e.a. (2012, 2013, 2014); Australian Institute of Sport, richtlijn HRV; Tanaka e.a. (2001); Uth e.a. (2004, 2005).</span></details><span class="gl">Geen medisch advies.</span></div></div>`}
 function renderDetail(){
   if(detail==='herstel')return renderHerstel();
+  if(detail==='wform')return renderWorkoutForm();
+  if(detail==='wimport')return renderWorkoutImport();
+  if(String(detail).startsWith('w:'))return renderWorkout(detail.slice(2));
   const id=detail,m=MI[id],a=series(id),shown=a.slice(N-period),prev=a.slice(N-2*period,N-period);if(sel==null||sel>=period)sel=period-1;
   const ch=prev.length&&mean(prev)?(mean(shown)-mean(prev))/mean(prev)*100:null,good=m.lo?ch<0:ch>0,sum=m.agg==='sum';
   $('#v-detail').innerHTML=`<div class="back"><button class="ib" data-act="back" aria-label="Terug">${I.back}</button><div><h2>${m.n}</h2><span style="color:${col(id)};font-weight:500;font-size:14px">${CAT[m.cat]}</span></div></div>
@@ -428,9 +442,156 @@ function renderDetail(){
   <div class="fig" style="height:260px"><svg id="dfig"></svg></div></div>
   <div class="card"><div class="st" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><small>Gemiddelde</small><b>${fmt(id,mean(shown))}</b></div><div><small>Laagste</small><b>${fmt(id,Math.min(...shown))}</b></div><div><small>Hoogste</small><b>${fmt(id,Math.max(...shown))}</b></div></div>
   ${ch==null?'':`<span class="tm" style="font-size:14px"><span>Vergeleken met de periode ervoor</span><b class="${Math.abs(ch)<1?'':good?'up':'dn'}" style="font-size:16px">${ch>=0?'+':'−'}${nl(Math.abs(ch),1)}%</b></span>`}
-  ${sum?`<span class="gl">Totaal in deze periode: ${compact(shown.reduce((x,y)=>x+y,0))} ${unit(id)}</span>`:''}</div></div>`;
+  ${sum?`<span class="gl">Totaal in deze periode: ${compact(shown.reduce((x,y)=>x+y,0))} ${unit(id)}</span>`:''}</div>${bodyCard(id)}</div>`;
   drawChart($('#dfig'),shown.map((v,i)=>({d:dd(N-period+i),v})),{bars:sum,goal:goal(id),color:col(id),sel,axis:v=>id==='sleep'?Math.round(v)+'u':compact(v),onSel:i=>{sel=i;renderDetail()}});
 }
+
+
+// Uitleg per tegel: zelfde teksten als BodyInfo.kt in de app (taalniveau B1; bronnen in docs/uitleg-lichaam.md)
+const BODY={"steps": ["Stappen telt hoeveel stappen je per dag zet. Je telefoon of horloge meet dat aan de bewegingen van je lichaam.", "Lopen is de makkelijkste manier om in beweging te blijven. Het houdt je hart, bloedvaten, spieren en botten sterk, helpt je lichaam suiker uit je bloed op te nemen en geeft je hoofd rust.", "Elke stap telt. Onderzoek laat zien dat het gezondheidsvoordeel groeit tot ongeveer 8.000 tot 10.000 stappen per dag; vanaf 60 jaar al bij 6.000 tot 8.000. Wie nu weinig loopt, heeft het meeste aan een paar duizend stappen extra."], "active": ["Actieve minuten zijn de minuten waarin je zo beweegt dat je hartslag en ademhaling omhoog gaan: stevig wandelen, fietsen, sporten.", "Daarvan wordt je hart sterker en je conditie beter. Je bloeddruk daalt, je slaapt beter, je voelt je fitter en je hebt minder kans op hart- en vaatziekten en diabetes type 2.", "De Beweegrichtlijn (Gezondheidsraad) is minstens 150 minuten per week matig intensief bewegen, verspreid over meerdere dagen. Dat is ruim 20 minuten per dag. Doe daarnaast twee keer per week iets voor je spieren en botten, zoals krachttraining of traplopen."], "dist": ["Afstand is hoeveel kilometer je lopend of rennend aflegt.", "Net als stappen zegt het hoeveel je beweegt. Meer afstand op een rustig tempo bouwt je uithoudingsvermogen op: je hart, longen en spieren leren zuurstof beter te gebruiken.", "Wil je meer gaan lopen of hardlopen? Voer de afstand rustig op, ongeveer 10 procent per week, zodat spieren en pezen kunnen meegroeien."], "kcal": ["Actieve calorieën is de energie die je verbruikt door te bewegen, bovenop wat je lichaam in rust al verbruikt.", "Je lichaam haalt die energie uit koolhydraten en vet. Hoe meer en hoe zwaarder je beweegt, hoe meer je verbruikt.", "Het is een schatting van je horloge of telefoon en kan flink afwijken. Gebruik het om dagen met elkaar te vergelijken, niet als exact getal."], "floors": ["Verdiepingen telt hoeveel trappen je omhoog loopt. Eén verdieping is ongeveer 3 meter hoogte.", "Traplopen is een korte, stevige inspanning. Het traint je beenspieren en je conditie, en telt mee als spier- en botversterkende beweging."], "rhr": ["Je rusthartslag is hoe vaak je hart per minuut klopt als je helemaal stil ligt, meestal gemeten tijdens je slaap.", "Een getraind hart pompt per slag meer bloed rond en hoeft daarom minder vaak te kloppen. Een lagere rusthartslag past dus vaak bij een betere conditie.", "Bij volwassenen ligt de rusthartslag meestal tussen 60 en 100 slagen per minuut; bij sporters vaak lager, soms rond de 40 tot 60. Ligt hij een paar dagen hoger dan je gewend bent, dan kan dat komen door vermoeidheid, stress, alcohol, slecht slapen of een opkomende verkoudheid. Heb je klachten zoals duizeligheid of hartkloppingen, ga dan naar je huisarts."], "hrv": ["HRV (hartslagvariabiliteit) is het verschil in tijd tussen twee hartslagen. Je hart klopt niet als een klok: de tijd tussen slagen wisselt steeds een beetje.", "Die wisseling komt van je zenuwstelsel. Als je lichaam ontspannen is en herstelt, is de variatie groter. Bij stress, ziekte, alcohol, weinig slaap of een zware training wordt hij kleiner.", "HRV is heel persoonlijk en daalt met de leeftijd. Vergelijk hem daarom alleen met je eigen normaal, niet met anderen. Dat doet de tegel Herstel vandaag voor je."], "spo2": ["Zuurstof (SpO2) laat zien hoeveel procent van je rode bloedcellen zuurstof bij zich heeft.", "Rode bloedcellen brengen zuurstof van je longen naar je spieren en organen. Zonder genoeg zuurstof werken ze minder goed.", "Bij gezonde mensen ligt het meestal tussen 95 en 100 procent. Horloges meten minder nauwkeurig dan een meter bij de dokter. Ben je benauwd of blijft de waarde laag, neem dan contact op met je huisarts."], "resp": ["Ademhaling telt hoe vaak je per minuut in- en uitademt, gemeten tijdens je slaap.", "Rustig ademen hoort bij een lichaam dat ontspannen is en herstelt.", "Bij volwassenen in rust is 12 tot 20 keer per minuut gewoon. Een plotselinge stijging kan passen bij koorts, ziekte of stress."], "sleep": ["Slaapduur is hoe lang je echt slaapt, zonder de tijd dat je wakker in bed ligt.", "Tijdens je slaap herstellen je spieren, slaat je brein herinneringen op, ruimt het afvalstoffen op en regelt je lichaam je hormonen en afweer. Wie te kort slaapt, heeft minder energie, meer trek en wordt vaker ziek.", "Volwassenen hebben meestal 7 tot 9 uur nodig, vanaf 65 jaar 7 tot 8 uur. Vaste tijden om naar bed te gaan en op te staan helpen het meest."], "sscore": ["De slaapscore is een cijfer van je horloge dat samenvat hoe goed je sliep: hoe lang, hoe diep en hoe onrustig.", "Elk merk rekent het op een eigen manier uit. Kijk daarom vooral naar je eigen verloop: gaat het omhoog of omlaag?"], "stress": ["Stress is een score van je horloge, berekend uit je hartslag en HRV overdag. Hoe hoger, hoe meer je lichaam 'aan' staat.", "Korte stress is normaal en zelfs nuttig, bijvoorbeeld tijdens sporten. Blijft het lang hoog, dan krijgt je lichaam te weinig tijd om te herstellen.", "Een korte wandeling, rustig ademen of even niets doen helpt om de score omlaag te krijgen."], "energy": ["Energieniveau (Body Battery van Garmin) schat hoeveel energie je lichaam nog heeft.", "Het laadt op als je slaapt en rust, en loopt leeg door beweging, stress en drukte. Zie het als een batterij die je zelf kunt bijladen."], "recov": ["Hersteltijd is het advies van je horloge hoeveel uur je na een training nodig hebt voordat je weer zwaar traint.", "Na een zware training heeft je lichaam tijd nodig om spieren te herstellen en sterker terug te komen. Rustig bewegen mag in die tijd wel; dat helpt het herstel zelfs."], "vo2": ["VO2max is de hoeveelheid zuurstof die je lichaam per minuut per kilo kan gebruiken als je alles geeft. Het is de beste maat voor je conditie.", "Hoe hoger je VO2max, hoe beter je hart, longen en spieren samenwerken. Een goede conditie hangt samen met een langer en gezonder leven.", "Je kunt je VO2max verbeteren met duurtraining (lang en rustig) en intervaltraining (kort en zwaar). Wat goed is, hangt af van je leeftijd en geslacht; na je 30e daalt hij langzaam, maar trainen remt dat."], "weight": ["Gewicht is je lichaamsgewicht in kilo's.", "Je gewicht schommelt per dag makkelijk een tot twee kilo door vocht, eten en wc-bezoek. Kijk daarom naar het verloop over weken, niet naar één dag.", "Weeg jezelf voor een eerlijk beeld steeds op hetzelfde moment, bijvoorbeeld 's ochtends na het opstaan."], "herstel": ["Herstel vandaag laat zien hoe goed je lichaam is bijgekomen van inspanning, stress en de dag ervoor.", "Als je HRV hoger is en je rusthartslag lager dan je gewend bent, is je lichaam in de herstelstand. Dan kan het een stevige training aan. Zijn ze andersom, dan is je lichaam nog bezig met herstellen, of met iets anders zoals een verkoudheid of stress.", "Luister naar je lichaam: de score is een hulpmiddel, geen opdracht."], "load": ["Trainingsbelasting zegt hoe zwaar een training voor je lichaam was. Een uur rustig wandelen telt weinig, een uur hard rennen telt veel.", "Je lichaam wordt sterker in de rust na een training. Train je een tijd meer dan je gewend bent, dan word je fitter, maar heb je ook meer rust nodig. Wordt het te veel ineens, dan neemt de kans op blessures en ziek worden toe.", "'Deze week' is je belasting van de laatste dagen, 'gewend' die van de laatste zes weken. Vorm is het verschil: positief betekent uitgerust, negatief betekent dat je meer doet dan je gewend bent."]};
+const SPORT_INFO={"running": "Hardlopen traint je hart en longen sterk en maakt je botten steviger. Begin rustig en bouw langzaam op, zodat pezen en gewrichten mee kunnen groeien.", "walking": "Wandelen is zacht voor je gewrichten en goed voor je hart, je bloedsuiker en je humeur. Stevig doorwandelen telt als matig intensief bewegen.", "hiking": "Een wandeltocht, zeker met hoogteverschil, traint je benen, je conditie en je balans.", "cycling": "Fietsen traint je hart, longen en beenspieren en is licht voor je gewrichten.", "swimming": "Zwemmen gebruikt bijna al je spieren en is heel licht voor je gewrichten. Goed voor je conditie en je ademhaling.", "strength": "Krachttraining maakt je spieren en botten sterker, helpt je stofwisseling en voorkomt blessures. De Beweegrichtlijn raadt het minstens twee keer per week aan.", "hiit": "Intervaltraining wisselt korte, zware stukken af met rust. In korte tijd verbetert het je conditie en je VO2max flink.", "yoga": "Yoga en pilates maken je soepeler en sterker in je romp, verbeteren je balans en helpen je ontspannen.", "rowing": "Roeien en peddelen trainen je hele lichaam: benen, rug, armen en je conditie tegelijk.", "elliptical": "De crosstrainer en traplopen geven een stevige conditietraining die licht is voor je knieën.", "team": "Teamsport combineert sprinten, draaien en samenspelen: goed voor je conditie, je reactievermogen en je humeur.", "racket": "Racketsporten trainen je conditie, je snelheid en je oog-handcoördinatie.", "dance": "Dansen traint je conditie, je coördinatie en je geheugen, en is vooral leuk.", "martial": "Vechtsporten trainen kracht, conditie, snelheid en concentratie.", "winter": "Wintersport traint je benen, je balans en je conditie.", "other": "Elke beweging telt. Wie regelmatig beweegt, slaapt beter, voelt zich fitter en blijft langer gezond."};
+
+// ---------- Training (zelfde opzet als de app: Workouts.kt, WorkoutFiles.kt, functie training() op de server) ----------
+const SPORTS=[['running','Hardlopen'],['walking','Wandelen'],['hiking','Wandeltocht'],['cycling','Fietsen'],['swimming','Zwemmen'],['strength','Krachttraining'],['hiit','Intervaltraining'],['yoga','Yoga en pilates'],['rowing','Roeien en peddelen'],['elliptical','Crosstrainer en traplopen'],['team','Teamsport'],['racket','Racketsport'],['dance','Dansen'],['martial','Vechtsport'],['winter','Wintersport'],['other','Overig']];
+const SPORTN=Object.fromEntries(SPORTS),SPORTK=new Set(SPORTS.map(s=>s[0]));
+const bodyCard=id=>BODY[id]?`<div class="card"><details class="uk"><summary>${id==='load'?'Wat betekent dit voor je lichaam?':'Wat zegt dit over je lichaam?'}</summary>${BODY[id].map(p=>`<p>${p}</p>`).join('')}${id==='load'?'':'<span class="gl">Geen medisch advies. Twijfel je, vraag het je huisarts.</span>'}</details></div>`:'';
+// Voorbeeldtrainingen van de laatste 120 dagen (vast patroon, zodat de preview steeds hetzelfde laat zien)
+const SAMPLE_WK=(()=>{const out=[];let s=7;const r=()=>(s=s*16807%2147483647)/2147483647;
+  for(let i=0;i<120;i++){const d=new Date(NOW.getTime()-i*DAY),wd=d.getDay();let sp=null;
+    if(wd===1||wd===3)sp='running';else if(wd===6)sp=i%14<7?'running':'cycling';else if(wd===2)sp='strength';else if(wd===0)sp='cycling';else if(wd===4&&i%2)sp='yoga';
+    if(!sp)continue;const dur={running:2400+r()*1500,cycling:3600+r()*2400,strength:2700,yoga:1800}[sp]|0;
+    const hr={running:142+r()*14,cycling:128+r()*12,strength:112+r()*10,yoga:92+r()*8}[sp]|0;
+    const start=new Date(d);start.setHours(sp==='yoga'?20:7,15,0,0);
+    out.push({id:'s'+i,source:sp==='cycling'?'google_health':sp==='running'&&wd===6?'file':'health_connect',sport:sp,title:sp==='running'&&wd===6?'Lange duurloop':null,
+      day:start.toISOString().slice(0,10),start:start.getTime(),dur,dist:sp==='running'?dur/330*1000|0:sp==='cycling'?dur/150*1000|0:null,kcal:Math.round(dur/60*(sp==='yoga'?4:sp==='strength'?7:11)),
+      avg:hr,max:hr+18,asc:sp==='cycling'?Math.round(r()*300):null,notes:null,origin:sp==='cycling'?'Google Health':sp==='running'&&wd===6?'FIT-bestand':'Google Fit'})}
+  return out})();
+const allWk=()=>[...S.wk,...SAMPLE_WK].sort((a,b)=>b.start-a.start);
+function trimpOf(w,rest,max){if(w.avg==null||rest==null||max==null||max-rest<20)return null;const x=Math.max(0,Math.min(1,(w.avg-rest)/(max-rest))),m=w.dur/60,sx=S.prof.sex;
+  return Math.round(10*(sx==='male'?m*x*.64*Math.exp(1.92*x):sx==='female'?m*x*.86*Math.exp(1.67*x):m*x*(.64*Math.exp(1.92*x)+.86*Math.exp(1.67*x))/2))/10}
+function trainingSummary(){const birth=S.prof.birth?new Date(S.prof.birth):null,age=birth?Math.floor((NOW-birth)/31557600000):null,max=age!=null?Math.round(208-.7*age):null;
+  const rest=mean(series('rhr').slice(N-30)),list=allWk().map(w=>({...w,load:trimpOf(w,rest,max)}));
+  const t0=new Date(NOW);t0.setHours(0,0,0,0);const dayIdx=w=>Math.round((t0-new Date(w.day+'T00:00:00'))/DAY);
+  const wk=list.filter(w=>dayIdx(w)<7),loads=new Array(180).fill(0);list.forEach(w=>{const i=dayIdx(w);if(i>=0&&i<180&&w.load)loads[179-i]+=w.load});
+  let atl=0,ctl=0;const ready=list.some(w=>w.load!=null);if(ready)for(const l of loads){atl+=(l-atl)*(1-Math.exp(-1/7));ctl+=(l-ctl)*(1-Math.exp(-1/42))}
+  const mon=new Date(t0);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));
+  const weeks=[...Array(8)].map((_,k)=>{const a=new Date(mon);a.setDate(a.getDate()-7*(7-k));const b=new Date(a);b.setDate(b.getDate()+7);
+    const ws=list.filter(w=>{const d=new Date(w.day+'T00:00:00');return d>=a&&d<b});return{week:a,min:Math.round(ws.reduce((x,w)=>x+w.dur,0)/60)}});
+  return{list,max,rest,week:{n:wk.length,min:Math.round(wk.reduce((x,w)=>x+w.dur,0)/60),km:wk.reduce((x,w)=>x+(w.dist||0),0)/1000},weeks,
+    load:{ready:ready&&max!=null,acute:atl,chronic:ctl,form:ctl-atl,days:ready?Math.min(180,Math.max(...list.filter(w=>w.load!=null).map(dayIdx))+1):0}}}
+const fmtDur=s=>{const m=Math.round(s/60);return m<60?`${m} min`:`${Math.floor(m/60)}u ${String(m%60).padStart(2,'0')}m`};
+const fmtKm=m=>`${nl(m/1000,m>=10000?0:1)} km`;
+function fmtPace(w){const d=w.dist;if(!d||d<100)return null;if(['running','walking','hiking'].includes(w.sport)){const s=w.dur/(d/1000);return`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')} /km`}
+  if(w.sport==='cycling')return`${nl(d/1000/(w.dur/3600),1)} km/u`;if(w.sport==='swimming'){const s=w.dur/(d/100);return`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')} /100 m`}return null}
+const srcLabel=w=>w.source==='health_connect'?'Health Connect · '+(w.origin||'app'):w.source==='google_health'?'Google Health':w.source==='manual'?'Zelf gelogd':(w.origin||'Bestand');
+function dayLabel(day){const d=new Date(day+'T00:00:00'),t=new Date(NOW);t.setHours(0,0,0,0);const n=Math.round((t-d)/DAY);
+  if(n===0)return'Vandaag';if(n===1)return'Gisteren';const s=d.toLocaleDateString(NL,{weekday:'long',day:'numeric',month:'long',...(d.getFullYear()!==t.getFullYear()?{year:'numeric'}:{})});return s[0].toUpperCase()+s.slice(1)}
+const vormOf=f=>f>5?['Uitgerust','Je hebt de laatste dagen minder getraind dan je gewend bent. Goed voor een wedstrijd of een stevige training.']:f>=-10?['In balans','Je traint ongeveer zoveel als je gewend bent.']:f>=-30?['Flink aan het trainen','Je traint meer dan je gewend bent. Zo word je fitter, als je ook genoeg rust neemt.']:['Zwaar belast','Je traint veel meer dan je gewend bent. Plan een paar rustige dagen om blessures te voorkomen.'];
+function wkRow(w,click=true){const t=new Date(w.start).toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'}),facts=[w.dist?fmtKm(w.dist):null,fmtPace(w),w.avg?'♥ '+w.avg:null,w.kcal!=null?w.kcal+' kcal':null,w.load!=null?'belasting '+Math.round(w.load):null].filter(Boolean);
+  return`<${click?`button class="card tap wk" data-wk="${esc(w.id)}"`:'div class="card wk"'}><span class="wkh"><i class="dot" style="background:var(--act)"></i><span class="wkt"><b>${esc(w.title||SPORTN[w.sport])}</b><span class="gl">${[t,w.title?SPORTN[w.sport]:null,esc(srcLabel(w))].filter(Boolean).join(' · ')}</span></span><b class="num">${fmtDur(w.dur)}</b></span>${facts.length?`<span class="num wkf">${facts.join('&nbsp;&nbsp; ')}</span>`:''}</${click?'button':'div'}>`}
+function renderTraining(){const T=trainingSummary(),L=T.load,mx=Math.max(30,...T.weeks.map(w=>w.min)),by={};T.list.forEach(w=>(by[w.day]=by[w.day]||[]).push(w));
+  const v=L.ready?vormOf(L.form):null;
+  $('#v-training').innerHTML=`<div class="pad"><div class="sh" style="margin-top:16px"><div><h1 style="margin:0">Training</h1><p class="mut" style="margin:2px 0 0">Je trainingen uit al je bronnen, en wat ze met je lichaam doen</p></div></div>
+  <div class="g2" style="margin:4px 0 12px"><button class="btn pri" data-act="wnew">Training loggen</button><button class="btn" data-act="wimp">Importeren</button></div>
+  <input type="file" id="wfile" multiple accept=".fit,.json,application/json,application/octet-stream" hidden>
+  <div class="stack"><div class="card"><span class="gl">Afgelopen 7 dagen</span><div class="st" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><small>Trainingen</small><b>${T.week.n}</b></div><div><small>Tijd</small><b>${fmtDur(T.week.min*60)}</b></div><div><small>Afstand</small><b>${nl(T.week.km,1)} km</b></div></div>
+  <span class="gl" style="margin-top:4px">Minuten per week</span><div class="wbars" role="img" aria-label="Minuten per week: ${T.weeks.map(w=>w.min).join(', ')}">${T.weeks.map((w,i)=>`<span><i style="height:${Math.max(3,52*w.min/mx)}px;opacity:${i===7?1:.35}"></i><small>${w.week.getDate()}/${w.week.getMonth()+1}</small></span>`).join('')}</div></div>
+  <div class="card"><span class="gl">Trainingsbelasting</span>${L.ready?`<h3 style="margin:0">${v[0]}</h3><span>${v[1]}</span>
+  <div class="st" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><small>Deze week</small><b>${Math.round(L.acute)}</b></div><div><small>Gewend</small><b>${Math.round(L.chronic)}</b></div><div><small>Vorm</small><b>${L.form>0?'+':''}${Math.round(L.form)}</b></div></div>
+  ${L.days<42?`<span class="gl">Na 6 weken trainen is dit betrouwbaar; nu ${L.days} dagen.</span>`:''}`:`<span>${T.max==null?'Vul je geboortedatum in bij Profiel. Dan rekenen we uit hoe zwaar je trainingen voor je lichaam zijn.':'Belasting rekenen we uit je gemiddelde hartslag per training.'}</span>`}
+  <details class="uk"><summary>Wat betekent dit voor je lichaam?</summary>${BODY.load.map(p=>`<p>${p}</p>`).join('')}</details></div>
+  ${Object.keys(by).sort().reverse().map(d=>`<h2 class="wkd">${dayLabel(d)}</h2>${by[d].map(w=>wkRow(w)).join('')}`).join('')}</div></div>`}
+function renderWorkout(id){const T=trainingSummary(),w=T.list.find(x=>x.id===id);if(!w){detail=null;show();return}
+  const st=new Date(w.start),en=new Date(w.start+w.dur*1000),tm=d=>d.toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'});
+  const stats=[['Duur',fmtDur(w.dur)],w.dist?['Afstand',fmtKm(w.dist)]:null,fmtPace(w)?[w.sport==='cycling'?'Snelheid':'Tempo',fmtPace(w)]:null,w.kcal!=null?['Calorieën',w.kcal+' kcal']:null,w.avg?['Gem. hartslag',w.avg+' bpm']:null,w.max?['Max. hartslag',w.max+' bpm']:null,w.asc!=null?['Hoogtemeters',w.asc+' m']:null,w.load!=null?['Belasting',Math.round(w.load)]:null].filter(Boolean);
+  const own=w.source==='manual'||w.source==='file';
+  $('#v-detail').innerHTML=`<div class="back"><button class="ib" data-act="back" aria-label="Terug">${I.back}</button><div><h2>${esc(w.title||SPORTN[w.sport])}</h2><span class="gl">${dayLabel(w.day)}</span></div></div>
+  <div class="pad stack"><div class="card"><span class="gl">${SPORTN[w.sport]}</span><h3 style="margin:0">${tm(st)} – ${tm(en)}</h3>
+  <div class="st">${stats.map(([k,v])=>`<div><small>${k}</small><b>${v}</b></div>`).join('')}</div>${w.notes?`<p style="margin:0">${esc(w.notes)}</p>`:''}<span class="gl">Bron: ${esc(srcLabel(w))}</span></div>
+  ${w.avg==null?'<span class="gl" style="margin:0 4px">Zonder gemiddelde hartslag kunnen we de belasting van deze training niet berekenen.</span>':''}
+  <div class="card"><details class="uk"><summary>Wat doet ${SPORTN[w.sport].toLowerCase()} met je lichaam?</summary><p>${SPORT_INFO[w.sport]}</p><p>${BODY.load[0]}</p></details></div>
+  ${own?`<div class="row" style="gap:8px">${w.source==='manual'?`<button class="btn pri" data-act="wedit" data-id="${esc(w.id)}">Bewerken</button>`:''}<button class="btn" style="color:var(--bad)" data-act="wdel" data-id="${esc(w.id)}">Verwijderen</button></div>
+  <div class="card" id="wdelc" role="alertdialog" aria-labelledby="wdelt" hidden><h3 id="wdelt" style="margin:0">Training verwijderen?</h3><span>Deze training verdwijnt uit Vital Connect. Dit kun je niet ongedaan maken.</span>
+  <div class="g2"><button class="btn" data-act="wdelno">Annuleren</button><button class="btn pri" style="background:var(--bad);border-color:var(--bad)" data-act="wdelok" data-id="${esc(w.id)}">Verwijderen</button></div></div>`
+  :`<span class="gl" style="margin:0 4px">Deze training komt uit ${esc(srcLabel(w))}. Aanpassen of verwijderen doe je in die app; de wijziging komt hier vanzelf binnen.</span>`}</div>`}
+let wdraft=null,wimport=null;
+const pad2=n=>String(n).padStart(2,'0');
+function renderWorkoutForm(){const w=wdraft,st=new Date(w.start),date=`${st.getFullYear()}-${pad2(st.getMonth()+1)}-${pad2(st.getDate())}`,time=`${pad2(st.getHours())}:${pad2(st.getMinutes())}`;
+  const inp=(id,l,v,type='number',ex='')=>`<label class="fld"><span>${l}</span><input id="${id}" type="${type}" inputmode="${type==='number'?'decimal':'text'}" value="${v??''}" ${ex}></label>`;
+  $('#v-detail').innerHTML=`<div class="back"><button class="ib" data-act="back" aria-label="Terug">${I.back}</button><div><h2>${w.isNew?'Training loggen':'Training bewerken'}</h2></div></div>
+  <div class="pad stack wf"><div class="card"><h3 style="margin:0">Sport</h3><div class="row" style="flex-wrap:wrap;gap:6px">${SPORTS.map(([k,n])=>`<button class="pill" data-wsport="${k}" aria-pressed="${w.sport===k}">${n}</button>`).join('')}</div>
+  ${inp('wtitle','Naam (optioneel)',esc(w.title||''),'text','maxlength="80"')}</div>
+  <div class="card"><h3 style="margin:0">Wanneer en hoe lang</h3><div class="g2">${inp('wdate','Datum',date,'date',`max="${new Date(NOW).toISOString().slice(0,10)}"`)}${inp('wtime','Start',time,'time')}</div>
+  <div class="g2">${inp('wh','Uren',w.dur>=3600?Math.floor(w.dur/3600):'', 'number','min="0" max="24"')}${inp('wm','Minuten',Math.floor(w.dur%3600/60),'number','min="0" max="1440"')}</div></div>
+  <div class="card"><h3 style="margin:0">Details (optioneel)</h3><div class="g2">${inp('wkm','Afstand (km)',w.dist?nl(w.dist/1000,2).replace(/\./g,''):'','text')}${inp('wkcal','Calorieën',w.kcal)}</div>
+  <div class="g2">${inp('wavg','Gem. hartslag',w.avg)}${inp('wmax','Max. hartslag',w.max)}</div>${inp('wasc','Hoogtemeters',w.asc)}
+  <label class="fld"><span>Notities</span><textarea id="wnotes" maxlength="1000" rows="2">${esc(w.notes||'')}</textarea></label>
+  <span class="gl">Met je gemiddelde hartslag rekenen we ook uit hoe zwaar de training voor je lichaam was.</span></div>
+  <p class="note" id="wnote" aria-live="polite"></p><button class="btn pri" data-act="wsave">Opslaan</button></div>`}
+function readForm(){const g=id=>$('#'+id).value.trim(),n=id=>{const v=parseFloat(g(id).replace(',','.'));return g(id)===''?null:v};
+  const dur=Math.round((n('wh')||0)*3600+(n('wm')||0)*60),start=new Date(`${g('wdate')}T${g('wtime')||'00:00'}`),chk=(v,lo,hi)=>v==null||(Number.isFinite(v)&&v>=lo&&v<=hi);
+  if(isNaN(start)||start>new Date(Date.now()+36e5))return'Kies een geldige datum en starttijd.';if(!(dur>=60&&dur<=86400))return'Een training duurt minstens 1 minuut en hoogstens 24 uur.';
+  if(!chk(n('wkm'),0,1000)||!chk(n('wkcal'),0,20000)||!chk(n('wavg'),25,250)||!chk(n('wmax'),25,250)||!chk(n('wasc'),0,20000))return'Controleer de getallen: afstand tot 1000 km, hartslag tussen 25 en 250.';
+  return{...wdraft,isNew:undefined,source:'manual',title:g('wtitle').slice(0,80)||null,day:g('wdate'),start:start.getTime(),dur,dist:n('wkm')!=null?n('wkm')*1000:null,kcal:n('wkcal')!=null?Math.round(n('wkcal')):null,
+    avg:n('wavg')!=null?Math.round(n('wavg')):null,max:n('wmax')!=null?Math.round(n('wmax')):null,asc:n('wasc')!=null?Math.round(n('wasc')):null,notes:$('#wnotes').value.trim().slice(0,1000)||null,origin:null}}
+function renderWorkoutImport(){const r=wimport;
+  $('#v-detail').innerHTML=`<div class="back"><button class="ib" data-act="back" aria-label="Terug">${I.back}</button><div><h2>Importeren</h2></div></div>
+  <div class="pad stack"><div class="card"><h3 style="margin:0">${r.list.length===0?'Geen trainingen gevonden':r.list.length===1?'1 training gevonden':r.list.length+' trainingen gevonden'}</h3>
+  <span class="mut">Uit ${r.files} ${r.files===1?'bestand':'bestanden'}.${r.skipped?` ${r.skipped} ${r.skipped===1?'onderdeel kon':'onderdelen konden'} niet worden gelezen en ${r.skipped===1?'wordt':'worden'} overgeslagen.`:''} Een bestand dat je al eerder importeerde, wordt bijgewerkt en niet dubbel opgeslagen.</span>
+  ${r.list.length?`<button class="btn pri" data-act="wsaveimp">${r.list.length===1?'Opslaan':`Alle ${r.list.length} opslaan`}</button>`:`<details class="uk"><summary>Welke bestanden werken?</summary><p>FIT-bestanden van Garmin, Suunto, Polar, Coros, Wahoo en Zwift, en JSON uit Strava, Garmin Connect, de Google Fit-export (Takeout) en de export van Vital Connect zelf. Je kunt meerdere bestanden tegelijk kiezen.</p></details>`}</div>
+  ${r.list.slice(0,200).map(w=>wkRow(w,false)).join('')}</div>`}
+
+// FIT (Garmin/ANT+): session 18, record 20, activity 34; beide bytevolgordes, ontwikkelaarsvelden, gecomprimeerde tijd
+const sportText=t=>{const s=String(t||'').toUpperCase().replace(/[ -]/g,'_');if(!s)return'other';const R=[[/TRAIL_RUN|RUN|JOG/,'running'],[/HIK|MOUNTAINEER/,'hiking'],[/WALK/,'walking'],[/BIK|CYCL|RIDE|SPIN/,'cycling'],[/SWIM/,'swimming'],[/STRENGTH|WEIGHT|CALISTHENIC|CROSSFIT|CIRCUIT|GYM/,'strength'],[/INTERVAL|HIIT|BOOT_CAMP|CARDIO/,'hiit'],[/YOGA|PILATES|STRETCH|BREATH/,'yoga'],[/ROW|KAYAK|CANOE|PADDL/,'rowing'],[/ELLIPTICAL|STAIR|STEPPER/,'elliptical'],[/SOCCER|FOOTBALL|BASKETBALL|VOLLEYBALL|HOCKEY|HANDBALL|RUGBY|CRICKET|BASEBALL|SOFTBALL|KORFBAL/,'team'],[/TENNIS|BADMINTON|SQUASH|PADEL|PICKLEBALL|RACQUET|RACKET/,'racket'],[/DANC|ZUMBA|BARRE/,'dance'],[/BOX|KARATE|JIU|JUDO|MARTIAL|TAEKWONDO/,'martial'],[/SKI|SNOWBOARD|SKAT|SNOWSHOE/,'winter']];return(R.find(([re])=>re.test(s))||[0,'other'])[1]};
+const fitSport=(sp,sub)=>({1:'running',2:'cycling',21:'cycling',5:'swimming',6:'team',7:'team',9:'team',8:'racket',64:'racket',11:'walking',12:'winter',13:'winter',14:'winter',33:'winter',35:'winter',15:'rowing',19:'rowing',37:'rowing',41:'rowing',16:'hiking',17:'hiking',47:'martial',62:'hiit'})[sp]||(sp===10?({20:'strength',43:'yoga',44:'yoga',26:'hiit'})[sub]||'strength':sp===4?({14:'rowing',15:'elliptical',16:'elliptical'})[sub]||'other':'other');
+async function sha(buf){try{const h=new Uint8Array(await crypto.subtle.digest('SHA-1',buf));return[...h.slice(0,8)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return String(buf.byteLength)}}
+function parseFit(buf,hash){const b=new Uint8Array(buf),hs=b[0];if(hs!==12&&hs!==14)throw new Error('kop');
+  const dv=new DataView(buf),end=Math.min(hs+dv.getUint32(4,true),b.length),defs=[],ses=[],hr=[];let p=hs,last=0,off=null;
+  const W=[1,1,1,2,2,4,4,1,4,8,1,2,4,1,8,8,8];
+  const vals=(d,at)=>{const o={};let q=at;for(const f of d.f){const base=f.b&31,w=W[base]||1;if(f.s===w&&w<=4&&base!==7&&base!==13){let r=0;for(let i=0;i<w;i++){const x=b[q+i];r=d.big?r*256+x:r+x*2**(8*i)}
+      const all=2**(8*w)-1;let v=r,ok=true;if(base===1){ok=r!==0x7f;v=r>127?r-256:r}else if(base===3){ok=r!==0x7fff;v=r>32767?r-65536:r}else if(base===5){ok=r!==0x7fffffff;v=r>2147483647?r-4294967296:r}
+      else if(base===8){ok=r!==0xffffffff;v=new DataView(new Uint32Array([r]).buffer).getFloat32(0,true)}else if(base===10||base===11||base===12)ok=r!==0;else ok=r!==all;if(ok&&Number.isFinite(v))o[f.n]=v}q+=f.s}return o};
+  const handle=(d,v,ts)=>{if(d.g===18)ses.push(v);else if(d.g===20&&v[3]>=25&&v[3]<=250)hr.push([ts,v[3]]);else if(d.g===34&&v[253]!=null&&v[5]!=null)off=v[5]-v[253]};
+  while(p<end){const h=b[p++];
+    if(h&0x80){const d=defs[(h>>5)&3];if(!d||p+d.size>end)break;const o=h&31;last=(last-(last%32))+o+(o<last%32?32:0);handle(d,vals(d,p),last);p+=d.size}
+    else if(h&0x40){if(p+5>end)break;const big=b[p+1]===1,g=big?b[p+2]*256+b[p+3]:b[p+2]+b[p+3]*256,n=b[p+4];p+=5;const f=[];for(let i=0;i<n;i++)f.push({n:b[p+3*i],s:b[p+3*i+1],b:b[p+3*i+2]});p+=3*n;let dev=0;
+      if(h&0x20){const nd=b[p++];for(let i=0;i<nd;i++)dev+=b[p+3*i+1];p+=3*nd}defs[h&15]={g,big,f,size:f.reduce((x,y)=>x+y.s,0)+dev}}
+    else{const d=defs[h&15];if(!d||p+d.size>end)break;const v=vals(d,p);if(v[253]!=null)last=v[253];handle(d,v,last);p+=d.size}}
+  let skipped=0;const list=[];ses.forEach((s,i)=>{const dur=Math.round((s[8]??s[7])/1000);if(s[2]==null||!(dur>=60&&dur<=86400)){skipped++;return}
+    const start=(s[2]+631065600)*1000,day=new Date(off!=null?start+off*1000:start-new Date(start).getTimezoneOffset()*6e4).toISOString().slice(0,10);
+    const inS=hr.filter(([t])=>t>=s[2]&&t<=s[2]+dur).map(x=>x[1]);
+    list.push({id:'fit-'+hash+'-'+i,source:'file',sport:fitSport(s[5],s[6]),title:null,day,start,dur,dist:s[9]!=null?s[9]/100:null,kcal:s[11]??null,
+      avg:s[16]??(inS.length?Math.round(inS.reduce((x,y)=>x+y,0)/inS.length):null),max:s[17]??(inS.length?Math.max(...inS):null),asc:s[22]??null,notes:null,origin:'FIT-bestand'})});
+  return{list,skipped}}
+// JSON: Vital Connect, Strava, Garmin Connect (ook de gegevensexport), Google Fit-export, Google Health API
+function parseJsonWk(text,hash){let root=JSON.parse(text.replace(/^﻿/,'')),items;
+  if(Array.isArray(root))items=root.flatMap(x=>Array.isArray(x?.summarizedActivitiesExport)?x.summarizedActivitiesExport:[x]);
+  else if(root&&typeof root==='object')items=['workouts','activities','dataPoints','session','sessions','items','data'].map(k=>root[k]).find(Array.isArray)||[root];else items=[];
+  const str=(o,...k)=>{for(const x of k)if(typeof o?.[x]==='string'&&o[x].trim())return o[x];return null},num=(o,...k)=>{for(const x of k){const v=o?.[x];const n=typeof v==='number'?v:typeof v==='string'?parseFloat(v.replace(/s$/,'')):NaN;if(Number.isFinite(n))return n}return null};
+  const time=s=>{if(!s)return null;let t=Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(s)?s:s.replace(' ','T')+'Z');return isNaN(t)?null:t};
+  let skipped=0;const list=[];
+  items.forEach((o0,i)=>{try{if(!o0||typeof o0!=='object'){skipped++;return}
+    if(typeof o0.startTimeGmt==='number'){const dur=Math.round(num(o0,'duration')/1000);if(!(dur>=60&&dur<=86400))throw 0;const loc=typeof o0.startTimeLocal==='number'?o0.startTimeLocal:o0.startTimeGmt;
+      list.push({id:'garmin-'+(o0.activityId??hash+'-'+i),source:'file',sport:sportText(str(o0,'activityType','sportType')),title:str(o0,'name'),day:new Date(loc).toISOString().slice(0,10),start:o0.startTimeGmt,dur,
+        dist:num(o0,'distance')!=null?num(o0,'distance')/100:null,kcal:null,avg:num(o0,'avgHr'),max:num(o0,'maxHr'),asc:num(o0,'elevationGain')!=null?Math.round(num(o0,'elevationGain')/100):null,notes:null,origin:'Garmin-export'});return}
+    const o=o0.exercise&&typeof o0.exercise==='object'?o0.exercise:o0,iv=o.interval||{};
+    const start=time(str(o,'started_at','start_date','startTimeGMT','startTime','start_time','start')||iv.startTime)??(num(o0,'startTimeMillis'));if(start==null)throw 0;
+    const endT=time(str(o,'endTime','end_time','end_date')||iv.endTime),dur=Math.round(num(o,'duration_s','elapsed_time','moving_time','duration','activeDuration','elapsedDuration','movingDuration')??(endT?(endT-start)/1000:NaN));if(!(dur>=60&&dur<=86400))throw 0;
+    const loc=str(o,'start_date_local','startTimeLocal'),type=str(o,'sport','sport_type','type','fitnessActivity','exerciseType')||o.activityType?.typeKey,m=o.metricsSummary||{},agg=Array.isArray(o.aggregate)?o.aggregate:[];
+    const ag=n=>{const a=agg.find(x=>String(x?.metricName||'').includes(n));return a?num(a,'floatValue','intValue'):null};
+    const day=/^\d{4}-\d{2}-\d{2}$/.test(o.day||'')?o.day:loc?loc.slice(0,10):new Date(start-new Date(start).getTimezoneOffset()*6e4).toISOString().slice(0,10);
+    const id=str(o0,'external_id','id','activityId')??(typeof o0.id==='number'?String(o0.id):null);
+    const rng=(v,lo,hi)=>v!=null&&v>=lo&&v<=hi?v:null;
+    list.push({id:'json-'+(id?id.replace(/[^A-Za-z0-9_.:@+=-]/g,'_'):hash+'-'+i),source:'file',sport:SPORTK.has(type)?type:sportText(type),title:str(o,'title','displayName','activityName'),day,start,dur,
+      dist:rng(num(o,'distance_m','distance')??(num(m,'distanceMillimeters')!=null?num(m,'distanceMillimeters')/1000:ag('distance')),0,1e6),kcal:rng(num(o,'kcal','calories','active_calories')??num(m,'caloriesKcal')??ag('calories'),0,20000),
+      avg:rng(num(o,'avg_hr','average_heartrate','averageHR','averageHeartRate')??num(m,'averageHeartRateBeatsPerMinute'),25,250),max:rng(num(o,'max_hr','max_heartrate','maxHR','maxHeartRate'),25,250),
+      asc:rng(num(o,'ascent_m','total_elevation_gain','elevationGain')??(num(m,'elevationGainMillimeters')!=null?num(m,'elevationGainMillimeters')/1000:null),0,20000),notes:str(o,'notes','description'),origin:'JSON-bestand'})
+  }catch(e){skipped++}});
+  return{list,skipped}}
+async function importFiles(files){const all=[];let skipped=0,n=0;
+  for(const f of [...files].slice(0,50)){n++;try{if(f.size>25*1024*1024)throw 0;const buf=await f.arrayBuffer(),b=new Uint8Array(buf),h=await sha(buf),isFit=b.length>=12&&b[8]===46&&b[9]===70&&b[10]===73&&b[11]===84;
+    const r=isFit?parseFit(buf,h):parseJsonWk(new TextDecoder().decode(buf),h);all.push(...r.list);skipped+=r.skipped}catch(e){skipped++}}
+  const seen=new Set();wimport={list:all.filter(w=>!seen.has(w.id)&&seen.add(w.id)).sort((a,b)=>b.start-a.start),skipped,files:n};detail='wimport';renderDetail();show()}
 
 // ---------- Inloggen en kennismaking ----------
 const RINGS_SVG=`<svg viewBox="0 0 108 108" width="76" height="76" aria-hidden="true">  <g transform="translate(54 54) scale(1.0) translate(-54 -54)" stroke="#123430" stroke-width="2.6" stroke-linejoin="round" paint-order="stroke">    <circle cx="55" cy="29.5" r="7.2" fill="#DDB15A" stroke="none"/>    <path d="M25 41.5 C38 37.5 50 43.5 54 54 C57 62.5 55 72 50.5 80.5 C47.5 70.5 43 60.5 37 52.5 C33 47 29.5 43.5 25 41.5 Z" fill="#F5935A"/>    <path d="M84.5 31.5 C70.5 33.5 60 43.5 57 56 C55 66 51.5 74.5 43.5 82.5 C58.5 78 66.5 67 71.5 55.5 C75.5 46.5 79 37.5 84.5 31.5 Z" fill="#4CC3B3"/>    <path d="M83 51.5 C81 66.5 70.5 80 50 82.5 C56.5 76 61 70 65.5 63.5 C70.5 56.5 76 53 83 51.5 Z" fill="#8C97F2"/>  </g></svg>`;
@@ -505,7 +666,7 @@ function profileHtml(){
   <div class="sh" style="margin-bottom:0"><h2>Account</h2></div>
   <div class="card"><span class="gl">Je data is van jou. Je kunt alles exporteren of je account met alle data verwijderen.</span>
   <div class="row"><button class="btn">Mijn data exporteren</button><button class="btn" data-act="logout">Uitloggen</button></div><a class="lnk" style="padding:0;text-decoration:none" href="https://app.vital-connect.nl/privacy.html">Privacyverklaring</a><button class="lnk" style="color:var(--bad);padding:0">Account verwijderen</button></div>
-  <p class="gl" style="margin:4px">Vital Connect 1.10.0 · preview</p>`;
+  <p class="gl" style="margin:4px">Vital Connect 1.11.0 · preview</p>`;
 }
 const SRCS={hc:['hc','H','var(--src-hc)','Health Connect','Data van apps op deze telefoon, zoals Google Fit, Samsung Health en de Suunto-app.','@sync'],
   google:['google','F','var(--src-gh)','Google Health','Data van Fitbit, Pixel Watch en de Google Health-app.','@sync'],
@@ -525,9 +686,11 @@ const sw=(k,t,d,on,dis)=>`<label class="fld" style="flex-wrap:nowrap;align-items
 // Nagebootste melding bovenin het scherm
 // Zoals in de app: één melding per doel per dag, en de melding zit nooit in de weg (geen tikken opvangen)
 let notified='';
-function notify(title,text){const day=NOW.toDateString();if(notified===day)return;notified=day;document.querySelectorAll('.ntf').forEach(x=>x.remove());const e=document.createElement('div');e.className='ntf';e.setAttribute('role','status');
+function notify(title,text){const day=NOW.toDateString();if(notified===day)return;notified=day;toast(title,text)}
+// Korte bevestiging onderin, zoals de snackbar in de app
+function toast(title,text){document.querySelectorAll('.ntf').forEach(x=>x.remove());const e=document.createElement('div');e.className='ntf';e.setAttribute('role','status');
   e.style.cssText='position:fixed;top:12px;left:50%;transform:translateX(-50%);width:min(92vw,420px);background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:12px 16px;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:30;font-size:14px;pointer-events:none';
-  e.innerHTML=`<b>${title}</b><br><span class="gl">${text}</span>`;document.body.appendChild(e);setTimeout(()=>e.remove(),3500)}
+  e.innerHTML=`<b>${title}</b>${text?`<br><span class="gl">${text}</span>`:''}`;document.body.appendChild(e);setTimeout(()=>e.remove(),3500)}
 function connHtml(){
   const src=['hc','google','garmin'].map(k=>SRCS[k]);
   const on=src.filter(x=>S.conn[x[0]]),off=src.filter(x=>!S.conn[x[0]]).sort((a,b)=>SOON.has(a[0])-SOON.has(b[0]));
@@ -599,7 +762,7 @@ function fitHeads(){for(const el of document.querySelectorAll('.fit')){
   if(s<=.6){s=.6;el.classList.add('three')}
   el.style.fontSize=base*s+'px'}}
 addEventListener('resize',()=>fitHeads());
-function renderAll(){renderToday();renderHealth();renderSleep();if(detail)renderDetail();if(settings)renderSettings();if(editing)renderEdit();if(S.onb)renderAuth()}
+function renderAll(){renderToday();renderHealth();renderSleep();renderTraining();if(detail)renderDetail();if(settings)renderSettings();if(editing)renderEdit();if(S.onb)renderAuth()}
 const rr=()=>S.onb?renderAuth():renderSettings();
 const note=t=>{const n=$('#note');if(n)n.textContent=t};
 
@@ -607,6 +770,16 @@ document.addEventListener('click',e=>{
   const t=e.target.closest('button');if(!t)return;const d=t.dataset;
   if(d.tab){tab=d.tab;detail=null;settings=false;show()}
   else if(d.open){detail=d.open;sel=null;renderDetail();show()}
+  else if(d.wk){detail='w:'+d.wk;renderDetail();show()}
+  else if(d.act==='wnew'){const st=new Date(NOW.getTime()-36e5);st.setSeconds(0,0);wdraft={id:'m-'+Date.now(),source:'manual',sport:'running',title:null,start:st.getTime(),dur:1800,isNew:true};detail='wform';renderDetail();show()}
+  else if(d.act==='wedit'){const w=S.wk.find(x=>x.id===d.id);if(w){wdraft={...w};detail='wform';renderDetail();show()}}
+  else if(d.wsport){wdraft.sport=d.wsport;document.querySelectorAll('[data-wsport]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.wsport===d.wsport))}
+  else if(d.act==='wsave'){const r=readForm();if(typeof r==='string'){$('#wnote').textContent=r;return}S.wk=[r,...S.wk.filter(x=>x.id!==r.id)].slice(0,500);save();detail=null;renderTraining();show();toast('Training opgeslagen',`${SPORTN[r.sport]} · ${fmtDur(r.dur)}`)}
+  else if(d.act==='wdel'){const r=$('#wdelc');if(r)r.hidden=false}
+  else if(d.act==='wdelno'){$('#wdelc').hidden=true}
+  else if(d.act==='wdelok'){S.wk=S.wk.filter(x=>x.id!==d.id);save();detail=null;renderTraining();show();toast('Training verwijderd','')}
+  else if(d.act==='wimp'){$('#wfile').value='';$('#wfile').click()}
+  else if(d.act==='wsaveimp'){const ids=new Set(wimport.list.map(w=>w.id));S.wk=[...wimport.list,...S.wk.filter(x=>!ids.has(x.id))].slice(0,500);save();const n=wimport.list.length;wimport=null;detail=null;renderTraining();show();toast('Importeren klaar',n===1?'1 training opgeslagen':`${n} trainingen opgeslagen of bijgewerkt`)}
   else if(d.per){period=+d.per;sel=null;renderDetail()}
   else if(d.act==='back'){detail=null;settings=false;draft=null;show()}
   else if(d.act==='settings'){settings=true;ptab='profile';draft=null;renderSettings();show()}
@@ -656,6 +829,7 @@ document.addEventListener('change',e=>{
   else if(d.hh){const l=S.lay.healthHidden;S.lay.healthHidden=t.checked?l.filter(x=>x!==d.hh):[...l,d.hh];save()}
 });
 document.addEventListener('input',e=>{if(e.target.dataset.prof)setProf(e.target)});
+document.addEventListener('change',e=>{if(e.target.id==='wfile'&&e.target.files.length)importFiles(e.target.files)});
 // Verplichte uitleg vóór het toestemmingsscherm van Google Health of Garmin (zoals in de app)
 function disclose(k){closeDisc();const n=SRCS[k][3],el=document.createElement('div');el.id='disc';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');
   el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:24px;z-index:20';
@@ -666,7 +840,7 @@ function checkProf(){const okH=draft.h==null||(draft.h>=50&&draft.h<=260),okW=dr
 function setProf(t){const k=t.dataset.prof;let v=t.value;if(k==='h'||k==='w'){v=parseFloat(String(v).replace(',','.'));v=isFinite(v)?v:null}else if(k==='birth')v=v||null;draft[k]=v;
   const b=document.querySelector('[data-act=psave]');if(b)b.disabled=JSON.stringify(draft)===JSON.stringify(S.prof);const n=$('#pnote');if(n){n.textContent='';n.style.color=''}}
 // Swipen tussen Vandaag, Gezondheid en Slaap (zoals in de app); niet vanuit een grafiek of invulveld
-{let sx=null,sy=0,st=0;const TABS=['today','health','sleep'];
+{let sx=null,sy=0,st=0;const TABS=['today','health','sleep','training'];
   document.addEventListener('touchstart',e=>{const t=e.touches[0];if(e.touches.length!==1||editing||detail||settings||S.onb||e.target.closest('.fig,input,.pills')){sx=null;return}sx=t.clientX;sy=t.clientY;st=Date.now()},{passive:true});
   document.addEventListener('touchend',e=>{if(sx==null)return;const t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;sx=null;
     if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.5||Date.now()-st>800)return;

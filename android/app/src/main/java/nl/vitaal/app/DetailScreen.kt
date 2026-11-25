@@ -99,6 +99,17 @@ fun DetailScreen(vm: MainViewModel) {
                     style = MaterialTheme.typography.bodySmall, color = p.muted)
             }
         }
+
+        // Wat de meting voor je lichaam betekent; standaard ingeklapt
+        BODY_INFO[id]?.let { info ->
+            Spacer(Modifier.height(12.dp))
+            VCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                Expandable("Wat zegt dit over je lichaam?") {
+                    info.forEach { InfoParagraph(it) }
+                    Text("Geen medisch advies. Twijfel je, vraag het je huisarts.", style = MaterialTheme.typography.bodySmall, color = p.muted)
+                }
+            }
+        }
     }
 }
 }

@@ -122,7 +122,7 @@ Bij **Gezondheidsapps**: kies **Activiteit en fitness** en **Slaap**. De app is 
 | Persoonlijke info → Naam | Ja (bij inloggen met Google of zelf ingevuld in het profiel) | Nee | Nee | Accountbeheer, App-functionaliteit |
 | Persoonlijke info → Andere info (geboortedatum, geslacht) | Ja, zelf ingevuld | Nee | Nee | App-functionaliteit |
 | Gezondheid en fitness → Gezondheidsinformatie (rusthartslag, HRV, SpO2, ademhaling, gewicht, lengte, VO2max, slaap) | Ja | Nee | Nee | App-functionaliteit |
-| Gezondheid en fitness → Fitnessinformatie (stappen, afstand, calorieën, verdiepingen, actieve minuten) | Ja | Nee | Nee | App-functionaliteit |
+| Gezondheid en fitness → Fitnessinformatie (stappen, afstand, calorieën, verdiepingen, actieve minuten, trainingen: sport, tijd, duur, afstand, hartslag, hoogtemeters, notities) | Ja | Nee | Nee | App-functionaliteit |
 
 Geen locatie, contacten, foto's, berichten, financiële gegevens, apparaat-ID's of app-activiteit voor analyse.
 Bij "Gedeeld": dienstverleners die namens jou verwerken (Supabase, Resend) tellen volgens Google niet als delen.
@@ -132,7 +132,8 @@ Play Console vraagt per recht waarom de app het nodig heeft. Gebruik:
 
 | Recht | Waarom |
 |---|---|
-| READ_STEPS, READ_DISTANCE, READ_ACTIVE_CALORIES_BURNED, READ_FLOORS_CLIMBED, READ_EXERCISE | Dagtotalen tonen op het dashboard (tegels, dagringen, grafieken, statistieken) |
+| READ_STEPS, READ_DISTANCE, READ_ACTIVE_CALORIES_BURNED, READ_FLOORS_CLIMBED | Dagtotalen tonen op het dashboard (tegels, dagringen, grafieken, statistieken) |
+| READ_EXERCISE | Actieve minuten per dag en de trainingen zelf (sport, tijd, duur) in het tabblad Training |
 | READ_RESTING_HEART_RATE, READ_HEART_RATE_VARIABILITY, READ_OXYGEN_SATURATION, READ_RESPIRATORY_RATE | Hart en herstel tonen, ook in het tabblad Slaap |
 | READ_SLEEP | Slaapduur per nacht en het tabblad Slaap |
 | READ_WEIGHT, READ_VO2_MAX | Lichaamsmetingen en hun verloop tonen |
