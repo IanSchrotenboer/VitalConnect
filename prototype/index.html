@@ -399,6 +399,12 @@ function renderSleep(){
 
 // ---------- Grafiek ----------
 function drawChart(s,pts,o){
+  // Ook met het toetsenbord: pijl links/rechts kiest een andere dag (zoals de TalkBack-acties in de app)
+  {const n=pts.length;s.setAttribute('tabindex','0');s.setAttribute('role','slider');s.setAttribute('aria-label','Kies een dag');
+    s.setAttribute('aria-valuemin','0');s.setAttribute('aria-valuemax',String(n-1));s.setAttribute('aria-valuenow',String(o.sel));
+    if(pts[o.sel])s.setAttribute('aria-valuetext',pts[o.sel].d.toLocaleDateString(NL,{weekday:'long',day:'numeric',month:'long'}));
+    s.onkeydown=e=>{const k={ArrowLeft:-1,ArrowDown:-1,ArrowRight:1,ArrowUp:1}[e.key];if(!k)return;e.preventDefault();const i=Math.max(0,Math.min(n-1,o.sel+k));
+      const q=s.id?'#'+s.id:'#'+s.parentElement.id+' svg';if(i!==o.sel){o.onSel(i);requestAnimationFrame(()=>document.querySelector(q)?.focus())}}}
   const draw=()=>{const W=s.clientWidth,H=s.clientHeight;if(!W)return;const n=pts.length,vals=pts.map(p=>p.v);
     let lo=Math.min(...vals),hi=Math.max(...vals);if(o.goal){lo=Math.min(lo,o.goal);hi=Math.max(hi,o.goal)}
     if(o.bars){lo=0;hi*=1.08}else{const pd=(hi-lo)*.15||1;lo-=pd;hi+=pd}
@@ -412,12 +418,6 @@ function drawChart(s,pts,o){
       g+=`<line x1="${x(o.sel)}" x2="${x(o.sel)}" y1="${T}" y2="${T+ih}" stroke="var(--mut)" stroke-dasharray="3 3"/><circle cx="${x(o.sel)}" cy="${y(pts[o.sel].v)}" r="5.5" style="fill:${o.color}" stroke="var(--card)" stroke-width="2.5"/>`}
     if(o.goal&&o.goal>=lo&&o.goal<=hi)g+=`<line x1="${L}" x2="${W-R}" y1="${y(o.goal)}" y2="${y(o.goal)}" stroke="var(--ink)" stroke-dasharray="6 4" stroke-width="1.5"/><text x="${W-R}" y="${y(o.goal)-6}" text-anchor="end" style="fill:var(--ink)">Doel</text>`;
     s.innerHTML=g;
-    // Ook met het toetsenbord: pijl links/rechts kiest een andere dag (zoals de TalkBack-acties in de app)
-    s.setAttribute('tabindex','0');s.setAttribute('role','slider');s.setAttribute('aria-label','Kies een dag');
-    s.setAttribute('aria-valuemin','0');s.setAttribute('aria-valuemax',String(n-1));s.setAttribute('aria-valuenow',String(o.sel));
-    s.setAttribute('aria-valuetext',pts[o.sel].d.toLocaleDateString(NL,{weekday:'long',day:'numeric',month:'long'}));
-    s.onkeydown=e=>{const k={ArrowLeft:-1,ArrowDown:-1,ArrowRight:1,ArrowUp:1}[e.key];if(!k)return;e.preventDefault();const i=Math.max(0,Math.min(n-1,o.sel+k));
-      const q=s.id?'#'+s.id:'#'+s.parentElement.id+' svg';if(i!==o.sel){o.onSel(i);requestAnimationFrame(()=>document.querySelector(q)?.focus())}};
     s.onpointerdown=s.onpointermove=e=>{if(e.type==='pointermove'&&!e.buttons&&e.pointerType!=='mouse')return;if(e.type==='pointermove'&&e.pointerType==='mouse'&&!e.buttons)return;const r=s.getBoundingClientRect(),i=Math.max(0,Math.min(n-1,Math.floor((e.clientX-r.left-L)/bw)));if(i!==o.sel)o.onSel(i)}};
   draw();const ro=new ResizeObserver(draw);ro.observe(s);
 }
@@ -573,9 +573,11 @@ const SPI={run:['M15.5 4.5a1.5 1.5 0 1 0 0 .01','M13.5 8.5l-3 3.5 3 2.5-1.5 5','
 const spIcon=k=>{const g={running:'run',walking:'walk',hiking:'walk',cycling:'bike',swimming:'swim',rowing:'swim',strength:'strength',hiit:'strength',martial:'strength',yoga:'yoga',dance:'yoga'}[k]||'other';
   return`<span class="spi" aria-hidden="true"><svg viewBox="0 0 24 24">${SPI[g].map(d=>`<path d="${d}"/>`).join('')}</svg></span>`};
 // Maandag van de week (YYYY-MM-DD) en het label erbij
-const wkStart=day=>{const d=new Date(day+'T00:00:00');d.setDate(d.getDate()-((d.getDay()+6)%7));return d.toISOString().slice(0,10)};
-const wkLabel=m=>{const now=wkStart(new Date(NOW-new Date(NOW).getTimezoneOffset()*6e4).toISOString().slice(0,10)),prev=new Date(now+'T00:00:00');prev.setDate(prev.getDate()-7);
-  return m===now?'Deze week':m===prev.toISOString().slice(0,10)?'Vorige week':'Week van '+new Date(m+'T00:00:00').toLocaleDateString(NL,{day:'numeric',month:'short'}).replace(/\.$/,'')};
+// Lokale datum als YYYY-MM-DD (geen toISOString: dat rekent in UTC en schuift rond middernacht een dag op)
+const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const wkStart=day=>{const d=new Date(day+'T00:00:00');d.setDate(d.getDate()-((d.getDay()+6)%7));return ymd(d)};
+const wkLabel=m=>{const now=wkStart(ymd(new Date(NOW))),prev=new Date(now+'T00:00:00');prev.setDate(prev.getDate()-7);
+  return m===now?'Deze week':m===ymd(prev)?'Vorige week':'Week van '+new Date(m+'T00:00:00').toLocaleDateString(NL,{day:'numeric',month:'short'}).replace(/\.$/,'')};
 let openWeeks=new Set();
 function wkRow(w,click=true){const t=new Date(w.start).toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'}),facts=[w.dist?fmtKm(w.dist):null,fmtPace(w),w.avg?'♥ '+w.avg+' bpm':null,w.kcal!=null?nl(w.kcal)+' kcal':null,w.load!=null?'belasting '+Math.round(w.load):null].filter(Boolean);
   return`<${click?`button class="card tap wk" data-wk="${esc(w.id)}"`:'div class="card wk"'}><span class="wkh">${spIcon(w.sport)}<span class="wkt"><b>${esc(w.title||SPORTN[w.sport])}</b><span class="gl">${[t,w.title?SPORTN[w.sport]:null,esc(srcLabel(w))].filter(Boolean).join(' · ')}</span></span><b class="num">${fmtDur(w.dur)}</b></span>${facts.length?`<span class="num wkf">${facts.join('&nbsp;&nbsp; ')}</span>`:''}</${click?'button':'div'}>`}

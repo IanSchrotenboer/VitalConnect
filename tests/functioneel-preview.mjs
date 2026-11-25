@@ -196,6 +196,52 @@ const naarKoppelingen = async (p) => { await p.click("[data-tab=today]"); await 
   await p.context().close();
 }
 
+// Critique 1.16.0: betekenis van getallen, lange schermen en bediening
+{
+  const p = await start({ onb: null, prof: { name: "Ian" } });
+  const r = await p.evaluate(() => {
+    const tegel = document.querySelector('#v-today [data-open="weight"]');
+    return {
+      gewicht: tegel?.querySelector(".gl")?.textContent ?? "", gewichtBalk: !!tegel?.querySelector(".bar"),
+      herstel: document.querySelector("#v-today .hs")?.textContent ?? "",
+    };
+  });
+  verwacht(r.gewicht === "" || (/boven je doel|Doel gehaald/.test(r.gewicht) && !/%/.test(r.gewicht)), `Gewicht: "${r.gewicht}" toont een percentage in plaats van de afstand`);
+  verwacht(!r.gewichtBalk, "Gewicht: tegel toont een voortgangsbalk bij lager-is-beter");
+  verwacht(/\/100$/.test(r.herstel), `Herstel: score "${r.herstel}" zonder schaal`);
+  await p.click("[data-tab=health]");
+  const g = await p.evaluate(() => ({ kaarten: document.querySelectorAll("#v-health .stack.hl > .card").length,
+    zes: [...document.querySelectorAll("#v-health .stack.hl > .card")].some((c) => c.querySelectorAll(".st > div").length > 3),
+    gemeten: document.querySelector("#v-health").innerHTML.includes("dagen gemeten") }));
+  verwacht(g.kaarten > 0 && !g.zes && !g.gemeten, "Gezondheid: kaarten zijn niet compact (meer dan 3 cijfers of 'dagen gemeten')");
+  await p.click("[data-tab=training]");
+  const t = await p.evaluate(() => {
+    const kop = [...document.querySelectorAll("#v-training .wkw")];
+    return { koppen: kop.slice(0, 2).map((k) => k.querySelector("b").textContent), oud: kop[2]?.getAttribute("aria-expanded"), iconen: document.querySelectorAll("#v-training .wk .spi svg").length,
+      rij: document.querySelectorAll("#v-training .wk").length, kcal: [...document.querySelectorAll("#v-training .wkf")].map((e) => e.textContent).join(" ") };
+  });
+  verwacht(t.koppen[0] === "Deze week" && t.koppen[1] === "Vorige week" && t.oud === "false", `Training: weken ${t.koppen.join(", ")}, oudere week open: ${t.oud}`);
+  verwacht(t.iconen === t.rij && t.rij > 0, `Training: ${t.iconen} sporticonen bij ${t.rij} trainingen`);
+  verwacht(!/\b\d{4} kcal/.test(t.kcal) && !/♥ \d+(?!\d| bpm)/.test(t.kcal), `Training: getallen zonder punt of eenheid: ${t.kcal.slice(0, 120)}`);
+  const voor = await p.evaluate(() => document.querySelectorAll("#v-training .wk").length);
+  await p.locator("#v-training .wkw").nth(2).click();
+  verwacht(await p.evaluate((v) => document.querySelectorAll("#v-training .wk").length > v, voor), "Training: oudere week klapt niet open");
+  await p.click("[data-act=wfilter]");
+  const k = await p.evaluate(() => ({ eerste: document.querySelector("#v-settings .sh h2")?.textContent ?? "",
+    zichtbaar: (() => { const b = document.querySelector("#c-training")?.getBoundingClientRect(); return !!b && b.top < innerHeight && b.bottom > 0; })() }));
+  verwacht(k.eerste.startsWith("Gekoppeld"), `Koppelingen: begint met "${k.eerste}" in plaats van de bronnen`);
+  verwacht(k.zichtbaar, "Koppelingen: Filter brengt je niet bij het trainingsfilter");
+  await terug(p); await p.click("[data-tab=health]");
+  await p.locator('#v-health [data-open="steps"]').click();
+  const d = await p.evaluate(() => { const l = document.querySelector("#v-detail .back span"); return l ? getComputedStyle(l).color : ""; });
+  verwacht(d !== "" && !/rgb\(216, 111, 49\)/.test(d), `Detail: categorielabel in categoriekleur (${d})`);
+  const svg = p.locator("#dfig"); await svg.focus();
+  const v0 = await svg.getAttribute("aria-valuenow"); await p.keyboard.press("ArrowLeft");
+  const v1 = await p.locator("#dfig").getAttribute("aria-valuenow");
+  verwacht(v0 != null && v1 != null && Number(v1) === Number(v0) - 1, `Detail: pijltoets kiest geen andere dag (${v0} → ${v1})`);
+  await p.context().close();
+}
+
 // Geboortedatum: de knop opent Profiel met de cursor in het veld; Record-waarden halen 4,5:1 op wit
 {
   const p = await start({ onb: null, prof: { name: "Ian" } });
