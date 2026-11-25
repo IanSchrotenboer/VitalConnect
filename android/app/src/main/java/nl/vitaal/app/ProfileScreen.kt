@@ -241,9 +241,12 @@ private fun SyncCard(vm: MainViewModel) {
     val p = LocalPalette.current
     VCard(Modifier.fillMaxWidth()) {
         Text("Synchroniseren", style = MaterialTheme.typography.titleMedium, color = p.ink)
-        Text("Hoe vaak $APP_NAME Health Connect en Google Health bijwerkt, ook als de app dicht is. " +
-            "Garmin stuurt nieuwe data zelf na elke sync van je horloge. Vaker kost iets meer batterij; Android kan een ronde soms iets uitstellen.",
-            style = MaterialTheme.typography.bodySmall, color = p.muted)
+        Text("Hoe vaak $APP_NAME je bronnen bijwerkt, ook als de app dicht is.", style = MaterialTheme.typography.bodySmall, color = p.muted)
+        Expandable("Meer uitleg") {
+            Text("Dit geldt voor Health Connect en Google Health. Garmin stuurt nieuwe data zelf na elke sync van je horloge. " +
+                "Vaker kost iets meer batterij; Android kan een ronde soms iets uitstellen.",
+                style = MaterialTheme.typography.bodySmall, color = p.muted)
+        }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SYNC_CHOICES.forEach { (min, label) -> Pill(label, vm.syncMinutes == min) { vm.setSyncInterval(min) } }
         }

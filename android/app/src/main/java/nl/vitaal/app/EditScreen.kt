@@ -54,7 +54,7 @@ fun EditScreen(vm: MainViewModel, target: EditTarget) {
     var open by remember { mutableStateOf<String?>(null) }
     val (title, intro) = when (target) {
         EditTarget.Today -> "Vandaag aanpassen" to
-            "Kies je dagringen, je begroeting en welke tegels je ziet. Een metric in de ringen staat niet ook als tegel; in Gezondheid blijft hij altijd staan."
+            "Kies je dagringen, je begroeting en welke tegels je ziet."
         EditTarget.Health -> "Gezondheid aanpassen" to "Kies welke statistieken je in Gezondheid ziet. Dit staat los van Vandaag."
         EditTarget.Sleep -> "Slaap aanpassen" to "Kies je slaapdoel, de hersteltegels en of je slaapadvies wilt zien."
     }
@@ -65,6 +65,12 @@ fun EditScreen(vm: MainViewModel, target: EditTarget) {
     LazyColumn(Modifier.weight(1f).imePadding(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Text(intro, style = MaterialTheme.typography.bodyMedium, color = p.muted, modifier = Modifier.padding(horizontal = 4.dp))
+        }
+        if (target == EditTarget.Today) item {
+            Expandable("Hoe werken ringen en tegels samen?", Modifier.padding(horizontal = 4.dp)) {
+                Text("Een metric in de ringen staat niet ook als tegel. In Gezondheid blijft hij altijd staan, wat je hier ook kiest.",
+                    style = MaterialTheme.typography.bodyMedium, color = p.muted)
+            }
         }
         when (target) {
             EditTarget.Today -> {

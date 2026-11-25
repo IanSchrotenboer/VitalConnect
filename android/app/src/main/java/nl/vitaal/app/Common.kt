@@ -1,6 +1,20 @@
 package nl.vitaal.app
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -247,6 +261,32 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier, dot: Color? = null
         if (dot != null) { Dot(dot); Spacer(Modifier.width(10.dp)) }
         Text(text, style = MaterialTheme.typography.titleLarge, color = LocalPalette.current.ink, modifier = Modifier.weight(1f).semantics { heading() })
         action?.invoke()
+    }
+}
+
+/**
+ * Uitklapmenu voor lange uitleg: standaard dicht, zodat ieder zelf kiest of hij het leest.
+ * De hele kop is één knop (minstens 48 dp); TalkBack leest "uitgeklapt" of "ingeklapt" voor.
+ */
+@Composable
+fun Expandable(title: String, modifier: Modifier = Modifier, initiallyExpanded: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
+    val p = LocalPalette.current
+    var open by rememberSaveable(title) { mutableStateOf(initiallyExpanded) }
+    val turn by animateFloatAsState(if (open) 180f else 0f, label = "pijl")
+    Column(modifier) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp))
+                .clickable(role = Role.Button, onClickLabel = if (open) "Inklappen" else "Uitklappen") { open = !open }
+                .semantics { stateDescription = if (open) "Uitgeklapt" else "Ingeklapt" },
+        ) {
+            Text(title, style = MaterialTheme.typography.titleSmall, color = p.primary, modifier = Modifier.weight(1f))
+            Icon(VIcons.ChevronDown, contentDescription = null, tint = p.primary,
+                modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = turn })
+        }
+        AnimatedVisibility(open, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+            Column(Modifier.padding(bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
+        }
     }
 }
 

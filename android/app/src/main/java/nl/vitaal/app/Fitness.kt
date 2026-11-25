@@ -308,14 +308,16 @@ fun HerstelScreen(vm: MainViewModel) {
             }
 
             VCard(Modifier.fillMaxWidth()) {
-                Text("Hoe berekenen we dit?", style = MaterialTheme.typography.titleMedium, color = p.ink)
+                Expandable("Hoe berekenen we dit?") {
                 listOf(
                     "Herstel volgt de methode die sportwetenschappers gebruiken om herstel te volgen met HRV. Je HRV (RMSSD, gemeten tijdens je slaap) wordt logaritmisch omgerekend en over 7 dagen gemiddeld; één losse nacht zegt weinig. Dat gemiddelde zetten we tegen je eigen basislijn van de 60 dagen ervoor. Je normale bereik is die basislijn plus en min de kleinste zinvolle verandering (een halve standaardafwijking). Je rusthartslag volgen we op dezelfde manier.",
                     "De score van 0 tot 100 telt HRV voor de helft, rusthartslag en slaap elk voor een kwart. Die weging is onze keuze; het oordeel (goed, let op, rustig aan) komt uit de banden. Na 14 dagen meten is er een eerste basislijn, na 60 dagen een volledige.",
                     "Maximale hartslag: 208 − 0,7 × leeftijd (Tanaka). Hartslagzones: 50–60, 60–70, 70–80, 80–90 en 90–100% daarvan. VO2max-schatting: factor × maximale hartslag ÷ rusthartslag (Uth), met factor 15,3 voor mannen en 14,5 voor vrouwen. De schatting is ontwikkeld bij getrainde volwassenen; een waarde van je horloge of een inspanningstest is nauwkeuriger.",
                 ).forEach { Text(it, style = MaterialTheme.typography.bodyMedium, color = p.ink) }
-                Text("Bronnen: Plews e.a. (2012, 2013, 2014); Australian Institute of Sport, richtlijn HRV; Tanaka e.a. (2001); Uth e.a. (2004, 2005). Geen medisch advies.",
+                Text("Bronnen: Plews e.a. (2012, 2013, 2014); Australian Institute of Sport, richtlijn HRV; Tanaka e.a. (2001); Uth e.a. (2004, 2005).",
                     style = MaterialTheme.typography.bodySmall, color = p.muted)
+                }
+                Text("Geen medisch advies.", style = MaterialTheme.typography.bodySmall, color = p.muted)
             }
         }
     }

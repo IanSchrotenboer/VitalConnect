@@ -77,6 +77,11 @@ button,input,select{font:inherit;color:inherit}button{cursor:pointer}
 .sh{display:flex;align-items:center;gap:10px;margin:20px 0 12px;padding:0 4px}.sh h2{flex:1}
 .lnk{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;border:0;border-radius:22px;background:transparent;color:var(--pri);font-weight:600}
 .lnk svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.uk summary{list-style:none;cursor:pointer;min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:600;font-size:15px;color:var(--pri);border-radius:12px}
+.uk summary::-webkit-details-marker{display:none}.uk summary::after{content:'';width:9px;height:9px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-3px) rotate(45deg);transition:transform .2s;margin-right:6px}
+.uk[open] summary::after{transform:translateY(2px) rotate(-135deg)}.uk[open]>:not(summary){animation:ukIn .2s ease-out}.uk>*+*{margin-top:8px!important}.uk{display:flex;flex-direction:column;gap:8px}.uk p{margin:0 0 8px}
+@keyframes ukIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.uk summary::after{transition:none}.uk[open]>:not(summary){animation:none}}
 .tile.herst{grid-column:1/-1}.herst{gap:10px}.hct{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;width:100%}.hct>span:first-child{display:flex;flex-direction:column;gap:4px}
 .hl{display:flex;align-items:center;gap:8px;font-weight:600;font-size:17px;color:var(--ink)}.hs{font-size:44px;font-weight:700;line-height:1;color:var(--ink)}.hadv{font-size:15px;color:var(--ink);text-align:left}
 .hf{display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--line);width:100%;text-align:left}.hft{display:flex;justify-content:space-between;gap:8px;font-size:15px;color:var(--ink)}
@@ -407,11 +412,11 @@ function renderHerstel(){const h=herstel(),f=h.fit,W=320,H=140,tr=h.trend,all=tr
   <div><small>VO2max van je horloge</small><b>${nl(f.vo2,1)} ml/kg/min</b></div><div><small>VO2max (schatting)</small><b>${nl(f.est,1)} ml/kg/min</b></div></div>
   <b style="margin-top:4px">Hartslagzones</b>${f.zones.map(([z,a,b])=>`<span class="tm" style="font-size:15px;color:var(--ink)"><span>Zone ${z} · ${zn[z-1]}</span><span class="num">${a}–${b} bpm</span></span>`).join('')}
   ${S.prof.sex==null||S.prof.sex==='other'?'<span class="gl">Geslacht niet ingevuld: de VO2max-schatting gebruikt de middelste factor (15).</span>':''}`}</div>
-  <div class="card"><h3>Hoe berekenen we dit?</h3>
+  <div class="card"><details class="uk"><summary>Hoe berekenen we dit?</summary>
   <p style="margin:0">Herstel volgt de methode die sportwetenschappers gebruiken om herstel te volgen met HRV. Je HRV (RMSSD, gemeten tijdens je slaap) wordt logaritmisch omgerekend en over 7 dagen gemiddeld; één losse nacht zegt weinig. Dat gemiddelde zetten we tegen je eigen basislijn van de 60 dagen ervoor. Je normale bereik is die basislijn plus en min de kleinste zinvolle verandering (een halve standaardafwijking). Je rusthartslag volgen we op dezelfde manier.</p>
   <p style="margin:0">De score van 0 tot 100 telt HRV voor de helft, rusthartslag en slaap elk voor een kwart. Die weging is onze keuze; het oordeel (goed, let op, rustig aan) komt uit de banden. Na 14 dagen meten is er een eerste basislijn, na 60 dagen een volledige.</p>
   <p style="margin:0">Maximale hartslag: 208 − 0,7 × leeftijd (Tanaka). Hartslagzones: 50–60, 60–70, 70–80, 80–90 en 90–100% daarvan. VO2max-schatting: factor × maximale hartslag ÷ rusthartslag (Uth), met factor 15,3 voor mannen en 14,5 voor vrouwen. De schatting is ontwikkeld bij getrainde volwassenen; een waarde van je horloge of een inspanningstest is nauwkeuriger.</p>
-  <span class="gl">Bronnen: Plews e.a. (2012, 2013, 2014); Australian Institute of Sport, richtlijn HRV; Tanaka e.a. (2001); Uth e.a. (2004, 2005). Geen medisch advies.</span></div></div>`}
+  <span class="gl">Bronnen: Plews e.a. (2012, 2013, 2014); Australian Institute of Sport, richtlijn HRV; Tanaka e.a. (2001); Uth e.a. (2004, 2005).</span></details><span class="gl">Geen medisch advies.</span></div></div>`}
 function renderDetail(){
   if(detail==='herstel')return renderHerstel();
   const id=detail,m=MI[id],a=series(id),shown=a.slice(N-period),prev=a.slice(N-2*period,N-period);if(sel==null||sel>=period)sel=period-1;
@@ -528,7 +533,8 @@ function connHtml(){
   const on=src.filter(x=>S.conn[x[0]]),off=src.filter(x=>!S.conn[x[0]]).sort((a,b)=>SOON.has(a[0])-SOON.has(b[0]));
   const head=(t,n,c)=>`<div class="sh" style="margin-bottom:0"><h2 style="display:flex;align-items:center;gap:10px"><i class="dot" style="background:${c}"></i>${t} · ${n}</h2></div>`;
   return`<p class="mut" style="margin:0 4px">Kies welke bronnen je data leveren. Per metric stel je de voorkeursbron in onder Vandaag → Aanpassen.</p>
-  <div class="card"><h3>Synchroniseren</h3><span class="gl">Hoe vaak Vital Connect Health Connect en Google Health bijwerkt, ook als de app dicht is. Garmin stuurt nieuwe data zelf na elke sync van je horloge. Vaker kost iets meer batterij; Android kan een ronde soms iets uitstellen.</span>
+  <div class="card"><h3>Synchroniseren</h3><span class="gl">Hoe vaak Vital Connect je bronnen bijwerkt, ook als de app dicht is.</span>
+  <details class="uk"><summary>Meer uitleg</summary><span class="gl">Dit geldt voor Health Connect en Google Health. Garmin stuurt nieuwe data zelf na elke sync van je horloge. Vaker kost iets meer batterij; Android kan een ronde soms iets uitstellen.</span></details>
   <div class="row">${SYNC_CHOICES.map(([m,l])=>`<button class="pill" data-sync="${m}" aria-pressed="${S.sync===m}">${l}</button>`).join('')}</div>
   <span style="font-size:14px;font-weight:500">Nu: ${syncLabel(S.sync)}.</span></div>
   ${head('Gekoppeld',on.length,'var(--good)')}${on.length?on.map(srcCard).join(''):'<p class="mut" style="margin:0 4px">Nog niets gekoppeld. Kies hieronder een bron om je dashboard te vullen.</p>'}
@@ -541,8 +547,8 @@ const DEF_GOALS={steps:10000,active:30,kcal:600,dist:5,floors:10,sleep:8,sscore:
 const SLEEP_CHOICES=['hrv','rhr','resp','spo2','sscore','stress','energy','recov'];
 const tog=(attr,val,t,sub,on)=>`<label class="fld" style="flex-wrap:nowrap;align-items:center;gap:12px"><span style="flex:1"><b style="font-weight:600">${t}</b>${sub?`<br><span class="gl">${sub}</span>`:''}</span><input type="checkbox" class="sw" ${attr}="${val}" ${on?'checked':''} aria-label="${t}"></label>`;
 function renderEdit(){
-  const head=(t,intro)=>`<div class="pad"><div class="sh" style="margin-top:16px"><h2 style="font-size:22px">${t}</h2><button class="btn pri" data-act="done">Klaar</button></div>
-  <p class="mut" style="margin:0 4px 12px">${intro}</p><p class="note" id="note" aria-live="polite"></p><div class="stack edit">`;
+  const head=(t,intro,more)=>`<div class="pad"><div class="sh" style="margin-top:16px"><h2 style="font-size:22px">${t}</h2><button class="btn pri" data-act="done">Klaar</button></div>
+  <p class="mut" style="margin:0 4px ${more?'4px':'12px'}">${intro}</p>${more?`<details class="uk" style="margin:0 4px 12px"><summary>${more[0]}</summary><p class="mut" style="margin:0">${more[1]}</p></details>`:''}<p class="note" id="note" aria-live="polite"></p><div class="stack edit">`;
   let h='';
   if(editing==='health'){
     h=head('Gezondheid aanpassen','Kies welke statistieken je in Gezondheid ziet. Dit staat los van Vandaag.')+
@@ -558,7 +564,7 @@ function renderEdit(){
   } else {
     const rings=S.rings.filter(id=>goal(id)&&!MI[id].lo).slice(0,3),pos=['buitenste ring','middelste ring','binnenste ring'];
     const ids=[...S.order.filter(id=>!rings.includes(id)),...M.map(m=>m.id).filter(id=>!S.order.includes(id)||rings.includes(id))];
-    h=head('Vandaag aanpassen','Kies je dagringen, je begroeting en welke tegels je ziet. Een metric in de ringen staat niet ook als tegel; in Gezondheid blijft hij altijd staan.')+
+    h=head('Vandaag aanpassen','Kies je dagringen, je begroeting en welke tegels je ziet.',['Hoe werken ringen en tegels samen?','Een metric in de ringen staat niet ook als tegel. In Gezondheid blijft hij altijd staan, wat je hier ook kiest.'])+
     `<div class="sh" style="margin-bottom:0"><h2>Dagringen</h2></div><div class="card">
     ${rings.length?'':'<span class="gl">Nog geen ringen. Kies hieronder tot drie doelen.</span>'}
     ${rings.map((id,i)=>`<div class="er"><i class="dot" style="background:${RING[i]};width:12px;height:12px"></i><div class="t"><h3>${MI[id].n}</h3><span class="gl">Doel ${fmt(id,goal(id))} · ${i===rings.length-1&&i>0?pos[2]:pos[i]}</span></div>
@@ -567,9 +573,9 @@ function renderEdit(){
     <button class="lnk" data-rdel="${id}" style="color:var(--bad)">Weg</button></div>`).join('')}
     ${rings.length<3?`<span class="gl">Toevoegen</span><div class="row">${M.filter(m=>!m.lo&&!rings.includes(m.id)).sort((a,b)=>a.n.localeCompare(b.n)).map(m=>`<button class="pill" data-radd="${m.id}">+ ${m.n}</button>`).join('')}</div>`:''}</div>
     <div class="sh" style="margin-bottom:0"><h2>Begroeting</h2></div>
-    <div class="card">${tog('data-lay','herstel','Herstel vandaag','Score uit HRV, rusthartslag en slaap, boven je metrics',S.lay.herstel)}</div>
     <div class="card">${tog('data-lay','greetName','Je voornaam','Goedemorgen, Sam',S.lay.greetName)}${tog('data-lay','motivation','Motiverende zin','Wat je vandaag nog kunt halen',S.lay.motivation)}</div>
-    <div class="sh" style="margin-bottom:0"><h2>Tegels</h2></div>`+
+    <div class="sh" style="margin-bottom:0"><h2>Tegels</h2></div>
+    <div class="card">${tog('data-lay','herstel','Herstel vandaag','Score uit HRV, rusthartslag en slaap, boven je metrics',S.lay.herstel)}</div>`+
     ids.map(id=>{const m=MI[id],ring=rings.includes(id),on=S.order.includes(id)&&!ring,o=openEdit===id;
     return`<div class="card"><div class="er"><i class="dot" style="background:${col(id)}"></i><div class="t"><h3>${m.n}</h3><span class="gl" ${ring?'style="color:var(--pri)"':''}>${CAT[m.cat]}${ring?' · in de ringen':''}</span></div>
     <button class="ib" data-exp="${id}" aria-expanded="${o}" aria-label="Instellingen ${m.n}"><svg viewBox="0 0 24 24" style="stroke:var(--mut)"><path d="${o?'M6 15l6-6 6 6':'M6 9l6 6 6-6'}"/></svg></button>
