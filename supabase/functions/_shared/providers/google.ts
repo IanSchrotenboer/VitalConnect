@@ -150,6 +150,15 @@ const SPORT_OF: [RegExp, string][] = [
   [/TENNIS|BADMINTON|SQUASH|PADEL|PICKLEBALL|RACQUET/, "racket"], [/DANC|ZUMBA|BARRE/, "dance"],
   [/BOX|KARATE|JIU|JUDO|MARTIAL|TAEKWONDO|KICKBOX/, "martial"], [/SKI|SNOWBOARD|SKAT/, "winter"],
 ];
+/** Hoe Google Health de training vastlegde: zelf gestart, automatisch herkend, ingevoerd of afgeleid */
+const RECORDING: Record<string, WorkoutRow["recording"]> = {
+  ACTIVELY_MEASURED: "active", PASSIVELY_MEASURED: "passive", MANUAL: "manual", MANUALLY_ENTERED: "manual",
+  DERIVED: "derived", UNKNOWN: "unknown",
+};
+const recordingOf = (dp: { dataSource?: { recordingMethod?: string }; exercise?: { exerciseEvents?: { exerciseEventType?: string }[] } }) =>
+  RECORDING[dp.dataSource?.recordingMethod ?? ""] ??
+  // Zonder vastlegmethode: een START-gebeurtenis betekent dat iemand de training zelf startte
+  (dp.exercise?.exerciseEvents?.some((e) => e.exerciseEventType === "START") ? "active" : null);
 const sportOf = (t?: string) => SPORT_OF.find(([re]) => re.test(t ?? ""))?.[1] ?? "other";
 /** "1800s" of "1800.5s" → seconden */
 const secs = (d?: string) => { const n = num(d?.replace(/s$/, "")); return n; };
@@ -188,7 +197,7 @@ async function exercises(token: string, uid: string, days: number): Promise<Work
         user_id: uid, external_id: String(dp.name ?? "").split("/").pop() || `${start}`, sport: sportOf(ex.exerciseType),
         title: ex.displayName ?? null, day, started_at: start, duration_s: dur,
         distance_m: mm(m.distanceMillimeters), kcal: num(m.caloriesKcal) ?? null, avg_hr: num(m.averageHeartRateBeatsPerMinute) ?? null,
-        ascent_m: mm(m.elevationGainMillimeters), origin: dp.dataSource?.platform ?? null,
+        ascent_m: mm(m.elevationGainMillimeters), origin: dp.dataSource?.platform ?? null, recording: recordingOf(dp),
       });
     }
     pageToken = res.nextPageToken;

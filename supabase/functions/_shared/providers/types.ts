@@ -10,6 +10,8 @@ export type WorkoutRow = {
   user_id: string; external_id: string; sport: string; title?: string | null; day: string; started_at: string;
   duration_s: number; distance_m?: number | null; kcal?: number | null; avg_hr?: number | null; max_hr?: number | null;
   ascent_m?: number | null; origin?: string | null;
+  /** Vastlegmethode: zelf gestart (active), automatisch herkend (passive), ingevoerd (manual), afgeleid of onbekend */
+  recording?: "active" | "passive" | "manual" | "derived" | "unknown" | null;
 };
 
 /** Mislukte stap met een status die de app begrijpt (vitaal://<slug>?status=...). */

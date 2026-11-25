@@ -181,6 +181,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var fitness by mutableStateOf<Fitness?>(null); private set
     /** Tabblad Training (server, app_state). */
     var training by mutableStateOf<Training?>(null); private set
+    /** Welke trainingen meetellen (profiel): auto, google_health, health_connect of all; en alleen zelf gestart. */
+    var trainingSource by mutableStateOf("auto"); private set
+    var trainingOwnOnly by mutableStateOf(false); private set
     /** Trainingen ouder dan 90 dagen, geladen met "Oudere trainingen laden". */
     var olderWorkouts by mutableStateOf<List<Workout>>(emptyList()); private set
     var olderDone by mutableStateOf(false); private set
@@ -297,6 +300,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
+    /** Instelling opslaan en het tabblad Training direct opnieuw laten rekenen; mislukt het, dan blijft de oude stand. */
+    fun setTrainingFilter(source: String = trainingSource, ownOnly: Boolean = trainingOwnOnly) {
+        if (source !in TRAINING_SOURCES.map { it.first }) return
+        val old = trainingSource to trainingOwnOnly
+        trainingSource = source; trainingOwnOnly = ownOnly
+        task {
+            try {
+                api.patch("profiles?id=eq.${api.userId}", buildJsonObject { put("training_source", source); put("training_own_only", ownOnly) })
+            } catch (e: Exception) {
+                trainingSource = old.first; trainingOwnOnly = old.second
+                throw e
+            }
+            parseTraining(api.rpc("training", buildJsonObject { put("p_today", LocalDate.now().toString()) }) as? JsonObject)?.let { training = it }
+            olderWorkouts = emptyList(); olderDone = false
+        }
+    }
+
     fun loadOlderWorkouts() = task {
         val before = olderWorkouts.lastOrNull()?.day ?: training?.workouts?.lastOrNull()?.day ?: LocalDate.now().minusDays(89)
         val r = api.rpc("workouts_before", buildJsonObject { put("p_day", before.toString()); put("p_limit", 50) })
@@ -381,7 +401,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         api.signOut(); hc.reset(); Notifier.clear(getApplication())
         signedIn = false; authStep = AuthStep.Login
         tab = Tab.Today; showSettings = false; detailMetric = null; showHerstel = false; fitness = null; editing = null; layout = Layout()
-        training = null; olderWorkouts = emptyList(); olderDone = false; workoutDetail = null; workoutForm = null; workoutImport = null
+        training = null; trainingSource = "auto"; trainingOwnOnly = false; olderWorkouts = emptyList(); olderDone = false; workoutDetail = null; workoutForm = null; workoutImport = null
         profile = Profile(); profileTab = ProfileTab.Profile; onboarding = null
         // Niets van de vorige gebruiker laten staan op dit toestel
         prefs = emptyMap(); today = emptyMap(); connections = emptyMap(); history = emptyMap(); stats = emptyMap()
@@ -511,6 +531,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             )
             applyTheme(ThemeMode.of(prof.str("theme")))
             layout = Layout.from(prof["layout"] as? JsonObject)
+            trainingSource = prof.str("training_source").ifEmpty { "auto" }
+            trainingOwnOnly = prof.bool("training_own_only") == true
             if (!needsConsent && onboarding == null && prof.str("onboarded_at").isEmpty()) onboarding = Onboarding.Import
         }
         connections = st.connections

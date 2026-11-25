@@ -139,13 +139,23 @@ async function limits(sb: SupabaseClient) {
   return catalog.lim;
 }
 
-/** Valideert dagwaarden tegen de catalogus en schrijft ze weg. */
 const SPORTS = new Set(["running", "walking", "hiking", "cycling", "swimming", "strength", "hiit", "yoga",
   "rowing", "elliptical", "team", "racket", "dance", "martial", "winter", "other"]);
 const inRange = (v: number | null | undefined, lo: number, hi: number) =>
   v === null || v === undefined || !isFinite(v) || v < lo || v > hi ? null : Math.round(v * 10) / 10;
 
-/** Trainingen van een cloudbron wegschrijven (tabel workouts). Onzin wordt per training overgeslagen. */
+const RECORDINGS = new Set(["active", "passive", "manual", "derived", "unknown"]);
+const WORKOUT_FIELDS = ["sport", "title", "day", "started_at", "duration_s", "distance_m", "kcal", "avg_hr", "max_hr", "ascent_m", "origin", "recording"];
+/** Vergelijkbare vorm van een training: tijden als milliseconden, getallen als getal, leeg als null */
+const sameShape = (r: Record<string, unknown>) => JSON.stringify(WORKOUT_FIELDS.map((k) => {
+  const v = r[k];
+  if (v === null || v === undefined) return null;
+  if (k === "started_at") return Date.parse(String(v));
+  return typeof v === "string" && k !== "title" && k !== "day" && k !== "sport" && k !== "origin" && k !== "recording" ? Number(v) : v;
+}));
+
+/** Trainingen van een cloudbron wegschrijven (tabel workouts). Onzin wordt per training overgeslagen;
+ *  alleen nieuwe en gewijzigde trainingen worden geschreven. Geeft het aantal geschreven trainingen terug. */
 export async function writeWorkouts(
   sb: SupabaseClient, rows: import("./providers/types.ts").WorkoutRow[], provider: ProviderId,
 ): Promise<number> {
@@ -155,12 +165,29 @@ export async function writeWorkouts(
     const dur = Math.round(w.duration_s);
     if (!SPORTS.has(w.sport) || !/^\d{4}-\d{2}-\d{2}$/.test(w.day) || isNaN(Date.parse(w.started_at)) || !(dur >= 60 && dur <= 86400)) continue;
     if (!/^[A-Za-z0-9_.:@/+=-]{1,200}$/.test(w.external_id)) continue;
+    const hr = (v: number | null | undefined) => { const n = inRange(v, 25, 250); return n === null ? null : Math.round(n); };
     ok.set(`${w.user_id}|${w.external_id}`, {
       user_id: w.user_id, source: provider, external_id: w.external_id, sport: w.sport, title: w.title?.slice(0, 80) || null,
       day: w.day, started_at: w.started_at, duration_s: dur, distance_m: inRange(w.distance_m, 0, 1e6), kcal: inRange(w.kcal, 0, 20000),
-      avg_hr: inRange(w.avg_hr, 25, 250) && Math.round(w.avg_hr!), max_hr: inRange(w.max_hr, 25, 250) && Math.round(w.max_hr!),
-      ascent_m: inRange(w.ascent_m, 0, 20000), origin: w.origin?.slice(0, 120) || null, updated_at: now,
+      avg_hr: hr(w.avg_hr), max_hr: hr(w.max_hr), ascent_m: inRange(w.ascent_m, 0, 20000), origin: w.origin?.slice(0, 120) || null,
+      recording: RECORDINGS.has(w.recording ?? "") ? w.recording : null, updated_at: now,
     });
+  }
+  if (!ok.size) return 0;
+  // Wat er al staat, per gebruiker in één verzoek; ongewijzigde trainingen worden niet opnieuw geschreven
+  const byUser = new Map<string, string[]>();
+  for (const r of ok.values()) byUser.set(r.user_id as string, [...(byUser.get(r.user_id as string) ?? []), r.external_id as string]);
+  for (const [uid, ids] of byUser) {
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data, error } = await sb.from("workouts").select(["external_id", ...WORKOUT_FIELDS].join(","))
+        .eq("user_id", uid).eq("source", provider).in("external_id", ids.slice(i, i + 200));
+      if (error) throw error;
+      for (const old of (data ?? []) as unknown as Record<string, unknown>[]) {
+        const key = `${uid}|${old.external_id}`;
+        const nu = ok.get(key);
+        if (nu && sameShape(nu) === sameShape(old)) ok.delete(key);
+      }
+    }
   }
   if (!ok.size) return 0;
   const { error } = await sb.from("workouts").upsert([...ok.values()], { onConflict: "user_id,source,external_id" });
@@ -168,6 +195,7 @@ export async function writeWorkouts(
   return ok.size;
 }
 
+/** Valideert dagwaarden tegen de catalogus en schrijft ze weg. */
 export async function writeDaily(
   sb: SupabaseClient,
   rows: { user_id: string; day: string; metric: string; value: number }[],

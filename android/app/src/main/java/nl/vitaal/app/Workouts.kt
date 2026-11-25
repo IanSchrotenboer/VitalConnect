@@ -83,6 +83,8 @@ data class Workout(
     val id: String?, val source: String, val externalId: String, val sport: String, val title: String?,
     val day: LocalDate, val startedAt: Instant, val durationS: Int, val distanceM: Double?, val kcal: Double?,
     val avgHr: Int?, val maxHr: Int?, val ascentM: Double?, val notes: String?, val origin: String?, val load: Double?,
+    /** Vastlegmethode: active (zelf gestart), passive (automatisch herkend), manual, derived of unknown */
+    val recording: String? = null,
 )
 
 fun Workout.toJson(): JsonObject = buildJsonObject {
@@ -93,6 +95,7 @@ fun Workout.toJson(): JsonObject = buildJsonObject {
     distanceM?.let { put("distance_m", (it * 10).roundToInt() / 10.0) }; kcal?.let { put("kcal", it.roundToInt()) }
     avgHr?.let { put("avg_hr", it) }; maxHr?.let { put("max_hr", it) }; ascentM?.let { put("ascent_m", it.roundToInt()) }
     notes?.let { put("notes", it) }; origin?.let { put("origin", it) }
+    (recording ?: when (source) { "manual" -> "manual"; "file" -> "active"; else -> null })?.let { put("recording", it) }
 }
 
 fun parseWorkout(o: JsonObject): Workout? {
@@ -103,7 +106,7 @@ fun parseWorkout(o: JsonObject): Workout? {
         sport = o.str("sport").ifEmpty { "other" }, title = o.str("title").ifEmpty { null }, day = day, startedAt = start,
         durationS = o.int("duration_s") ?: return null, distanceM = o.num("distance_m"), kcal = o.num("kcal"),
         avgHr = o.int("avg_hr"), maxHr = o.int("max_hr"), ascentM = o.num("ascent_m"), notes = o.str("notes").ifEmpty { null },
-        origin = o.str("origin").ifEmpty { null }, load = o.num("load"),
+        origin = o.str("origin").ifEmpty { null }, load = o.num("load"), recording = o.str("recording").ifEmpty { null },
     )
 }
 
@@ -113,7 +116,12 @@ data class TrainingLoad(
     val ready: Boolean, val days: Int?, val acute: Double?, val chronic: Double?, val form: Double?,
     val hrmax: Int?, val rest: Double?,
 )
-data class Training(val workouts: List<Workout>, val week: TrainingWeek, val weeks: List<WeekBar>, val load: TrainingLoad)
+/** Keuzes bij Profiel → Koppelingen → Trainingen (zelfde waarden als profiles.training_source). */
+val TRAINING_SOURCES = listOf("auto" to "Automatisch", "google_health" to "Google Health", "health_connect" to "Health Connect", "all" to "Alles")
+
+/** Welke trainingen meetellen: source = de keuze (auto, google_health, health_connect, all), mode = wat auto werd. */
+data class TrainingFilter(val source: String, val mode: String, val ownOnly: Boolean, val hidden: Int)
+data class Training(val workouts: List<Workout>, val week: TrainingWeek, val weeks: List<WeekBar>, val load: TrainingLoad, val filter: TrainingFilter? = null)
 
 /** Leest het veld training van app_state; null bij een oudere server. */
 fun parseTraining(o: JsonObject?): Training? {
@@ -127,6 +135,9 @@ fun parseTraining(o: JsonObject?): Training? {
             day(w.str("week"))?.let { WeekBar(it, w.int("count") ?: 0, w.int("minutes") ?: 0, w.int("load")) }
         },
         load = TrainingLoad(ld.bool("ready") == true, ld.int("days"), ld.num("acute"), ld.num("chronic"), ld.num("form"), ld.int("hrmax"), ld.num("rest")),
+        filter = (o["filter"] as? JsonObject)?.let { f ->
+            TrainingFilter(f.str("source").ifEmpty { "auto" }, f.str("mode"), f.bool("own_only") == true, f.int("hidden") ?: 0)
+        },
     )
 }
 
@@ -217,6 +228,7 @@ fun TrainingScreen(vm: MainViewModel) {
         if (t != null) {
             item { WeekCard(t) }
             item { LoadCard(vm, t.load) }
+            t.filter?.takeIf { it.hidden > 0 }?.let { f -> item { FilterNote(vm, f) } }
         }
         if (all.isEmpty()) item {
             VCard(Modifier.fillMaxWidth()) {
@@ -256,6 +268,23 @@ private fun WeekCard(t: Training) {
 }
 
 /** Acht weken als staafjes; de huidige week in de hoofdkleur. */
+/** Korte regel dat de instelling trainingen verbergt, met een weg naar die instelling. */
+@Composable
+private fun FilterNote(vm: MainViewModel, f: TrainingFilter) {
+    val p = LocalPalette.current
+    val wat = when {
+        f.mode == "google_health" && f.ownOnly -> "uit Health Connect en automatisch herkende trainingen"
+        f.mode == "google_health" -> "die Google Health uit Health Connect overneemt, zoals de wandelingen van Google Fit,"
+        f.ownOnly -> "die automatisch zijn herkend"
+        else -> "uit andere bronnen"
+    }
+    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("${if (f.hidden == 1) "1 training" else "${f.hidden} trainingen"} $wat ${if (f.hidden == 1) "telt" else "tellen"} niet mee.",
+            style = MaterialTheme.typography.bodySmall, color = p.muted, modifier = Modifier.weight(1f))
+        TextButton(onClick = { vm.openProfile(ProfileTab.Connections) }) { Text("Aanpassen") }
+    }
+}
+
 @Composable
 private fun WeekBars(weeks: List<WeekBar>) {
     val p = LocalPalette.current
