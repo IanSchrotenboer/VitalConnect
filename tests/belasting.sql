@@ -16,6 +16,14 @@ begin
   from tu cross join generate_series(current_date - 69, current_date, interval '1 day') d cross join public.metrics m;
   get diagnostics n = row_count;
   rep := rep || jsonb_build_object('c','vullen 500 gebruikers','d', n||' rijen in '||round(extract(epoch from clock_timestamp()-t0))||' s');
+  -- Trainingen: ongeveer 3 per week per gebruiker, deels dubbel uit twee bronnen (app_state rekent belasting en ontdubbelt)
+  insert into public.workouts (user_id, source, external_id, sport, day, started_at, duration_s, distance_m, avg_hr)
+  select tu.id, s.src, s.src || d, 'running', (current_date - d), (current_date - d)::timestamptz + interval '7 hours' + s.shift, 2400, 8000, 140 + d % 20
+  from tu cross join generate_series(0, 69) d cross join (values ('health_connect', interval '0'), ('google_health', interval '1 minute')) s(src, shift)
+  where d % 7 in (1, 3, 6);
+  get diagnostics n = row_count;
+  rep := rep || jsonb_build_object('c','trainingen 500 gebruikers','d', n||' rijen');
+  analyze public.workouts;
   insert into public.connections (user_id, provider, status, last_sync_at) select id, 'google_health', 'active', now() - (g||' minutes')::interval from tu;
   heavy := (select id from tu where g = 1);
   insert into public.daily_metrics (user_id, day, metric, source, provider, value, updated_at)

@@ -11,10 +11,18 @@ HERSTEL EN FITHEID
 • Volgens de methode die sportwetenschappers gebruiken, met uitleg bij elke score
 • Geschatte maximale hartslag, hartslagzones en VO2max uit je leeftijd en rusthartslag
 
+TRAINING
+• Al je trainingen uit Google Fit, Health Connect en Google Health in één lijst, per dag
+• Zelf een training loggen: sport, tijd, duur, afstand, hartslag, hoogtemeters en notities
+• FIT- en JSON-bestanden importeren van Garmin, Suunto, Polar, Coros, Wahoo, Zwift, Strava en Google Fit, ook veel tegelijk
+• Dezelfde training uit twee bronnen telt maar één keer
+• Je week in minuten en trainingsbelasting: wat je deze week deed tegenover wat je gewend bent
+
 GEZONDHEID
 • Al je statistieken over je hele geschiedenis: gemiddelde, laatste 30 dagen, record en totaal
 • Ingedeeld in activiteit, hart, slaap, herstel en lichaam
 • Per metric een grafiek over 7 dagen, 30 dagen, 90 dagen of een jaar, met vergelijking met de periode ervoor
+• Bij elke metric in gewone taal wat hij zegt over je lichaam; klap de uitleg open als je hem wilt lezen
 
 SLAAP
 • Je afgelopen nacht naast je slaapdoel, met je slaapscore

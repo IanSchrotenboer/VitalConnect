@@ -1,4 +1,4 @@
-# Berekeningen: herstel en fitheid
+# Berekeningen: herstel, fitheid en training
 
 Vital Connect berekent herstel en fitheid zelf, op de server (functie `fitness`, migratie `20261125060900_fitness_scores.sql`).
 De uitkomst komt mee in `app_state`, zodat de app nog steeds met één verzoek opent. App en preview rekenen niet zelf;
@@ -57,11 +57,46 @@ De schatting is ontwikkeld bij getrainde volwassenen. Een VO2max van het horloge
 
 Leeftijd en geslacht komen uit het profiel. Zonder geboortedatum vraagt de app die in te vullen.
 
-## Nog niet
+## Training
 
-**Trainingsbelasting** (TRIMP; vermoeidheid, fitheid en vorm volgens Banister) vraagt de hartslag per minuut tijdens trainingen.
-- Dat is een nieuwe toestemming in Health Connect (`READ_HEART_RATE`) met een aanpassing in de Play Store.
-- Of het komt via de trainingen van Garmin of Suunto.
+De functie `training(p_today)` (migraties `20261125083904_workouts.sql` en `20261125084109_workouts_dedupe.sql`) levert het tabblad Training, en komt mee in `app_state`.
+
+**Dubbele trainingen.** Dezelfde training komt vaak uit twee bronnen, bijvoorbeeld Health Connect én Google Health.
+- Twee trainingen gelden als dezelfde als ze binnen 5 minuten van elkaar beginnen en hun duur hooguit 25% verschilt (minstens 3 minuten).
+- Dan blijft er één over, in deze volgorde: bestand, zelf gelogd, Google Health, Health Connect. Een bestand van je horloge is meestal het meest volledig.
+- De andere blijft opgeslagen maar telt nergens mee (`workout_hidden`).
+
+**Belasting per training (TRIMP, Banister).**
+- `x = (gemiddelde hartslag − rusthartslag) / (maximale hartslag − rusthartslag)`, begrensd tussen 0 en 1.
+- `TRIMP = minuten × x × k × e^(b·x)`.
+  - Man: k = 0,64; b = 1,92.
+  - Vrouw: k = 0,86; b = 1,67.
+  - Anders of onbekend: het gemiddelde van beide uitkomsten.
+- Rusthartslag: gemiddelde van de laatste 30 dagen (dezelfde bronkeuze als de tegel).
+- Maximale hartslag: 208 − 0,7 × leeftijd (Tanaka), dus alleen met een geboortedatum.
+- Zonder gemiddelde hartslag, of als maximaal en rust minder dan 20 slagen verschillen, is er geen belasting.
+  - Health Connect-trainingen hebben geen hartslag: daarvoor is een extra toestemming nodig (`READ_HEART_RATE`), die de app nu niet vraagt.
+
+**Deze week, gewend en vorm (Banister).**
+- Belasting per dag over 180 dagen, als exponentieel voortschrijdend gemiddelde.
+  - Deze week (acute belasting, ATL): tijdconstante 7 dagen.
+  - Gewend (chronische belasting, CTL): tijdconstante 42 dagen.
+  - Vorm = gewend − deze week.
+- Oordeel:
+  - vorm > 5: uitgerust;
+  - −10 tot 5: in balans;
+  - −30 tot −10: flink aan het trainen;
+  - lager: zwaar belast.
+- Met minder dan 42 dagen aan trainingen toont de app dat de waarden nog niet betrouwbaar zijn.
+
+**Week en weken.** Aantal, minuten, afstand, calorieën en belasting van de laatste 7 dagen, en minuten per week voor de laatste 8 weken (maandag tot zondag).
+
+**Bestanden** (alleen op de telefoon gelezen, `WorkoutFiles.kt`; de preview doet hetzelfde in JavaScript).
+- FIT: sessieberichten (18) leveren sport, start, duur, afstand, calorieën, hartslag en hoogtemeters.
+  - Ontbreekt de hartslag in de sessie, dan berekenen we die uit de meetpunten (20).
+  - De lokale dag komt uit het activiteitsbericht (34).
+- JSON: de export van Vital Connect, Strava, Garmin Connect (ook de gegevensexport), Google Fit (Takeout) en de Google Health API.
+- Een stabiele sleutel per bestand (SHA-1) of per activiteit-id zorgt dat opnieuw importeren bijwerkt in plaats van verdubbelt.
 
 ## Bronnen
 
@@ -71,4 +106,6 @@ Leeftijd en geslacht komen uit het profiel. Zonder geboortedatum vraagt de app d
 - Australian Institute of Sport. Heart rate variability: best practice guidelines.
 - Tanaka H, Monahan KD, Seals DR (2001). Age-predicted maximal heart rate revisited. *J Am Coll Cardiol* 37:153–156.
 - Uth N e.a. (2004). Estimation of VO2max from the ratio between HRmax and HRrest – the Heart Rate Ratio Method. *Eur J Appl Physiol* 91:111–115.
+- Banister EW (1991). Modeling elite athletic performance. In: *Physiological Testing of Elite Athletes*, Human Kinetics.
+- Morton RH, Fitz-Clarke JR, Banister EW (1990). Modeling human performance in running. *J Appl Physiol* 69:1171–1177.
 - Uth N (2005). Gender difference in the proportionality factor between the mass specific VO2max and the ratio between HRmax and HRrest. *Int J Sports Med*.

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -208,9 +209,9 @@ fun TrainingScreen(vm: MainViewModel) {
             }
         }
         item {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { vm.newWorkout() }) { Text("Training loggen") }
-                OutlinedButton(onClick = { pick.launch(arrayOf("*/*")) }) { Text("FIT of JSON importeren") }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { vm.newWorkout() }, Modifier.weight(1f)) { Text("Training loggen", textAlign = TextAlign.Center) }
+                OutlinedButton(onClick = { pick.launch(arrayOf("*/*")) }, Modifier.weight(1f)) { Text("Importeren", textAlign = TextAlign.Center) }
             }
         }
         if (t != null) {

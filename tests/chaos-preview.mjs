@@ -60,10 +60,13 @@ for (const [naam, waarde] of [
   ["null-velden", JSON.stringify({ onb: null, order: null, rings: null, goal: null, lay: null, prof: null, conn: null })],
   ["oude versie", JSON.stringify({ order: ["steps", "bestaat_niet"], size: {}, goal: { steps: -5 }, rings: ["x", "y", "z", "q"], conn: {} })],
   ["rare waarden", JSON.stringify({ onb: null, sync: "vaak", theme: 42, lay: { sleepTiles: "hrv" }, prof: { name: 123, h: "abc" } })],
+  ["kapotte trainingen", JSON.stringify({ onb: null, wk: [null, 5, "x", { id: 1 }, { id: "a", sport: "raket", source: "manual", day: "2026-01-01", start: 1, dur: 600 },
+    { id: "b", sport: "running", source: "manual", day: "gisteren", start: 1, dur: 600 }, { id: "c", sport: "running", source: "file", day: "2026-11-20", start: 1.7e12, dur: 1e9 },
+    { id: "<img src=x onerror=alert(1)>", sport: "running", source: "manual", day: "2026-11-20", start: 1.7637e12, dur: 1800, title: "<b>x</b>", avg: "veel", dist: -5 }] })],
 ]) {
   const p = await nieuw(waarde); p._naam = naam;
   await controleer(p, naam);
-  for (const tab of ["health", "sleep", "today"]) { await p.click(`[data-tab=${tab}]`).catch(() => {}); }
+  for (const tab of ["health", "sleep", "training", "today"]) { await p.click(`[data-tab=${tab}]`).catch(() => {}); }
   await controleer(p, naam + " na tabbladen");
   await p.context().close();
 }
@@ -84,7 +87,7 @@ for (const [naam, waarde] of [
 // 3. Razendsnel: 60x van tabblad wisselen, dubbel tikken, vegen tijdens animatie
 {
   const p = await nieuw(JSON.stringify({ onb: null })); p._naam = "snel";
-  for (let i = 0; i < 60; i++) await p.click(`[data-tab=${["today", "health", "sleep"][i % 3]}]`, { delay: 0 });
+  for (let i = 0; i < 60; i++) await p.click(`[data-tab=${["today", "health", "sleep", "training"][i % 4]}]`, { delay: 0 });
   for (let i = 0; i < 40; i++) await veeg(p, i % 2 ? 150 : -150);
   await controleer(p, "snel wisselen en vegen");
   await p.click("[data-tab=today]"); await p.click("#syncBtn", { clickCount: 3 }); await p.waitForTimeout(1100);
@@ -121,6 +124,39 @@ for (const [naam, waarde] of [
   await p.click("[data-act=psave]").catch(() => {});
   await p.click("[data-act=back]");
   await controleer(p, "extreme invoer");
+  await p.context().close();
+}
+
+// 5b. Training: onzin in het formulier, rommel importeren, verwijderen
+{
+  const p = await nieuw(JSON.stringify({ onb: null })); p._naam = "training";
+  await p.click("[data-tab=training]"); await p.click("[data-act=wnew]");
+  for (const [veld, waarde] of [["#wtitle", "😀".repeat(100) + "<script>alert(1)</script>"], ["#wm", "1e309"], ["#wh", "-3"], ["#wkm", "abc"], ["#wavg", "999"], ["#wdate", "9999-12-31"]]) {
+    await p.fill(veld, waarde).catch(() => {});
+  }
+  await p.click("[data-act=wsave]", { clickCount: 3 });
+  const melding = await p.textContent("#wnote").catch(() => "");
+  if (!melding) fouten.push("training: onzin in het formulier werd zonder melding opgeslagen");
+  await p.fill("#wdate", "2026-11-20"); await p.fill("#wh", "1"); await p.fill("#wm", "0"); await p.fill("#wkm", "10,5"); await p.fill("#wavg", "150");
+  await p.click("[data-act=wsave]"); await p.waitForTimeout(200);
+  await controleer(p, "training opslaan");
+  const rommel = [
+    { name: "leeg.json", mimeType: "application/json", buffer: Buffer.from("") },
+    { name: "kapot.json", mimeType: "application/json", buffer: Buffer.from("{[") },
+    { name: "diep.json", mimeType: "application/json", buffer: Buffer.from("[".repeat(5000) + "]".repeat(5000)) },
+    { name: "getallen.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify([{ start_date: "2026-11-20T07:00:00Z", elapsed_time: 1e40, distance: "NaN" }, { start_date: "x", elapsed_time: 600 }])) },
+    { name: "kapot.fit", mimeType: "application/octet-stream", buffer: Buffer.concat([Buffer.from([14, 0x10, 0, 0, 0xff, 0xff, 0, 0, 46, 70, 73, 84, 0, 0]), Buffer.alloc(400, 0x41)]) },
+    { name: "foto.jpg", mimeType: "image/jpeg", buffer: Buffer.alloc(2000, 0xff) },
+  ];
+  await p.setInputFiles("#wfile", rommel); await p.waitForTimeout(600);
+  await controleer(p, "rommel importeren");
+  await p.click("[data-act=back]").catch(() => {});
+  await p.click("[data-tab=training]"); await p.click("[data-wk^=m-]").catch(() => {});
+  await p.click("[data-act=wdel]").catch(() => {}); await p.click("[data-act=wdelok]").catch(() => {}); await p.waitForTimeout(200);
+  if (await p.locator("[data-wk^=m-]").count()) fouten.push("training: zelf gelogde training niet verwijderd");
+  await controleer(p, "training verwijderen");
+  for (let i = 0; i < 30; i++) { await p.click("[data-wk]", { delay: 0 }).catch(() => {}); await p.click("[data-act=back]", { delay: 0 }).catch(() => {}); }
+  await controleer(p, "snel trainingen openen en sluiten");
   await p.context().close();
 }
 

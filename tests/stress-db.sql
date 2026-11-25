@@ -35,6 +35,17 @@ begin
   get diagnostics n = row_count;
   rep := rep || jsonb_build_object('c', 'Testdata aangemaakt', 'ok', n > 50000, 'd', n || ' dagwaarden (A: 5 jaar, 2 bronnen; B: 30 dagen)');
 
+  -- A: 5 jaar trainingen (bijna elke dag één, plus kopieën uit een tweede bron die als dubbel wegvallen)
+  update public.profiles set birth_date = '1985-06-01', sex = 'male' where id = a;
+  insert into public.workouts (user_id, source, external_id, sport, day, started_at, duration_s, distance_m, kcal, avg_hr, max_hr)
+  select a, s.src, s.src || '-' || g, (array['running','cycling','strength','yoga'])[1 + g % 4], current_date - g,
+         (current_date - g)::timestamptz + interval '7 hours' + s.shift, 1800 + (g % 5) * 600, 8000 + (g % 7) * 1000, 400 + g % 300, 120 + g % 40, 170
+  from generate_series(0, 1825) g
+  cross join (values ('health_connect', interval '0'), ('google_health', interval '2 minutes')) s(src, shift)
+  where g % 6 <> 0;
+  get diagnostics n = row_count;
+  rep := rep || jsonb_build_object('c', 'Trainingen aangemaakt', 'ok', n > 2500, 'd', n || ' trainingen (5 jaar, 2 bronnen)');
+
   begin
     -- ---------- Als gebruiker A ----------
     perform set_config('request.jwt.claims', jsonb_build_object('sub', a, 'role', 'authenticated')::text, true);
@@ -76,6 +87,29 @@ begin
     end loop;
     rep := rep || jsonb_build_object('c', 'Herstel en fitheid (fitness, 5 jaar)', 'ok', maxms < grens, 'd', round(maxms) || ' ms');
 
+    maxms := 0;
+    for i in 1..3 loop
+      t0 := clock_timestamp(); payload := public.training(current_date);
+      maxms := greatest(maxms, extract(epoch from clock_timestamp() - t0) * 1000);
+    end loop;
+    rep := rep || jsonb_build_object('c', 'Training: lijst, week en belasting (training, 5 jaar)', 'ok', maxms < grens
+      and (payload #>> '{load,ready}')::boolean and jsonb_array_length(payload->'workouts') between 50 and 300,
+      'd', round(maxms) || ' ms, ' || jsonb_array_length(payload->'workouts') || ' trainingen zichtbaar na ontdubbelen');
+
+    maxms := 0;
+    for i in 1..3 loop
+      t0 := clock_timestamp(); perform public.workouts_before(current_date - 1000, 100);
+      maxms := greatest(maxms, extract(epoch from clock_timestamp() - t0) * 1000);
+    end loop;
+    rep := rep || jsonb_build_object('c', 'Oudere trainingen laden (workouts_before)', 'ok', maxms < grens, 'd', round(maxms) || ' ms');
+
+    t0 := clock_timestamp();
+    select public.save_workouts(jsonb_agg(jsonb_build_object('source','file','external_id','fit-stress-' || g,'sport','running',
+      'day', current_date - g % 1800, 'started_at', (current_date - g % 1800)::timestamptz + interval '18 hours' + (g / 1800) * interval '1 hour', 'duration_s', 3600, 'avg_hr', 150)))
+      into n from generate_series(0, 1999) g;
+    ms := extract(epoch from clock_timestamp() - t0) * 1000;
+    rep := rep || jsonb_build_object('c', 'Grote import (save_workouts, 2000 trainingen)', 'ok', n = 2000 and ms < 3000, 'd', n || ' opgeslagen in ' || round(ms) || ' ms');
+
     t0 := clock_timestamp(); perform public.export_my_data();
     ms := extract(epoch from clock_timestamp() - t0) * 1000;
     rep := rep || jsonb_build_object('c', 'Data exporteren (export_my_data, ~60.000 regels)', 'ok', ms < 3000, 'd', round(ms) || ' ms (grens 3000)');
@@ -94,6 +128,14 @@ begin
     rep := rep || jsonb_build_object('c', 'A ziet geen andere profielen', 'ok', n = 0, 'd', n || ' zichtbaar');
     select count(*) into n from public.metric_prefs where user_id <> a;
     rep := rep || jsonb_build_object('c', 'A ziet geen dashboards van anderen', 'ok', n = 0, 'd', n || ' zichtbaar');
+    select count(*) into n from public.workouts where user_id <> a;
+    rep := rep || jsonb_build_object('c', 'A ziet geen trainingen van anderen', 'ok', n = 0, 'd', n || ' zichtbaar');
+    begin
+      insert into public.workouts (user_id, source, external_id, sport, day, started_at, duration_s) values (b, 'manual', 'hack', 'running', current_date, now(), 600);
+      rep := rep || jsonb_build_object('c', 'A kan geen training in het account van B zetten', 'ok', false, 'd', 'insert gelukt');
+    exception when others then
+      rep := rep || jsonb_build_object('c', 'A kan geen training in het account van B zetten', 'ok', true, 'd', 'geweigerd');
+    end;
     update public.profiles set display_name = 'gehackt', weight_kg = 99 where id = b;
     get diagnostics n = row_count;
     rep := rep || jsonb_build_object('c', 'A kan het profiel van B niet wijzigen', 'ok', n = 0, 'd', n || ' rijen gewijzigd');

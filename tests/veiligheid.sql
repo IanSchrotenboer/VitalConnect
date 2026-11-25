@@ -73,4 +73,16 @@ select 'Controles op invoer profiel (lengte, gewicht, geboortedatum, weergave)',
        count(*) >= 5,
        count(*)::text || ' controles'
 from pg_constraint
-where conrelid = 'public.profiles'::regclass and contype = 'c';
+where conrelid = 'public.profiles'::regclass and contype = 'c'
+union all
+select 'Trainingen: elke policy alleen voor eigen rijen (select, insert, update, delete)',
+       count(*) = 4 and bool_and(coalesce(qual, '') || coalesce(with_check, '') like '%auth.uid()%' and roles = '{authenticated}'),
+       count(*)::text || ' policies'
+from pg_policies
+where schemaname = 'public' and tablename = 'workouts'
+union all
+select 'Controles op invoer trainingen (sport, bron, duur, tekstlengtes)',
+       count(*) >= 5,
+       count(*)::text || ' controles'
+from pg_constraint
+where conrelid = 'public.workouts'::regclass and contype = 'c';

@@ -5,7 +5,7 @@ declare
   a uuid := gen_random_uuid();
   b uuid := gen_random_uuid();
   rep jsonb := '[]';
-  n bigint; v numeric; j jsonb; ok boolean; t1 timestamptz; t2 timestamptz;
+  n bigint; k bigint; v numeric; j jsonb; ok boolean; ids uuid[]; t1 timestamptz; t2 timestamptz;
 begin
   insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
   values ('00000000-0000-0000-0000-000000000000', a, 'authenticated', 'authenticated', 'chaos-a@vitalconnect.invalid', '{}', '{}', now(), now()),
@@ -22,6 +22,8 @@ begin
   rep := rep || jsonb_build_object('c','statistieken zonder inlog leeg','ok', n = 0, 'd', n);
   begin perform public.fitness(current_date); ok := false; exception when others then ok := true; end;
   rep := rep || jsonb_build_object('c','herstel zonder inlog geweigerd','ok', ok);
+  begin perform public.training(current_date); perform public.save_workouts('[]'::jsonb); ok := false; exception when others then ok := true; end;
+  rep := rep || jsonb_build_object('c','trainingen zonder inlog geweigerd','ok', ok);
 
   perform set_config('request.jwt.claims', jsonb_build_object('sub', a, 'role', 'authenticated')::text, true);
 
@@ -126,11 +128,57 @@ begin
     rep := rep || jsonb_build_object('c','herstel met constante HRV en uitschieters: geen fout','ok', false, 'd', sqlerrm);
   end;
 
+  -- Trainingen: geen lijst = nette weigering; onzin in de lijst wordt overgeslagen, geldige rijen blijven, niemand komt bij een ander
+  k := 0;
+  begin k := k + coalesce(public.save_workouts(null), 0); exception when others then null; end;
+  begin k := k + coalesce(public.save_workouts('{}'::jsonb), 0); exception when others then null; end;
+  begin k := k + coalesce(public.save_workouts('"x"'::jsonb), 0); exception when others then null; end;
+  rep := rep || jsonb_build_object('c','save_workouts zonder lijst: niets opgeslagen','ok', k = 0 and not exists (select 1 from public.workouts where user_id = a));
+  begin
+    n := public.save_workouts(jsonb_build_array(
+      1, 'x', null, '{}'::jsonb,
+      jsonb_build_object('source','manual','external_id','c1','sport','raketbouw','day',current_date,'started_at',now(),'duration_s',600),
+      jsonb_build_object('source','manual','external_id','c2','sport','running','day','gisteren','started_at',now(),'duration_s',600),
+      jsonb_build_object('source','manual','external_id','c3','sport','running','day',current_date,'started_at','nooit','duration_s',600),
+      jsonb_build_object('source','manual','external_id','c4','sport','running','day',current_date,'started_at',now(),'duration_s',5),
+      jsonb_build_object('source','manual','external_id','c5','sport','running','day',current_date,'started_at',now(),'duration_s',1e30),
+      jsonb_build_object('source','manual','external_id','c6','sport','running','day',current_date,'started_at',now(),'duration_s',600,'avg_hr',-4,'distance_m','NaN'),
+      jsonb_build_object('source','hacker','external_id','c7','sport','running','day',current_date,'started_at',now(),'duration_s',600),
+      jsonb_build_object('source','manual','external_id',repeat('x',500),'sport','running','day',current_date,'started_at',now(),'duration_s',600),
+      jsonb_build_object('source','manual','external_id','c9','sport','running','day','9999-12-31','started_at','9999-12-31T00:00:00Z','duration_s',600),
+      jsonb_build_object('source','manual','external_id','ok1','sport','running','title',repeat('t',500),'notes',repeat('n',5000),'day',current_date,'started_at',now(),'duration_s',1800,'avg_hr',150)));
+    select count(*) into k from public.workouts where user_id = a and source = 'manual';
+    rep := rep || jsonb_build_object('c','save_workouts: onzin overgeslagen, geldige rij opgeslagen en ingekort','ok', n = 1 and k = 1
+      and (select length(title) <= 80 and length(notes) <= 1000 from public.workouts where user_id = a and external_id = 'ok1'), 'd', n || ' opgeslagen');
+  exception when others then
+    rep := rep || jsonb_build_object('c','save_workouts: onzin overgeslagen, geldige rij opgeslagen en ingekort','ok', false, 'd', sqlerrm);
+  end;
+  begin
+    perform public.save_workouts((select jsonb_agg(jsonb_build_object('source','manual','external_id','m'||g,'sport','yoga','day',current_date,'started_at',now(),'duration_s',600)) from generate_series(1,2500) g));
+    ok := false;
+  exception when others then ok := true; end;
+  rep := rep || jsonb_build_object('c','save_workouts weigert meer dan 2000 rijen per keer','ok', ok);
+  begin
+    j := public.training(null); j := public.training('1900-01-01'); j := public.training('9999-12-31');
+    perform public.workouts_before(null, null); perform public.workouts_before(current_date, -5); perform public.workouts_before(current_date, 100000);
+    n := public.delete_workouts(null, null, null) + public.delete_workouts(array[gen_random_uuid()], 'hacker', array['x']);
+    rep := rep || jsonb_build_object('c','training, workouts_before en delete_workouts met onzin: geen fout','ok', n = 0);
+  exception when others then
+    rep := rep || jsonb_build_object('c','training, workouts_before en delete_workouts met onzin: geen fout','ok', false, 'd', sqlerrm);
+  end;
+
   -- Een andere gebruiker blijft onaangeroerd
+  select array_agg(id) into ids from public.workouts where user_id = a;
   perform set_config('request.jwt.claims', jsonb_build_object('sub', b, 'role', 'authenticated')::text, true);
   j := public.app_state(current_date - 400, current_date, true);
   rep := rep || jsonb_build_object('c','gebruiker B ziet niets van A','ok', jsonb_array_length(j->'daily') = 0 and jsonb_array_length(j->'stats') = 0
-    and j #> '{fitness,herstel,score}' = 'null'::jsonb and j #> '{fitness,fitheid,hrmax}' = 'null'::jsonb);
+    and j #> '{fitness,herstel,score}' = 'null'::jsonb and j #> '{fitness,fitheid,hrmax}' = 'null'::jsonb
+    and jsonb_array_length(j #> '{training,workouts}') = 0);
+  n := public.delete_workouts(ids, 'manual', array['ok1']);
+  perform set_config('role', 'postgres', true);
+  select count(*) into k from public.workouts where user_id = a;
+  perform set_config('role', 'authenticated', true);
+  rep := rep || jsonb_build_object('c','gebruiker B kan trainingen van A niet verwijderen','ok', n = 0 and k = 1 and cardinality(ids) = 1);
 
   -- Account verwijderen ruimt ook de cache op (koppeling met cascade)
   perform set_config('role', 'postgres', true);
