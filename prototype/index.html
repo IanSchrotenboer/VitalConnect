@@ -20,7 +20,7 @@
 --dial:#123430;--dink:#f3f7f5;--dmut:#a9bdb7;
 --act:light-dark(#d86f31,#f5935a);--hart:light-dark(#d04e6a,#ec7290);--slaap:light-dark(#5865d6,#8c97f2);--herst:light-dark(#2f9c8f,#4cc3b3);--lich:light-dark(#ad7e24,#ddb15a);
 --good:light-dark(#1e7f5c,#4cc79a);--src-hc:light-dark(#2f7d6e,#3a9483);--src-gh:light-dark(#3f7f4a,#4e9659);--src-gm:light-dark(#2b5fa8,#3b72c4);--bad:light-dark(#b4462b,#f07d5f);
---dact:#f5935a;--dhart:#ec7290;--dslaap:#8c97f2;--dherst:#4cc3b3;--dlich:#ddb15a;--dgood:#4cc79a}
+--ring1:#ff8438;--ring2:#26e8c8;--ring3:#7b83ff;--dact:#f5935a;--dhart:#ec7290;--dslaap:#8c97f2;--dherst:#4cc3b3;--dlich:#ddb15a;--dgood:#4cc79a}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
 html,body{margin:0}
@@ -43,11 +43,26 @@ button,input,select{font:inherit;color:inherit}button{cursor:pointer}
 .ib.spin svg{animation:sp .9s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
 .dmid{display:grid;grid-template-columns:150px minmax(0,1fr);gap:20px;align-items:center;margin:16px 8px 0 0}
 .rsvg{width:100%;height:auto;display:block}
-.rt{fill:none;stroke-width:13;stroke-opacity:.22}.rp{fill:none;stroke-width:13;stroke-linecap:round;transition:stroke-dasharray .9s cubic-bezier(.3,.7,.2,1)}
+.rt{fill:none;stroke-width:13;stroke:rgba(255,255,255,.08)}.rp{fill:none;stroke-width:13;stroke-linecap:round;transition:stroke-dasharray .9s cubic-bezier(.3,.7,.2,1)}
 .rsvg text{fill:var(--dink);font:700 22px Figtree,sans-serif;text-anchor:middle}
 .leg{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 .leg b{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;color:var(--dmut)}
 .leg span{font-size:22px}.leg small{color:var(--dmut);font-size:14px;font-weight:400}
+.leg li{min-width:0}.leg b{flex-wrap:wrap;column-gap:8px;row-gap:0}
+.leg .pc{margin-left:auto;font-style:normal;font-size:13px;font-weight:600}
+.mot .arr{display:none;width:18px;height:18px;flex:none;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* Donker (OLED-zwart): begroeting los op zwart, ringen in een tegel zoals de andere tegels (ontwerp C) */
+:root[data-scheme=dark] .dial{background:none;color:var(--ink);border-radius:0;padding:max(16px,env(safe-area-inset-top,0px)) 8px 0 16px}
+:root[data-scheme=dark] .dtop{padding-left:4px}
+:root[data-scheme=dark] .dtop small,:root[data-scheme=dark] .leg b,:root[data-scheme=dark] .leg small,:root[data-scheme=dark] .upd,:root[data-scheme=dark] .demo{color:var(--mut)}
+:root[data-scheme=dark] .rsvg text{fill:var(--ink)}
+:root[data-scheme=dark] .rt{stroke:#2a312f}
+:root[data-scheme=dark] .dtile{background:var(--card);border-radius:24px;padding:20px 18px;margin:12px 8px 0 0}
+:root[data-scheme=dark] .dmid{margin:0}
+:root[data-scheme=dark] .mot{margin:18px 0 0;padding:14px 0 0;border-radius:0;background:none;border-top:1px solid var(--line);font-weight:400;font-size:16px;display:flex;align-items:center;gap:10px}
+:root[data-scheme=dark] .mot .arr{display:block}
+:root[data-scheme=dark] .upd,:root[data-scheme=dark] .demo{padding-left:4px}
+:root[data-scheme=dark] .mot.ok{color:var(--good)}
 .dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
 .mot{margin:16px 8px 0 0;padding:10px 14px;border-radius:14px;background:rgba(243,247,245,.08);font-weight:600;font-size:15px}
 .mot.ok{color:var(--dgood)}
@@ -158,6 +173,7 @@ button,input,select{font:inherit;color:inherit}button{cursor:pointer}
 @media(prefers-reduced-motion:reduce){.in-r,.in-l{animation:none}}
 @media(max-width:380px){.dmid{grid-template-columns:120px minmax(0,1fr);gap:14px}.tv .num{font-size:24px}}
 /* heel smal: buitenscherm van een klaptelefoon */
+@media(max-width:339px){:root[data-scheme=dark] .dtile{padding:16px 14px}:root[data-scheme=dark] .dmid{grid-template-columns:minmax(0,1fr);justify-items:center;gap:16px}:root[data-scheme=dark] .dmid .rsvg{max-width:150px}:root[data-scheme=dark] .leg{width:100%}}
 @media(max-width:339px){.grid{grid-template-columns:minmax(0,1fr)}.tile.l{grid-column:auto}.trio{grid-template-columns:minmax(0,1fr)}.dmid{grid-template-columns:108px minmax(0,1fr);gap:12px}}
 /* breed: opengevouwen foldable of tablet; tabbladen aan de zijkant, meer kolommen */
 @media(min-width:600px){
@@ -260,12 +276,17 @@ const wk=Array.isArray(o.wk)?o.wk:[];d.wk=wk.filter(w=>w&&typeof w==='object'&&t
 return d}
 let S;try{S=clean(JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S=fresh()}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
-const applyTheme=()=>{const r=document.documentElement;if(S.theme==='light'||S.theme==='dark')r.dataset.theme=S.theme;else delete r.dataset.theme};applyTheme();
+// data-scheme = het schema dat echt geldt (ook bij Systeem), voor regels die meer dan een kleur wisselen
+const DARKQ=matchMedia('(prefers-color-scheme: dark)');
+const applyTheme=()=>{const r=document.documentElement;if(S.theme==='light'||S.theme==='dark')r.dataset.theme=S.theme;else delete r.dataset.theme;
+  r.dataset.scheme=S.theme==='dark'||(S.theme!=='light'&&DARKQ.matches)?'dark':'light'};applyTheme();
+DARKQ.addEventListener?.('change',applyTheme);
 const goal=id=>id in S.goal?S.goal[id]:MI[id].g;
 const today=id=>series(id)[N-1];
 const col=(id,dial)=>`var(--${dial?'d':''}${MI[id].cat})`;
 // Ringen krijgen een kleur per positie, zodat twee doelen uit dezelfde categorie niet gelijk kleuren
-const RING=['var(--dact)','var(--dherst)','var(--dslaap)'];
+// Dagringen: kleur per positie (abrikoos, zeegroen, indigo), fel; gelijk aan RING_COLORS in Theme.kt
+const RING=['var(--ring1)','var(--ring2)','var(--ring3)'];
 const nl=(v,d=0)=>v.toLocaleString(NL,{minimumFractionDigits:d,maximumFractionDigits:d});
 const fmtH=v=>{let h=Math.floor(v),m=Math.round((v-h)*60);if(m===60){h++;m=0}return`${h}u ${String(m).padStart(2,'0')}m`};
 const fmt=(id,v)=>v==null?'–':id==='sleep'?fmtH(v):nl(v,MI[id].d);
@@ -303,9 +324,9 @@ function renderToday(){
   $('#v-today').innerHTML=`<header class="dial">
     <div class="dtop"><div class="t"><small>${date.charAt(0).toUpperCase()+date.slice(1)}</small><h1 class="fit">${greet}</h1></div>
     <button class="ib${refreshing==='done'?' done':''}" id="syncBtn" data-act="sync" aria-label="${refreshing==='done'?'Bijgewerkt':'Bijwerken'}">${refreshing==='done'?I.check:I.sync}</button><button class="ib" data-act="settings" aria-label="Profiel en koppelingen">${I.person}</button></div>
-    ${rings.length?`<div class="dmid"><svg class="rsvg" viewBox="0 0 150 150" role="img" aria-label="Dagdoelen ${avg}% gehaald">${rings.map((id,i)=>{const r=R[i],c=2*Math.PI*r;return`<circle cx="75" cy="75" r="${r}" class="rt" style="stroke:${RING[i]}"/><circle cx="75" cy="75" r="${r}" class="rp" style="stroke:${RING[i]}" stroke-dasharray="0 ${c}" data-d="${c*Math.min(fr[i],1)} ${c}" transform="rotate(-90 75 75)"/>`}).join('')}<text x="75" y="83">${avg}%</text></svg>
-    <ul class="leg">${rings.map((id,i)=>`<li><b><i class="dot" style="background:${RING[i]}"></i>${MI[id].n}</b><span class="num">${fmt(id,today(id))}</span> <small>/ ${fmt(id,goal(id))}</small></li>`).join('')}</ul></div>
-    ${S.lay.motivation?`<div class="mot ${open?'':'ok'}">${mot}</div>`:''}`:`<p class="mot">Kies tot drie dagdoelen via Aanpassen om hier je voortgang te zien.</p>`}
+    ${rings.length?`<div class="dtile"><div class="dmid"><svg class="rsvg" viewBox="0 0 150 150" role="img" aria-label="Dagdoelen ${avg}% gehaald">${rings.map((id,i)=>{const r=R[i],c=2*Math.PI*r;return`<circle cx="75" cy="75" r="${r}" class="rt"/><circle cx="75" cy="75" r="${r}" class="rp" style="stroke:${RING[i]}" stroke-dasharray="0 ${c}" data-d="${c*Math.min(fr[i],1)} ${c}" transform="rotate(-90 75 75)"/>`}).join('')}<text x="75" y="83">${avg}%</text></svg>
+    <ul class="leg">${rings.map((id,i)=>`<li><b><i class="dot" style="background:${RING[i]}"></i>${MI[id].n}<em class="pc num" style="color:${RING[i]}">${Math.round(fr[i]*100)}%</em></b><span class="num">${fmt(id,today(id))}</span> <small>/ ${fmt(id,goal(id))}</small></li>`).join('')}</ul></div>
+    ${S.lay.motivation?`<div class="mot ${open?'':'ok'}"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true" style="stroke:${open?RING[rings.indexOf(open[0])]:'var(--good)'}"><path d="${open?'M5 12h14M13 6l6 6-6 6':'M5 12.5l4.5 4.5L19 7.5'}"/></svg><span>${mot}</span></div>`:''}</div>`:`<p class="mot">Kies tot drie dagdoelen via Aanpassen om hier je voortgang te zien.</p>`}
     <p class="upd${refreshing==='done'?' ok':''}" aria-live="polite">Bijgewerkt om ${syncedAt.toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'})}</p>
     <p class="demo">Preview met voorbeelddata</p></header>
   <div class="pad"><div class="sh"><h2>Jouw metrics</h2><button class="lnk" data-act="edit">${I.sliders}Aanpassen</button></div>
@@ -695,7 +716,7 @@ function profileHtml(){
   <div class="sh" style="margin-bottom:0"><h2>Account</h2></div>
   <div class="card"><span class="gl">Je data is van jou. Je kunt alles exporteren of je account met alle data verwijderen.</span>
   <div class="row"><button class="btn">Mijn data exporteren</button><button class="btn" data-act="logout">Uitloggen</button></div><a class="lnk" style="padding:0;text-decoration:none" href="https://app.vital-connect.nl/privacy.html">Privacyverklaring</a><button class="lnk" style="color:var(--bad);padding:0">Account verwijderen</button></div>
-  <p class="gl" style="margin:4px">Vital Connect 1.13.0 · preview</p>`;
+  <p class="gl" style="margin:4px">Vital Connect 1.14.0 · preview</p>`;
 }
 const SRCS={hc:['hc','H','var(--src-hc)','Health Connect','Data van apps op deze telefoon, zoals Google Fit, Samsung Health en de Suunto-app.','@sync'],
   google:['google','F','var(--src-gh)','Google Health','Data van Fitbit, Pixel Watch en de Google Health-app.','@sync'],

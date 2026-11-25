@@ -77,6 +77,9 @@ fun Rings(
     modifier: Modifier = Modifier,
     description: String? = null,
     refreshing: Boolean = false,
+    /** Kleur van het spoor onder elke ring; neutraal, zodat de ringkleur niet troebel wordt. */
+    track: Color = Color.White.copy(alpha = 0.08f),
+    centerColor: Color = DialPalette.dialInk,
 ) {
     var started by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { started = true }
@@ -97,12 +100,12 @@ fun Rings(
                 val inset = w / 2 + i * (w + gap)
                 val sz = Size(d - 2 * inset, d - 2 * inset)
                 val tl = Offset((size.width - sz.width) / 2, (size.height - sz.height) / 2)
-                drawArc(c.copy(alpha = 0.22f), 0f, 360f, false, tl, sz, style = Stroke(w))
+                drawArc(track, 0f, 360f, false, tl, sz, style = Stroke(w))
                 val sweep = 360f * shown[i] * t
                 if (sweep > 0.5f) drawArc(c.copy(alpha = pulse), -90f, sweep, false, tl, sz, style = Stroke(w, cap = StrokeCap.Round))
             }
         }
-        Text(center, style = MaterialTheme.typography.titleLarge, color = DialPalette.dialInk)
+        Text(center, style = MaterialTheme.typography.titleLarge, color = centerColor)
     }
 }
 
