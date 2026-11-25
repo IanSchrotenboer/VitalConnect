@@ -47,6 +47,8 @@ data class Palette(
     val good: Color,
     val bad: Color,
     val warn: Color,
+    // Statuskleur voor "Let op" (stip en tekst); warn is alleen een achtergrond
+    val caution: Color,
     // Herkenningskleuren van de bronnen (koppelingen)
     val srcHealthConnect: Color,
     val srcGoogle: Color,
@@ -61,7 +63,7 @@ private val Light = Palette(
     // Abrikoos en oker iets donkerder dan in de wijzerplaat: grafieklijnen halen zo 3:1 op wit
     activity = Color(0xFFD86F31), heart = Color(0xFFD04E6A), sleep = Color(0xFF5865D6),
     body = Color(0xFFAD7E24), recovery = Color(0xFF2F9C8F),
-    good = Color(0xFF1E7F5C), bad = Color(0xFFB4462B), warn = Color(0xFFFFF4E0),
+    good = Color(0xFF1E7F5C), bad = Color(0xFFB4462B), warn = Color(0xFFFFF4E0), caution = Color(0xFFB36B00),
     srcHealthConnect = Color(0xFF2F7D6E), srcGoogle = Color(0xFF3F7F4A), srcGarmin = Color(0xFF2B5FA8),
 )
 
@@ -73,7 +75,7 @@ private val Dark = Palette(
     dial = Color(0xFF123430), dialInk = Color(0xFFF3F7F5), dialMuted = Color(0xFFA9BDB7),
     activity = Color(0xFFF5935A), heart = Color(0xFFEC7290), sleep = Color(0xFF8C97F2),
     body = Color(0xFFDDB15A), recovery = Color(0xFF4CC3B3),
-    good = Color(0xFF4CC79A), bad = Color(0xFFF07D5F), warn = Color(0xFF2E2717),
+    good = Color(0xFF4CC79A), bad = Color(0xFFF07D5F), warn = Color(0xFF2E2717), caution = Color(0xFFE8B04A),
     srcHealthConnect = Color(0xFF3A9483), srcGoogle = Color(0xFF4E9659), srcGarmin = Color(0xFF3B72C4),
 )
 
@@ -123,6 +125,18 @@ fun Palette.colorOf(c: Category): Color = when (c) {
     Category.Sleep -> sleep
     Category.Recovery -> recovery
     Category.Body -> body
+}
+
+/**
+ * Categoriekleur voor tekst (zoals Record op Gezondheid). In donker is dat de categoriekleur zelf (≥ 5,6:1 op de tegel);
+ * in licht een donkerdere tint met minstens 4,5:1 op wit, zoals ringInk bij de ringen.
+ */
+fun Palette.inkOf(metric: String): Color = if (dark) colorOf(metric) else when (categoryOf(metric)) {
+    Category.Activity -> Color(0xFFB85A23)
+    Category.Heart -> Color(0xFFCD4260)
+    Category.Sleep -> sleep
+    Category.Recovery -> Color(0xFF278176)
+    Category.Body -> Color(0xFF966D1F)
 }
 
 /** Cijfers met vaste breedte, zodat waarden onder elkaar netjes uitlijnen. */

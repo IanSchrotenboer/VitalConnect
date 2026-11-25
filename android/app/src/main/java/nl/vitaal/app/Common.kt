@@ -91,6 +91,9 @@ fun fmtHours(v: Double): String {
 /** Eenheid zoals hij naast het getal staat; slaap heeft die al in het getal. */
 fun unitOf(metric: String, unit: String): String = if (metric == "sleep") "" else unit
 
+/** Uren in een zin: hele uren als "8 uur", anders als fmtHours ("7u 30m"). */
+fun hoursText(v: Double): String = if (abs(v - Math.round(v)) < 1.0 / 120) "${Math.round(v)}\u00A0uur" else fmtHours(v)
+
 /** Grote getallen kort, voor totalen: 1.234.567 → "1,2 mln". */
 fun fmtCompact(v: Double): String = when {
     abs(v) >= 1_000_000 -> String.format(NL, "%.1f mln", v / 1_000_000)

@@ -62,11 +62,11 @@ class TrainingTest {
     @Test fun meldingVerborgenTrainingen() {
         fun f(src: Int, walks: Int, mode: String = "google_health", min: Int = 0, light: Boolean = false) =
             filterNoteText(TrainingFilter("auto", mode, min, light, 95, src, walks))
-        assertEquals("244 trainingen uit Health Connect tellen niet mee.", f(244, 0))
-        assertEquals("1 training uit Health Connect telt niet mee.", f(1, 0))
-        assertEquals("3 korte wandelingen tellen niet mee.", f(0, 3, min = 20))
-        assertEquals("1 lichte wandeling telt niet mee.", f(0, 1, light = true))
-        assertEquals("10 trainingen uit andere bronnen en 2 korte of lichte wandelingen tellen niet mee.",
+        assertEquals("Verborgen: 244 dubbele of losse registraties uit Health Connect.", f(244, 0))
+        assertEquals("Verborgen: 1 dubbele of losse registratie uit Health Connect.", f(1, 0))
+        assertEquals("Verborgen: 3 korte wandelingen.", f(0, 3, min = 20))
+        assertEquals("Verborgen: 1 lichte wandeling.", f(0, 1, light = true))
+        assertEquals("Verborgen: 10 dubbele of losse registraties uit andere bronnen en 2 korte of lichte wandelingen.",
             f(10, 2, mode = "health_connect", min = 20, light = true))
     }
 
@@ -91,5 +91,50 @@ class UrenTest {
         assertEquals("0 min", fmtHours(0.0))
         assertEquals("0 min", fmtHours(-1.0))
         assertEquals("1u 00m", fmtHours(0.9999))
+    }
+}
+
+/** De zin onder de ringen en het herstel-advies. */
+class ZinnenTest {
+    private fun r(metric: String, value: Double, goal: Double, name: String = metric, unit: String = "") =
+        RingGoal(metric, name, unit, value, goal, (value / goal).toFloat())
+
+    @Test fun motivatie() {
+        // Slaap staat het dichtst bij af, maar je kunt overdag alleen nog bewegen
+        val a = motivationLine(listOf(r("steps", 6000.0, 10000.0, "Stappen"), r("sleep", 7.07, 8.0, "Slaapduur")))
+        assertEquals(0, a.ring); assertEquals("Nog 4.000 stappen tot je doel voor stappen.", a.text)
+        // Alleen slaap nog open: vooruitkijken
+        val b = motivationLine(listOf(r("steps", 12000.0, 10000.0), r("sleep", 7.07, 8.0)))
+        assertEquals(1, b.ring); assertEquals("Vanavond op tijd naar bed voor je 8\u00A0uur slaap.", b.text)
+        val c = motivationLine(listOf(r("sscore", 70.0, 80.0)))
+        assertEquals("Vanavond op tijd naar bed voor een goede slaapscore.", c.text)
+        // Alleen iets open dat je niet kunt sturen
+        val d = motivationLine(listOf(r("steps", 12000.0, 10000.0), r("hrv", 40.0, 50.0)))
+        assertEquals(null, d.ring); assertEquals("Je bewegingsdoelen voor vandaag zijn gehaald.", d.text)
+        assertEquals("Alle dagdoelen gehaald. Mooi werk!", motivationLine(listOf(r("steps", 12000.0, 10000.0))).text)
+        assertEquals("Alle dagdoelen gehaald. Mooi werk!", motivationLine(emptyList()).text)
+    }
+
+    @Test fun herstelAdvies() {
+        fun band(bad: Boolean) = Band(true, 50.0, 45.0, 55.0, 30.0, 70.0, null, bad, 7, 30)
+        fun h(hrv: Boolean, rhr: Boolean, sleep: Boolean) =
+            Herstel(60, 1, band(hrv), band(rhr), SleepFactor(true, 7.0, 7.0, 8.0, sleep, 7), emptyList())
+        assertEquals("Je slaap is deze week korter dan je doel.", deviationText(h(false, false, true)))
+        assertEquals("Je HRV ligt onder je normaal en je rusthartslag ligt boven je normaal.", deviationText(h(true, true, false)))
+        assertEquals("Je HRV ligt onder je normaal, je rusthartslag ligt boven je normaal en je slaap is deze week korter dan je doel.",
+            deviationText(h(true, true, true)))
+        assertEquals("Een signaal wijkt af van je normaal.", deviationText(h(false, false, false)))
+    }
+}
+
+/** Ronde waarden op de grafiekas. */
+class AsTest {
+    @Test fun rondeStappen() {
+        assertEquals(listOf(4.0, 6.0, 8.0, 10.0), niceTicks(4.32, 8.64))
+        assertEquals(listOf(50.0, 52.0, 54.0, 56.0, 58.0), niceTicks(51.2, 56.8))
+        assertEquals(listOf(0.0, 5000.0, 10000.0, 15000.0), niceTicks(0.0, 12960.0))
+        assertEquals(listOf(74.0, 75.0, 76.0), niceTicks(74.2, 75.8))
+        assertEquals(listOf(0.0, 1.0), niceTicks(Double.NaN, 3.0))
+        assertTrue(niceTicks(5.0, 5.0).size >= 2)
     }
 }

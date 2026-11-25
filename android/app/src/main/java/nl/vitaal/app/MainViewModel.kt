@@ -2,6 +2,8 @@ package nl.vitaal.app
 
 import android.app.Application
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.health.connect.client.HealthConnectClient
@@ -173,7 +175,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     // Synchroniseren en meldingen (instellingen van dit toestel)
     private val device = DeviceSettings(app)
-    var syncMinutes by mutableStateOf(device.syncMinutes); private set
+    var syncMinutes by mutableIntStateOf(device.syncMinutes); private set
     var notifyGoals by mutableStateOf(device.notifyGoals); private set
     var notifyStatus by mutableStateOf(device.notifyStatus); private set
     var notificationsAllowed by mutableStateOf(Notifier.allowed(app)); private set
@@ -184,7 +186,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Welke trainingen meetellen (profiel): auto, google_health, health_connect of all; en alleen zelf gestart. */
     var trainingSource by mutableStateOf("auto"); private set
     /** Wandelingen korter dan dit (minuten) tellen niet mee; 0 = uit. */
-    var trainingWalkMin by mutableStateOf(0); private set
+    var trainingWalkMin by mutableIntStateOf(0); private set
     /** Lichte wandelingen (hartslag onder de grens, of trager dan 4 km/u) tellen niet mee. */
     var trainingWalkLight by mutableStateOf(false); private set
     /** Trainingen ouder dan 90 dagen, geladen met "Oudere trainingen laden". */
@@ -209,7 +211,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     // Detailgrafiek
     var trendMetric by mutableStateOf("steps"); private set
-    var trendDays by mutableStateOf(30); private set
+    var trendDays by mutableIntStateOf(30); private set
     /** 2 × trendDays dagen: de tweede helft is de getoonde periode, de eerste de vorige. */
     var trendSeries by mutableStateOf<List<TrendPoint>>(emptyList()); private set
     var trendSource by mutableStateOf<String?>(null); private set
@@ -217,7 +219,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Register van de server; leeg (oude server) = alles wat de app kent staat open. */
     var sources by mutableStateOf<Map<String, SourceInfo>>(emptyMap()); private set
     var hcStatus by mutableStateOf(HcStatus.UNKNOWN); private set
-    var lastSync by mutableStateOf(hc.lastSync); private set
+    var lastSync by mutableLongStateOf(hc.lastSync); private set
     var refresh by mutableStateOf(RefreshState.Idle); private set
     /** Waarom vernieuwen mislukte, kort, voor onder de dagringen. */
     var refreshError by mutableStateOf<String?>(null); private set

@@ -20,6 +20,7 @@
 --ringink1:light-dark(#b8500f,#ff8438);--ringink2:light-dark(#0c7c6a,#26e8c8);--ringink3:light-dark(#4f57e0,#7b83ff);--track:light-dark(#e3e9e6,#2a312f);
 --dial:#123430;--dink:#f3f7f5;--dmut:#a9bdb7;
 --act:light-dark(#d86f31,#f5935a);--hart:light-dark(#d04e6a,#ec7290);--slaap:light-dark(#5865d6,#8c97f2);--herst:light-dark(#2f9c8f,#4cc3b3);--lich:light-dark(#ad7e24,#ddb15a);
+--actink:light-dark(#b85a23,#f5935a);--hartink:light-dark(#cd4260,#ec7290);--slaapink:var(--slaap);--herstink:light-dark(#278176,#4cc3b3);--lichink:light-dark(#966d1f,#ddb15a);--caution:light-dark(#b36b00,#e8b04a);
 --good:light-dark(#1e7f5c,#4cc79a);--src-hc:light-dark(#2f7d6e,#3a9483);--src-gh:light-dark(#3f7f4a,#4e9659);--src-gm:light-dark(#2b5fa8,#3b72c4);--bad:light-dark(#b4462b,#f07d5f);
 --ring1:#ff8438;--ring2:#26e8c8;--ring3:#7b83ff;--dact:#f5935a;--dhart:#ec7290;--dslaap:#8c97f2;--dherst:#4cc3b3;--dlich:#ddb15a;--dgood:#4cc79a}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
@@ -28,7 +29,7 @@ html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font:16px/1.5 Figtree,system-ui,sans-serif;overflow-x:clip}
 .app{max-width:560px;margin:0 auto;min-height:100vh;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px));position:relative}
 h1,h2,h3{margin:0;line-height:1.1;letter-spacing:-.02em}
-h1{font-size:30px;font-weight:700}h2{font-size:20px;font-weight:600}h3{font-size:16px;font-weight:600}
+h1{font-size:30px;font-weight:700}h2{font-size:20px;font-weight:600}h3,h2.h3{font-size:16px;font-weight:600}
 button,input,select{font:inherit;color:inherit}button{cursor:pointer}
 :focus-visible{outline:3px solid var(--act);outline-offset:2px}
 .num{font-variant-numeric:tabular-nums;font-weight:700;letter-spacing:-.02em}
@@ -48,8 +49,8 @@ button,input,select{font:inherit;color:inherit}button{cursor:pointer}
 .rt{fill:none;stroke-width:13;stroke:var(--track)}.rp{fill:none;stroke-width:13;stroke-linecap:round;transition:stroke-dasharray .9s cubic-bezier(.3,.7,.2,1)}
 .rsvg text{fill:var(--ink);font:700 22px Figtree,sans-serif;text-anchor:middle}
 .leg{list-style:none;margin:0;padding:0;display:grid;gap:12px}
-.leg li{min-width:0}.leg b{display:flex;flex-wrap:wrap;align-items:center;column-gap:8px;row-gap:0;font-size:14px;font-weight:500;color:var(--mut)}
-.leg span{font-size:22px}.leg small{color:var(--mut);font-size:14px;font-weight:400}
+.leg li{min-width:0}.leg b{display:flex;flex-wrap:wrap;align-items:center;column-gap:8px;row-gap:0;font-size:14px;font-weight:500;color:var(--mut)}.leg .nm{flex:1 1 0;min-width:min-content;font-size:inherit}
+.leg span{font-size:22px}.leg small{white-space:nowrap}.leg small{color:var(--mut);font-size:14px;font-weight:400}
 .leg .pc{margin-left:auto;font-style:normal;font-size:13px;font-weight:600}
 .mot{margin:18px 0 0;padding:14px 0 0;border-top:1px solid var(--line);font-size:16px;display:flex;align-items:center;gap:10px}
 .mot .arr{width:18px;height:18px;flex:none;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -278,6 +279,10 @@ const RINGINK=['var(--ringink1)','var(--ringink2)','var(--ringink3)'];
 const nl=(v,d=0)=>v.toLocaleString(NL,{minimumFractionDigits:d,maximumFractionDigits:d});
 // 7,25 → "7u 15m"; onder het uur 0,93 → "56 min" (gelijk aan fmtHours in de app)
 const fmtH=v=>{const t=Math.round(Math.max(0,v)*60),h=Math.floor(t/60),m=t%60;return h?`${h}u ${String(m).padStart(2,'0')}m`:`${m} min`};
+// Ronde aswaarden (gelijk aan niceTicks in de app): stappen van 1, 2 of 5 × 10ⁿ, nooit kleiner dan 1
+function niceTicks(lo,hi,target=4){if(!isFinite(lo)||!isFinite(hi))return[0,1];const raw=((hi-lo)||1)/target,mag=10**Math.floor(Math.log10(raw)),
+  step=Math.max(1,[1,2,5,10].find(m=>m*mag>=raw)*mag),a=Math.floor(lo/step+1e-9)*step,b=Math.ceil(hi/step-1e-9)*step,n=Math.min(12,Math.max(1,Math.round((b-a)/step)));
+  return Array.from({length:n+1},(_,i)=>a+i*step)}
 const fmt=(id,v)=>v==null?'–':id==='sleep'?fmtH(v):nl(v,MI[id].d);
 const unit=id=>id==='sleep'?'':MI[id].u;
 const compact=v=>Math.abs(v)>=1e6?nl(v/1e6,1)+' mln':Math.abs(v)>=1e4?nl(v/1e3,0)+'k':nl(v,0);
@@ -300,13 +305,24 @@ function show(){const v=S.onb?'auth':editing?'edit':detail?'detail':settings?'se
 document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false'));window.scrollTo(0,0)}
 
 // ---------- Vandaag ----------
+// De zin onder de ringen (gelijk aan motivationLine in de app). Alleen beweging kun je vandaag nog bijsturen;
+// slaap ligt vast zodra je wakker bent: dan vooruitkijken naar vanavond.
+// 8 → "8 uur", 7,5 → "7u 30m"
+const urenTekst=v=>Math.abs(v-Math.round(v))<1/120?`${Math.round(v)}\u00a0uur`:fmtH(v);
+function motLine(rings,fr){
+  const open=rings.map((id,i)=>i).filter(i=>fr[i]<1);
+  if(!open.length)return{i:null,text:'Alle dagdoelen gehaald. Mooi werk!',done:true};
+  const move=open.filter(i=>MI[rings[i]].cat==='act').sort((a,b)=>fr[b]-fr[a])[0];
+  if(move!=null){const id=rings[move];return{i:move,text:`Nog ${fmt(id,goal(id)-today(id))} ${unit(id)} tot je doel voor ${MI[id].n.toLowerCase()}.`.replace('  ',' '),done:false}}
+  const night=open.find(i=>rings[i]==='sleep'||rings[i]==='sscore');
+  if(night!=null)return{i:night,text:rings[night]==='sleep'?`Vanavond op tijd naar bed voor je ${urenTekst(goal('sleep'))} slaap.`:'Vanavond op tijd naar bed voor een goede slaapscore.',done:false};
+  return{i:null,text:'Je bewegingsdoelen voor vandaag zijn gehaald.',done:true}}
 function renderToday(){
   const h=NOW.getHours(),first=(S.prof.name||'').trim().split(/\s+/)[0],greet=(h<12?'Goedemorgen':h<18?'Goedemiddag':'Goedenavond')+(first&&S.lay.greetName?',<span class="gn"> '+esc(first)+'</span>':'');
   const date=NOW.toLocaleDateString(NL,{weekday:'long',day:'numeric',month:'long'});
   const rings=S.rings.filter(id=>goal(id)&&!MI[id].lo).slice(0,3),R=[68,50,32];
   const fr=rings.map(id=>today(id)/goal(id)),avg=Math.round(mean(fr.map(f=>Math.min(f,1)))*100);
-  const open=rings.map((id,i)=>[id,fr[i]]).filter(x=>x[1]<1).sort((a,b)=>b[1]-a[1])[0];
-  const mot=open?`Nog ${fmt(open[0],goal(open[0])-today(open[0]))} ${unit(open[0])} tot je doel voor ${MI[open[0]].n.toLowerCase()}.`.replace('  ',' '):'Alle dagdoelen gehaald. Mooi werk!';
+  const ml=motLine(rings,fr);
   // Een metric in de ringen staat niet ook als tegel
   const tiles=S.order.filter(id=>!rings.includes(id));
   const rows=[];let pair=[];for(const id of tiles){if(S.size[id]==='l'){if(pair.length){rows.push(pair);pair=[]}rows.push([id])}else{pair.push(id);if(pair.length===2){rows.push(pair);pair=[]}}}if(pair.length)rows.push(pair);
@@ -314,8 +330,8 @@ function renderToday(){
     <div class="dtop"><div class="t"><small>${date.charAt(0).toUpperCase()+date.slice(1)}</small><h1 class="fit">${greet}</h1></div>
     <button class="ib${refreshing==='done'?' done':''}" id="syncBtn" data-act="sync" aria-label="${refreshing==='done'?'Bijgewerkt':'Bijwerken'}">${refreshing==='done'?I.check:I.sync}</button><button class="ib" data-act="settings" aria-label="Profiel en koppelingen">${I.person}</button></div>
     ${rings.length?`<div class="dtile"><div class="dmid"><svg class="rsvg" viewBox="0 0 150 150" role="img" aria-label="Dagdoelen ${avg}% gehaald">${rings.map((id,i)=>{const r=R[i],c=2*Math.PI*r;return`<circle cx="75" cy="75" r="${r}" class="rt"/><circle cx="75" cy="75" r="${r}" class="rp" style="stroke:${RING[i]}" stroke-dasharray="0 ${c}" data-d="${c*Math.min(fr[i],1)} ${c}" transform="rotate(-90 75 75)"/>`}).join('')}<text x="75" y="83">${avg}%</text></svg>
-    <ul class="leg">${rings.map((id,i)=>`<li><b><i class="dot" style="background:${RING[i]}"></i>${MI[id].n}<em class="pc num" style="color:${RINGINK[i]}">${Math.round(fr[i]*100)}%</em></b><span class="num">${fmt(id,today(id))}</span> <small>/ ${fmt(id,goal(id))}</small></li>`).join('')}</ul></div>
-    ${S.lay.motivation?`<div class="mot ${open?'':'ok'}"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true" style="stroke:${open?RINGINK[rings.indexOf(open[0])]:'var(--good)'}"><path d="${open?'M5 12h14M13 6l6 6-6 6':'M5 12.5l4.5 4.5L19 7.5'}"/></svg><span>${mot}</span></div>`:''}</div>`:`<p class="mot">Kies tot drie dagdoelen via Aanpassen om hier je voortgang te zien.</p>`}
+    <ul class="leg">${rings.map((id,i)=>`<li><b><i class="dot" style="background:${RING[i]}"></i><span class="nm">${MI[id].n}</span><em class="pc num" style="color:${RINGINK[i]}">${Math.round(fr[i]*100)}%</em></b><span class="num">${fmt(id,today(id))}</span> <small>/ ${fmt(id,goal(id))}</small></li>`).join('')}</ul></div>
+    ${S.lay.motivation?`<div class="mot ${ml.done?'ok':''}"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true" style="stroke:${ml.i!=null?RINGINK[ml.i]:'var(--good)'}"><path d="${ml.done?'M5 12.5l4.5 4.5L19 7.5':'M5 12h14M13 6l6 6-6 6'}"/></svg><span>${ml.text}</span></div>`:''}</div>`:`<p class="mot">Kies tot drie dagdoelen via Aanpassen om hier je voortgang te zien.</p>`}
     <p class="upd${refreshing==='done'?' ok':''}" aria-live="polite">Bijgewerkt om ${syncedAt.toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'})}</p>
     <p class="demo">Preview met voorbeelddata</p></header>
   <div class="pad"><div class="sh"><h2>Jouw metrics</h2><button class="lnk" data-act="edit">${I.sliders}Aanpassen</button></div>
@@ -344,7 +360,7 @@ function statCard(id){const m=MI[id],s=stats(id),sum=m.agg==='sum'&&id!=='sleep'
   return`<button class="card tap" data-open="${id}"><span style="display:flex;align-items:center;gap:8px"><i class="dot" style="background:${col(id)}"></i><h3>${m.n}</h3>${I.chev}</span>
   <span class="big"><span class="num">${f(s.last)}</span>${unit(id)?`<small>${unit(id)}</small>`:''}<em>vandaag</em></span>
   <span class="st"><div><small>${sum?'Gem. per dag':'Gemiddeld'}</small><b>${f(s.avg)}</b></div><div><small>Laatste 30 d.</small><b>${f(s.avg30)}</b></div>
-  <div><small>${m.lo?'Beste (laagste)':'Record'}</small><b style="color:${col(id)}">${f(m.lo?s.min:s.max)}</b></div>
+  <div><small>${m.lo?'Beste (laagste)':'Record'}</small><b style="color:var(--${MI[id].cat}ink)">${f(m.lo?s.min:s.max)}</b></div>
   <div><small>${sum?'Totaal':m.lo?'Hoogste':'Laagste'}</small><b>${sum?compact(s.total):f(m.lo?s.max:s.min)}</b></div></span>
   <span class="gl">${N} dagen gemeten</span></button>`}
 
@@ -360,7 +376,7 @@ function renderSleep(){
   <span style="display:flex;align-items:flex-end;gap:12px"><span class="num xl">${fmtH(last)}</span><span style="margin-left:auto;text-align:right"><small class="mut" style="display:block;font-size:13px">Score</small><span class="num" style="font-size:28px;color:var(--dslaap)">${nl(score)}</span></span></span>
   <span class="bar" style="height:10px;background:rgba(140,151,242,.2)"><b style="width:${Math.min(f,1)*100}%;background:${f>=1?'var(--dgood)':'var(--dslaap)'}"></b></span>
   <span style="font-weight:600;font-size:15px;${f>=1?'color:var(--dgood)':''}">${f>=1?`Slaapdoel van ${fmtH(g)} gehaald`:`${nl(f*100)}% van je doel van ${fmtH(g)}`}</span></button>
-  <div class="card"><h3>Laatste 14 nachten</h3><p class="mut" style="margin:0;font-size:15px">${si.toLocaleDateString(NL,{weekday:'long',day:'numeric',month:'short'})}: ${fmtH(nights[sleepSel])}</p>
+  <div class="card"><h2 class="h3">Laatste 14 nachten</h2><p class="mut" style="margin:0;font-size:15px">${si.toLocaleDateString(NL,{weekday:'long',day:'numeric',month:'short'})}: ${fmtH(nights[sleepSel])}</p>
   <div class="fig" id="sleepFig"><svg></svg></div>
   <div class="st" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><small>Gem. 7 nachten</small><b>${fmtH(avg7)}</b></div><div><small>Tekort deze week</small><b class="${debt>2?'dn':''}">${fmtH(debt)}</b></div><div><small>Beste nacht</small><b style="color:var(--slaap)">${fmtH(Math.max(...nights))}</b></div></div></div>
   ${S.lay.sleepAdvice?`<div class="tip">${tip}</div>`:''}
@@ -374,8 +390,9 @@ function drawChart(s,pts,o){
   const draw=()=>{const W=s.clientWidth,H=s.clientHeight;if(!W)return;const n=pts.length,vals=pts.map(p=>p.v);
     let lo=Math.min(...vals),hi=Math.max(...vals);if(o.goal){lo=Math.min(lo,o.goal);hi=Math.max(hi,o.goal)}
     if(o.bars){lo=0;hi*=1.08}else{const pd=(hi-lo)*.15||1;lo-=pd;hi+=pd}
+    const tk=niceTicks(lo,hi);lo=tk[0];hi=tk[tk.length-1];
     const L=W<400?40:48,R=8,T=10,B=24,iw=W-L-R,ih=H-T-B,bw=iw/n,y=v=>T+ih-(v-lo)/(hi-lo)*ih,x=i=>L+bw*(i+.5);
-    let g='';for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4,yy=y(v);g+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--line)"/>`;if(k%2===0)g+=`<text x="${L-6}" y="${yy+4}" text-anchor="end">${o.axis(v)}</text>`}
+    const ev=tk.length>4?2:1;let g='';tk.forEach((v,k)=>{const yy=y(v);g+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--line)"/>`;if(k%ev===0)g+=`<text x="${L-6}" y="${yy+4}" text-anchor="end">${o.axis(v)}</text>`});
     const step=n<=7?1:n<=31?7:n<=92?30:91;
     for(let i=n-1;i>=0;i-=step){const lb=n<=14&&n>7?pts[i].d.toLocaleDateString(NL,{day:'numeric'}):n<=7?pts[i].d.toLocaleDateString(NL,{weekday:'short'}):pts[i].d.toLocaleDateString(NL,{day:'numeric',month:'short'});g+=`<text x="${Math.min(Math.max(x(i),L+12),W-R-14)}" y="${H-6}" text-anchor="middle">${lb}</text>`}
     if(o.bars){const w=Math.max(bw*.62,1.5);pts.forEach((p,i)=>{g+=`<rect x="${x(i)-w/2}" y="${y(p.v)}" width="${w}" height="${Math.max(y(lo)-y(p.v),1)}" rx="${Math.min(w/2,6)}" style="fill:${o.color}" opacity="${i===o.sel?1:.42}"/>`})}
@@ -408,8 +425,11 @@ function herstel(){
   return{score,stand,hrv,rhr,sleep,trend,fit:{age,hrmax,pf,rhr7:rhr.value,vo2:today('vo2'),est:hrmax?pf*hrmax/rhr.value:null,
     zones:hrmax?[1,2,3,4,5].map(z=>[z,Math.round(hrmax*(.4+.1*z)),Math.round(hrmax*(.5+.1*z))]):[]}}}
 const STAND=[['Goed hersteld','var(--good)','Je lichaam is hersteld. Ruimte voor een stevige training.'],
-  ['Let op','var(--act)','Eén signaal wijkt af van je normaal. Train gerust, maar luister naar je lichaam.'],
-  ['Rustig aan','var(--slaap)','Meerdere signalen wijzen op vermoeidheid. Kies vandaag voor rust of een rustige training.']];
+  ['Let op','var(--caution)',' Train gerust, maar luister naar je lichaam.'],
+  ['Rustig aan','var(--slaap)',' Kies vandaag voor rust of een rustige training.']];
+// Welke signalen afwijken van je normaal (gelijk aan deviationText in de app)
+function afwijking(h){const d=[h.hrv.bad&&'je HRV ligt onder je normaal',h.rhr.bad&&'je rusthartslag ligt boven je normaal',h.sleep.bad&&'je slaap is deze week korter dan je doel'].filter(Boolean);
+  if(!d.length)return'Een signaal wijkt af van je normaal.';const z=d.length===1?d[0]:d.slice(0,-1).join(', ')+' en '+d[d.length-1];return z[0].toUpperCase()+z.slice(1)+'.'}
 const stateTxt=(b,lower)=>b.state==='normaal'?'Binnen je normale bereik.':b.state==='hoog'?(lower?'Hoger dan normaal: vaak een teken van vermoeidheid of een opkomende verkoudheid.':'Hoger dan normaal: goed hersteld.'):(lower?'Lager dan normaal: goed hersteld.':'Lager dan normaal: je lichaam staat onder spanning.');
 function factor(naam,b,u,lower,kort){const pos=x=>Math.max(0,Math.min(100,(x-b.min)/(b.max-b.min)*100)),r=Math.round;
   return`<span class="hf"><span class="hft"><b>${naam}</b><span class="num">${r(b.value)} ${u}</span></span><span class="gl">Normaal ${r(b.low)}–${r(b.high)} ${u}</span>
@@ -417,7 +437,7 @@ function factor(naam,b,u,lower,kort){const pos=x=>Math.max(0,Math.min(100,(x-b.m
   ${!kort||b.bad?`<span class="gl">${stateTxt(b,lower)}</span>`:''}</span>`}
 function sleepF(s,kort){return`<span class="hf"><span class="hft"><b>Slaap</b><span class="num">${fmtH(s.last)}</span></span><span class="gl">7 nachten ${fmtH(s.week)} gemiddeld, doel ${fmtH(s.need)}</span>
   ${!kort||s.bad?`<span class="gl">${s.bad?'Je slaapt deze week minder dan 90% van je doel.':'Je slaapt deze week genoeg.'}</span>`:''}</span>`}
-function herstelHead(h){const[lab,c,adv]=STAND[h.stand];return`<span class="hct"><span><span class="tn"><i class="dot" style="background:var(--herst)"></i>Herstel vandaag</span>
+function herstelHead(h){const[lab,c,a0]=STAND[h.stand],adv=h.stand?afwijking(h)+a0:a0;return`<span class="hct"><span><span class="tn"><i class="dot" style="background:var(--herst)"></i>Herstel vandaag</span>
   <span class="hl"><i class="dot" style="background:${c}"></i>${lab}</span></span><span class="hs num" aria-label="Herstelscore ${h.score} van 100">${h.score}</span></span><span class="hadv">${adv}</span>`}
 function herstelTile(){const h=herstel();return`<button class="card tap tile herst" data-open="herstel">${herstelHead(h)}
   ${factor('HRV, 7 dagen',h.hrv,'ms',false,true)}${factor('Rusthartslag, 7 dagen',h.rhr,'bpm',true,true)}${sleepF(h.sleep,true)}</button>`}
@@ -429,7 +449,7 @@ function renderHerstel(){const h=herstel(),f=h.fit,W=320,H=140,tr=h.trend,all=tr
   <div class="pad stack"><div class="card herst">${herstelHead(h)}${factor('HRV, 7 dagen',h.hrv,'ms',false,false)}${factor('Rusthartslag, 7 dagen',h.rhr,'bpm',true,false)}${sleepF(h.sleep,false)}</div>
   ${bodyCard('herstel')}<div class="card"><h3>HRV, laatste 30 dagen</h3><span class="gl">Lijn: je 7-daagse gemiddelde. Band: je normale bereik.</span>
   <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;overflow:visible" role="img" aria-label="HRV over 30 dagen met je normale bereik"><path d="${area}" fill="color-mix(in srgb,var(--herst) 30%,transparent)"/><path d="${line}" fill="none" stroke="var(--ink)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${x(tr.length-1)}" cy="${y(tr[tr.length-1].v)}" r="4" fill="var(--ink)"/></svg></div>
-  <div class="card"><h3>Fitheid</h3>${f.hrmax==null?`<span class="gl">Vul je geboortedatum in bij Profiel. Dan berekenen we je maximale hartslag, je hartslagzones en een schatting van je VO2max.</span>`:`
+  <div class="card"><h3>Fitheid</h3>${f.hrmax==null?`<span class="gl">Vul je geboortedatum in bij Profiel. Dan berekenen we je maximale hartslag, je hartslagzones en een schatting van je VO2max.</span><button class="btn" data-act="birth" style="align-self:flex-start">Geboortedatum invullen</button>`:`
   <div class="st"><div><small>Max. hartslag (geschat)</small><b>${f.hrmax} bpm</b></div><div><small>Rusthartslag, 7 dagen</small><b>${Math.round(f.rhr7)} bpm</b></div>
   <div><small>VO2max van je horloge</small><b>${nl(f.vo2,1)} ml/kg/min</b></div><div><small>VO2max (schatting)</small><b>${nl(f.est,1)} ml/kg/min</b></div></div>
   <b style="margin-top:4px">Hartslagzones</b>${f.zones.map(([z,a,b])=>`<span class="tm" style="font-size:15px;color:var(--ink)"><span>Zone ${z} · ${zn[z-1]}</span><span class="num">${a}–${b} bpm</span></span>`).join('')}
@@ -536,9 +556,9 @@ function renderTraining(){const F=visibleWk(),T=trainingSummary(),L=T.load,mx=Ma
   <span class="gl" style="margin-top:4px">Minuten per week</span><div class="wbars" role="img" aria-label="Minuten per week: ${T.weeks.map(w=>w.min).join(', ')}">${T.weeks.map((w,i)=>`<span><i style="height:${Math.max(3,52*w.min/mx)}px;opacity:${i===7?1:.35}"></i><small>${w.week.getDate()}/${w.week.getMonth()+1}</small></span>`).join('')}</div></div>
   <div class="card"><span class="gl">Trainingsbelasting</span>${L.ready?`<h3 style="margin:0">${v[0]}</h3><span>${v[1]}</span>
   <div class="st" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><small>Deze week</small><b>${Math.round(L.acute)}</b></div><div><small>Gewend</small><b>${Math.round(L.chronic)}</b></div><div><small>Vorm</small><b>${L.form>0?'+':''}${Math.round(L.form)}</b></div></div>
-  ${L.days<42?`<span class="gl">Na 6 weken trainen is dit betrouwbaar; nu ${L.days} dagen.</span>`:''}`:`<span>${T.max==null?'Vul je geboortedatum in bij Profiel. Dan rekenen we uit hoe zwaar je trainingen voor je lichaam zijn.':'Belasting rekenen we uit je gemiddelde hartslag per training.'}</span>`}
+  ${L.days<42?`<span class="gl">Na 6 weken trainen is dit betrouwbaar; nu ${L.days} dagen.</span>`:''}`:`<span>${T.max==null?'Vul je geboortedatum in bij Profiel. Dan rekenen we uit hoe zwaar je trainingen voor je lichaam zijn.':'Belasting rekenen we uit je gemiddelde hartslag per training.'}</span>${T.max==null?'<button class="btn" data-act="birth" style="align-self:flex-start">Geboortedatum invullen</button>':''}`}
   <details class="uk"><summary>Wat betekent dit voor je lichaam?</summary>${BODY.load.map(p=>`<p>${p}</p>`).join('')}</details></div>
-  ${F.hidden?`<div class="row" style="margin:0 4px;align-items:center;gap:8px;flex-wrap:nowrap"><span class="gl" style="flex:1">${[F.hs?(F.hs===1?'1 training ':F.hs+' trainingen ')+(F.mode==='google_health'?'uit Health Connect':'uit andere bronnen'):'',F.hw?(F.hw===1?'1 ':F.hw+' ')+(S.wmin&&S.wlight?'korte of lichte':S.wmin?'korte':'lichte')+(F.hw===1?' wandeling':' wandelingen'):''].filter(Boolean).join(' en ')} ${F.hidden===1?'telt':'tellen'} niet mee.</span><button class="btn" data-act="wfilter">Aanpassen</button></div>`:''}
+  ${F.hidden?`<div class="row" style="margin:0 4px;align-items:center;gap:8px;flex-wrap:nowrap"><span class="gl" style="flex:1">Verborgen: ${[F.hs?(F.hs===1?'1 dubbele of losse registratie ':F.hs+' dubbele of losse registraties ')+(F.mode==='google_health'?'uit Health Connect':'uit andere bronnen'):'',F.hw?(F.hw===1?'1 ':F.hw+' ')+(S.wmin&&S.wlight?'korte of lichte':S.wmin?'korte':'lichte')+(F.hw===1?' wandeling':' wandelingen'):''].filter(Boolean).join(' en ')}.</span><button class="btn" data-act="wfilter">Filter</button></div>`:''}
   ${Object.keys(by).sort().reverse().map(d=>`<h2 class="wkd">${dayLabel(d)}</h2>${by[d].map(w=>wkRow(w)).join('')}`).join('')}</div></div>`}
 function renderWorkout(id){const T=trainingSummary(),w=T.list.find(x=>x.id===id);if(!w){detail=null;show();return}
   const st=new Date(w.start),en=new Date(w.start+w.dur*1000),tm=d=>d.toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'});
@@ -641,7 +661,7 @@ function renderAuth(){
   let h='';
   if(S.onb==='login'){
     h=ah('Vital Connect','Je gezondheid op één plek: beweging, hart en slaap.')+`<div class="pad stack" style="margin-top:20px">
-    <h3 style="font-size:18px;line-height:1.3">Log in met je Google-account en importeer direct je gezondheidsgegevens.</h3>
+    <h2 class="h3" style="font-size:18px;line-height:1.3">Log in met je Google-account en importeer direct je gezondheidsgegevens.</h2>
     <button class="btn big google" data-act="google" ${busy==='login'?'disabled':''}>${busy==='login'?'Inloggen…':'Doorgaan met Google'}</button>
     <ul class="ul">${['Geen nieuw wachtwoord nodig','Koppel Google Health, Health Connect of Garmin in de volgende stap','Vul daarna je profiel aan; je naam staat er al in'].map(t=>`<li><i class="dot" style="background:var(--good)"></i>${t}</li>`).join('')}</ul>
     ${showEmail?`<div class="card"><h3>Met je e-mailadres</h3><label class="fld" for="a-mail">E-mailadres<input id="a-mail" type="email" autocomplete="email" style="width:14em;text-align:left"></label><label class="fld" for="a-pw">Wachtwoord<input id="a-pw" type="password" autocomplete="current-password" style="width:14em;text-align:left"></label>
@@ -706,7 +726,7 @@ function profileHtml(){
   <div class="sh" style="margin-bottom:0"><h2>Account</h2></div>
   <div class="card"><span class="gl">Je data is van jou. Je kunt alles exporteren of je account met alle data verwijderen.</span>
   <div class="row"><button class="btn">Mijn data exporteren</button><button class="btn" data-act="logout">Uitloggen</button></div><a class="lnk" style="padding:0;text-decoration:none" href="https://app.vital-connect.nl/privacy.html">Privacyverklaring</a><button class="lnk" style="color:var(--bad);padding:0">Account verwijderen</button></div>
-  <p class="gl" style="margin:4px">Vital Connect 1.15.0 · preview</p>`;
+  <p class="gl" style="margin:4px">Vital Connect 1.16.0 · preview</p>`;
 }
 const SRCS={hc:['hc','H','var(--src-hc)','Health Connect','Data van apps op deze telefoon, zoals Google Fit, Samsung Health en de Suunto-app.','@sync'],
   google:['google','F','var(--src-gh)','Google Health','Data van Fitbit, Pixel Watch en de Google Health-app.','@sync'],
@@ -783,7 +803,7 @@ function renderEdit(){
     <button class="lnk" data-rdel="${id}" style="color:var(--bad)">Weg</button></div>`).join('')}
     ${rings.length<3?`<span class="gl">Toevoegen</span><div class="row">${M.filter(m=>!m.lo&&!rings.includes(m.id)).sort((a,b)=>a.n.localeCompare(b.n)).map(m=>`<button class="pill" data-radd="${m.id}">+ ${m.n}</button>`).join('')}</div>`:''}</div>
     <div class="sh" style="margin-bottom:0"><h2>Begroeting</h2></div>
-    <div class="card">${tog('data-lay','greetName','Je voornaam','Goedemorgen, Sam',S.lay.greetName)}${tog('data-lay','motivation','Motiverende zin','Wat je vandaag nog kunt halen',S.lay.motivation)}</div>
+    <div class="card">${tog('data-lay','greetName','Je voornaam','Goedemorgen, '+esc((S.prof.name||'Sam').trim().split(/\s+/)[0]),S.lay.greetName)}${tog('data-lay','motivation','Motiverende zin','Wat je vandaag nog kunt halen',S.lay.motivation)}</div>
     <div class="sh" style="margin-bottom:0"><h2>Tegels</h2></div>
     <div class="card">${tog('data-lay','herstel','Herstel vandaag','Score uit HRV, rusthartslag en slaap, boven je metrics',S.lay.herstel)}</div>`+
     ids.map(id=>{const m=MI[id],ring=rings.includes(id),on=S.order.includes(id)&&!ring,o=openEdit===id;
@@ -831,6 +851,7 @@ document.addEventListener('click',e=>{
   else if(d.act==='back'){detail=null;settings=false;draft=null;show()}
   else if(d.act==='settings'){settings=true;ptab='profile';draft=null;renderSettings();show()}
   else if(d.act==='wfilter'){settings=true;ptab='conn';draft=null;renderSettings();show()}
+  else if(d.act==='birth'){detail=null;settings=true;ptab='profile';draft=null;renderSettings();show();$('#p-birth')?.focus()}
   else if(d.ptab){ptab=d.ptab;renderSettings()}
   else if(d.sex){draft.sex=draft.sex===d.sex?null:d.sex;rr()}
   else if(d.themeSet){S.theme=d.themeSet;save();applyTheme();renderSettings()}
