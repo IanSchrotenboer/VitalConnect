@@ -41,7 +41,8 @@
 - Ontwerpskill: `.claude/skills/impeccable` (Impeccable 4.10, Apache 2.0; zonder de hooks). Gebruik `/impeccable critique`, `audit`, `polish` enz. voor ontwerpwerk aan de app en de preview.
 - Kleuren staan in `android/.../Theme.kt`, `res/values(-night)/colors.xml` (opstartachtergrond), als CSS-variabelen bovenaan `prototype/index.html` en in `site/style.css`; houd ze gelijk. Licht = salie: achtergrond #DCE6E1, tegels #FFFFFF zonder rand, lijnen #CCD7D2. Donker = OLED-zwart: achtergrond #000000, tegels #1D2321, lijnen #333B38.
 - Tabbladen: Vandaag, Gezondheid (statistieken over de hele geschiedenis), Slaap. Koppelingen en account achter het persoon-icoon.
-- De dagringen kleuren per positie (abrikoos, zeegroen, indigo), niet per categorie.
+- De dagringen kleuren per positie, fel en gelijk in licht en donker: abrikoos #FF8438, zeegroen #26E8C8, indigo #7B83FF (`RING_COLORS` in Theme.kt, `--ring1..3` in de preview). De sporen onder de ringen zijn neutraal, nooit een doorzichtige ringkleur.
+- Blok bovenaan Vandaag: licht = dennengroene wijzerplaat (#123430); donker = begroeting los op zwart en de dagringen in een tegel (#1D2321) met percentages per doel (ontwerp C, canvas "Vital Connect – dagringen in donkere modus").
 
 ## Backend
 - Koppelingen: zie `docs/koppelingen.md`. Eén bestand per bron in `supabase/functions/_shared/providers/`; generieke functies

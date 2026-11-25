@@ -169,6 +169,27 @@ for (const [naam, waarde] of [
   await p.context().close();
 }
 
+// 5c. Donker (OLED-zwart): dagringen in een tegel; niets mag afkappen of horizontaal scrollen
+for (const breed of [260, 300, 360, 412, 900]) {
+  const p = await nieuw(JSON.stringify({ onb: null, theme: "dark", prof: { name: "Maximiliaan-Alexander" } }), { viewport: { width: breed, height: 800 } });
+  p._naam = `donker ${breed}px`;
+  await controleer(p, `dagringen donker ${breed}px`);
+  const r = await p.evaluate(() => {
+    const t = document.querySelector("#v-today .dtile"), page = document.documentElement.clientWidth;
+    if (!t) return { geen: true };
+    const b = t.getBoundingClientRect();
+    const legOver = [...t.querySelectorAll(".leg li")].some((li) => li.scrollWidth > li.clientWidth + 1);
+    return { buiten: b.left < 0 || b.right > page + 1, legOver, achtergrond: getComputedStyle(t).backgroundColor };
+  });
+  if (r.geen) fouten.push(`${p._naam}: geen tegel met dagringen`);
+  else {
+    if (r.buiten) fouten.push(`${p._naam}: tegel valt buiten het scherm`);
+    if (r.legOver) fouten.push(`${p._naam}: legenda afgekapt`);
+    if (r.achtergrond !== "rgb(29, 35, 33)") fouten.push(`${p._naam}: tegel heeft niet de tegelkleur (${r.achtergrond})`);
+  }
+  await p.context().close();
+}
+
 // 6. Begroeting bij elke breedte en naam: nooit afgekapt, nooit kleiner dan 60%
 for (const naam of ["Sam", "Ian", "Maximiliaan-Alexander", "Wwwwwwwwwwwwwwwwwwwwwwwwwwwwww"]) for (const breed of [260, 320, 360, 412, 900]) {
   const p = await nieuw(JSON.stringify({ onb: null, prof: { name: naam } }), { viewport: { width: breed, height: 800 } });
