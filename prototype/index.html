@@ -618,7 +618,8 @@ function parseJsonWk(text,hash){let root=JSON.parse(text.replace(/^﻿/,'')),ite
     const loc=str(o,'start_date_local','startTimeLocal'),type=str(o,'sport','sport_type','type','fitnessActivity','exerciseType')||o.activityType?.typeKey,m=o.metricsSummary||{},agg=Array.isArray(o.aggregate)?o.aggregate:[];
     const ag=n=>{const a=agg.find(x=>String(x?.metricName||'').includes(n));return a?num(a,'floatValue','intValue'):null};
     const day=/^\d{4}-\d{2}-\d{2}$/.test(o.day||'')?o.day:loc?loc.slice(0,10):new Date(start-new Date(start).getTimezoneOffset()*6e4).toISOString().slice(0,10);
-    const id=str(o0,'external_id','id','activityId')??(typeof o0.id==='number'?String(o0.id):null);
+    // Sleutel: id als tekst of geheel getal (Strava, Garmin Connect) of de naam van een Google Health-datapunt; nooit de titel
+    const whole=k=>Number.isInteger(o0[k])?String(o0[k]):null,id=str(o0,'external_id','id','activityId')??whole('id')??whole('activityId')??(str(o0,'name')?.startsWith('users/')?str(o0,'name').split('/').pop():null);
     const rng=(v,lo,hi)=>v!=null&&v>=lo&&v<=hi?v:null;
     list.push({id:'json-'+(id?id.replace(/[^A-Za-z0-9_.:@+=-]/g,'_'):hash+'-'+i),source:'file',sport:SPORTK.has(type)?type:sportText(type),title:str(o,'title','displayName','activityName'),day,start,dur,
       dist:rng(num(o,'distance_m','distance')??(num(m,'distanceMillimeters')!=null?num(m,'distanceMillimeters')/1000:ag('distance')),0,1e6),kcal:rng(num(o,'kcal','calories','active_calories')??num(m,'caloriesKcal')??ag('calories'),0,20000),

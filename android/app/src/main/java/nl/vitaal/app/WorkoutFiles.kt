@@ -267,7 +267,10 @@ private class JsonWorkouts(private val hash: String, private val zone: ZoneId) {
         val avg = num(o, "avg_hr", "average_heartrate", "averageHR", "averageHeartRate") ?: summary?.let { num(it, "averageHeartRateBeatsPerMinute") }
         val max = num(o, "max_hr", "max_heartrate", "maxHR", "maxHeartRate")
         val ascent = num(o, "ascent_m", "total_elevation_gain", "elevationGain") ?: summary?.let { num(it, "elevationGainMillimeters")?.div(1000) }
-        val id = str(o0, "external_id", "id", "activityId", "name")?.takeIf { it.length in 1..120 }
+        // Sleutel voor opnieuw importeren: een id als tekst of als getal (Strava, Garmin Connect), of de naam van een
+        // Google Health-datapunt. Nooit de titel: twee trainingen met dezelfde naam zouden elkaar overschrijven.
+        val id = (str(o0, "external_id", "id", "activityId") ?: wholeNumber(o0, "id", "activityId")
+            ?: str(o0, "name")?.takeIf { it.startsWith("users/") }?.substringAfterLast('/'))?.takeIf { it.length in 1..120 }
         return Workout(
             id = null, source = "file",
             externalId = "json-" + (id?.replace(Regex("[^A-Za-z0-9_.:@+=-]"), "_") ?: "$hash-$i"),
@@ -300,6 +303,11 @@ private class JsonWorkouts(private val hash: String, private val zone: ZoneId) {
 
     private fun str(o: JsonObject, vararg keys: String) = keys.firstNotNullOfOrNull { k ->
         (o[k] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotBlank() }
+    }
+
+    /** Een id die als geheel getal is opgeslagen (Strava, Garmin Connect), als tekst. */
+    private fun wholeNumber(o: JsonObject, vararg keys: String) = keys.firstNotNullOfOrNull { k ->
+        (o[k] as? JsonPrimitive)?.takeIf { !it.isString }?.content?.takeIf { it.matches(Regex("-?\\d{1,19}")) }
     }
 
     /** Getal, ook als tekst ("1800", "1800s", "1800.5s"). */
