@@ -231,27 +231,54 @@ private fun RefreshStatus(vm: MainViewModel) {
         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
 }
 
+/** Een dagdoel zoals de motivatiezin het ziet. */
+internal data class RingGoal(val metric: String, val name: String, val unit: String, val value: Double?, val goal: Double, val fraction: Float)
+
+/** Wat de motivatiezin zegt: de tekst en welke ring de pijl kleurt (null = alles wat vandaag nog kan, is gehaald). */
+internal data class MotivationLine(val ring: Int?, val text: String, val done: Boolean)
+
+/**
+ * Kiest de zin onder de ringen. Alleen beweging (stappen, actieve minuten, calorieën, afstand, trappen) kun je vandaag
+ * nog bijsturen; slaap en slaapscore liggen vast zodra je wakker bent. Daarom:
+ * - een open bewegingsdoel: hoeveel er nog nodig is, voor het doel dat het dichtst bij af is;
+ * - alleen slaap nog open: vooruitkijken naar vanavond;
+ * - verder open doelen die je niet kunt sturen (HRV, SpO2): de bewegingsdoelen zijn gehaald.
+ */
+internal fun motivationLine(rings: List<RingGoal>): MotivationLine {
+    val open = rings.indices.filter { rings[it].fraction < 1f }
+    if (open.isEmpty()) return MotivationLine(null, "Alle dagdoelen gehaald. Mooi werk!", done = true)
+    val move = open.filter { categoryOf(rings[it].metric) == Category.Activity }.minByOrNull { 1f - rings[it].fraction }
+    if (move != null) {
+        val r = rings[move]
+        val rest = r.goal - (r.value ?: 0.0)
+        val unit = unitOf(r.metric, r.unit).let { if (it.isEmpty() && r.metric == "steps") "stappen" else it }
+        return MotivationLine(move, "Nog ${fmt(r.metric, rest)} $unit tot je doel voor ${r.name.lowercase()}.".replace("  ", " "), done = false)
+    }
+    val night = open.firstOrNull { rings[it].metric == "sleep" || rings[it].metric == "sscore" }
+    if (night != null) {
+        val r = rings[night]
+        val text = if (r.metric == "sleep") "Vanavond op tijd naar bed voor je ${hoursText(r.goal)} slaap."
+        else "Vanavond op tijd naar bed voor een goede slaapscore."
+        return MotivationLine(night, text, done = false)
+    }
+    return MotivationLine(null, "Je bewegingsdoelen voor vandaag zijn gehaald.", done = true)
+}
+
 /** Eén zin die laat zien wat er vandaag nog te halen valt: onder een scheidingslijn, met een pijl in de kleur van de ring. */
 @Composable
 private fun Motivation(vm: MainViewModel, rings: List<Pref>, fractions: List<Float>) {
     val p = LocalPalette.current
-    val open = rings.indices.filter { fractions[it] < 1f }.minByOrNull { 1f - fractions[it] }
-    val text = if (open == null) {
-        "Alle dagdoelen gehaald. Mooi werk!"
-    } else {
-        val pref = rings[open]
+    val line = motivationLine(rings.mapIndexed { i, pref ->
         val m = vm.metrics[pref.metric]
-        val rest = pref.goal!! - (vm.today[pref.metric]?.value ?: 0.0)
-        val unit = unitOf(pref.metric, m?.unit ?: "").let { if (it.isEmpty() && pref.metric == "steps") "stappen" else it }
-        "Nog ${fmt(pref.metric, rest)} $unit tot je doel voor ${m?.name?.lowercase() ?: pref.metric}.".replace("  ", " ")
-    }
+        RingGoal(pref.metric, m?.name ?: pref.metric, m?.unit ?: "", vm.today[pref.metric]?.value, pref.goal!!, fractions[i])
+    })
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(if (open == null) VIcons.Check else VIcons.ArrowRight, contentDescription = null,
-                tint = if (open == null) p.good else p.ringInk(open), modifier = Modifier.size(18.dp))
+            Icon(if (line.done) VIcons.Check else VIcons.ArrowRight, contentDescription = null,
+                tint = line.ring?.let { p.ringInk(it) } ?: p.good, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(10.dp))
-            Text(text, style = MaterialTheme.typography.bodyLarge, color = if (open == null) p.good else p.ink)
+            Text(line.text, style = MaterialTheme.typography.bodyLarge, color = if (line.done) p.good else p.ink)
         }
     }
 }

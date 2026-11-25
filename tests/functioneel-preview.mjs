@@ -40,12 +40,17 @@ const naarKoppelingen = async (p) => { await p.click("[data-tab=today]"); await 
     const rings = __vc.state().rings.filter((id) => __vc.goal(id) && !__vc.MI[id].lo).slice(0, 3);
     const fr = rings.map((id) => __vc.today(id) / __vc.goal(id));
     const pcts = [...document.querySelectorAll("#v-today .leg .pc")].map((e) => e.textContent);
-    const open = rings.map((id, i) => [id, fr[i]]).filter((x) => x[1] < 1).sort((a, b) => b[1] - a[1])[0];
+    // Alleen beweging kun je vandaag nog bijsturen; staat alleen slaap open, dan kijkt de zin vooruit naar vanavond
+    const openRings = rings.map((id, i) => [id, fr[i]]).filter((x) => x[1] < 1);
+    const open = openRings.filter((x) => __vc.MI[x[0]].cat === "act").sort((a, b) => b[1] - a[1])[0];
+    const nacht = !open && openRings.some((x) => x[0] === "sleep" || x[0] === "sscore");
     return {
       n: rings.length, cirkels: document.querySelectorAll("#v-today .rp").length, pcts,
       verwachtPcts: fr.map((f) => Math.round(f * 100) + "%"),
       motivatie: document.querySelector("#v-today .mot span")?.textContent ?? "",
-      open: open ? __vc.MI[open[0]].n.toLowerCase() : null,
+      open: open ? __vc.MI[open[0]].n.toLowerCase() : null, nacht,
+      herstel: document.querySelector("#v-today .hadv")?.textContent ?? "",
+      letOpKleur: (() => { const d = [...document.querySelectorAll("#v-today .hl .dot")][0]; return d ? getComputedStyle(d).backgroundColor : ""; })(),
       groet: document.querySelector("#v-today h1")?.textContent ?? "",
       tegelKleur: getComputedStyle(document.querySelector("#v-today .dtile")).backgroundColor,
       inTegels: rings.some((id) => document.querySelector(`#v-today [data-open="${id}"]`)),
@@ -53,7 +58,10 @@ const naarKoppelingen = async (p) => { await p.click("[data-tab=today]"); await 
   });
   verwacht(r.n === 3 && r.cirkels === 3, `Vandaag: 3 ringen verwacht, ${r.cirkels} getekend`);
   verwacht(JSON.stringify(r.pcts) === JSON.stringify(r.verwachtPcts), `Vandaag: percentages ${r.pcts} ≠ ${r.verwachtPcts}`);
-  verwacht(r.open ? r.motivatie.includes(r.open) : r.motivatie.includes("gehaald"), `Vandaag: motivatie "${r.motivatie}" noemt niet ${r.open}`);
+  verwacht(r.open ? r.motivatie.includes(r.open) : r.nacht ? r.motivatie.startsWith("Vanavond op tijd naar bed") : r.motivatie.includes("gehaald"),
+    `Vandaag: motivatie "${r.motivatie}" past niet bij de open ringen (beweging: ${r.open}, alleen slaap: ${r.nacht})`);
+  verwacht(!/^Een signaal|^Eén signaal/.test(r.herstel) || r.herstel === "", `Herstel: advies noemt niet welk signaal afwijkt: "${r.herstel}"`);
+  verwacht(!/rgb\(255, 244, 224\)|rgb\(46, 39, 23\)/.test(r.letOpKleur), `Herstel: statusstip heeft een achtergrondkleur (${r.letOpKleur})`);
   verwacht(r.groet.includes("Ian"), `Vandaag: begroeting zonder naam ("${r.groet}")`);
   verwacht(r.tegelKleur === "rgb(255, 255, 255)", `Vandaag licht: ringtegel niet wit (${r.tegelKleur})`);
   verwacht(!r.inTegels, "Vandaag: een metric uit de ringen staat ook als tegel");
@@ -182,6 +190,27 @@ const naarKoppelingen = async (p) => { await p.click("[data-tab=today]"); await 
   }
   await p.click('[data-wsrc="auto"]');
   verwacht(await p.evaluate(() => __vc.state().wsrc === "auto" && __vc.state().wmin === 20 && __vc.state().wlight === true), "Filters: keuzes niet bewaard");
+  await terug(p); await p.click("[data-tab=training]");
+  const noot = await p.evaluate(() => [...document.querySelectorAll("#v-training .gl")].map((e) => e.textContent).find((t) => t.startsWith("Verborgen")) ?? "");
+  verwacht(/^Verborgen: .*\.$/.test(noot) && !/niet mee/.test(noot), `Training: filtermelding "${noot}" zegt niet dat er iets verborgen is`);
+  await p.context().close();
+}
+
+// Geboortedatum: de knop opent Profiel met de cursor in het veld; Record-waarden halen 4,5:1 op wit
+{
+  const p = await start({ onb: null, prof: { name: "Ian" } });
+  await p.click("[data-tab=training]");
+  await p.locator("[data-act=birth]:visible").first().click();
+  verwacht(await p.evaluate(() => document.activeElement?.id === "p-birth"), "Geboortedatum: knop opent het veld niet");
+  await terug(p); await p.click("[data-tab=health]");
+  const minimum = await p.evaluate(() => {
+    const lum = (c) => { const v = c.match(/\d+/g).slice(0, 3).map((x) => { x /= 255; return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; });
+      return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+    const els = [...document.querySelectorAll("#v-health .st b[style]")]; if (!els.length) return 0;
+    return Math.min(...els.map((b) => {
+      const l = lum(getComputedStyle(b).color); return (1 + 0.05) / (l + 0.05); }));
+  });
+  verwacht(minimum >= 4.5, `Gezondheid: Record-waarde haalt maar ${minimum.toFixed(2)}:1 op wit`);
   await p.context().close();
 }
 

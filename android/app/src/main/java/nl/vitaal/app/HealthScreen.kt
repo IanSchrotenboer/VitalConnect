@@ -109,7 +109,7 @@ private fun StatCard(vm: MainViewModel, id: String, modifier: Modifier = Modifie
             Stat("Laatste 30 d.", f(s.avg30), Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Stat(if (m.lowerIsBetter) "Beste (laagste)" else "Record", f(if (m.lowerIsBetter) s.minAll else s.maxAll), Modifier.weight(1f), color)
+            Stat(if (m.lowerIsBetter) "Beste (laagste)" else "Record", f(if (m.lowerIsBetter) s.minAll else s.maxAll), Modifier.weight(1f), p.inkOf(id))
             if (isSum) Stat("Totaal", s.totalAll?.let { fmtCompact(it) } ?: "–", Modifier.weight(1f))
             else Stat(if (m.lowerIsBetter) "Hoogste" else "Laagste", f(if (m.lowerIsBetter) s.maxAll else s.minAll), Modifier.weight(1f))
         }

@@ -39,6 +39,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import androidx.compose.ui.unit.sp
 import java.time.format.DateTimeFormatter
 import androidx.compose.animation.core.RepeatMode
@@ -188,15 +189,18 @@ fun TrendChart(
         if (bars) lo = 0.0 else { val pad = ((hi - lo) * 0.15).takeIf { it > 0 } ?: 1.0; lo -= pad; hi += pad }
         if (bars) hi *= 1.08
         if (hi <= lo) hi = lo + 1
+        // Ronde waarden op de as (0, 2, 4, 6, 8 uur; 52, 54, 56 bpm), zodat elk label klopt met zijn lijn
+        val ticks = niceTicks(lo, hi)
+        lo = ticks.first(); hi = ticks.last()
         fun y(v: Double) = top + h - ((v - lo) / (hi - lo)).toFloat() * h
         fun x(i: Int) = l + bw * (i + 0.5f)
 
         // Hulplijnen en waarden op de y-as
-        for (k in 0..4) {
-            val v = lo + (hi - lo) * k / 4
+        val every = if (ticks.size > 4) 2 else 1
+        ticks.forEachIndexed { k, v ->
             val yy = y(v)
             drawLine(p.line, Offset(l, yy), Offset(size.width - r, yy), strokeWidth = 1.dp.toPx())
-            if (k % 2 == 0) {
+            if (k % every == 0) {
                 val m = tm.measure(axis(v), label)
                 drawText(m, topLeft = Offset(l - 6.dp.toPx() - m.size.width, yy - m.size.height / 2f))
             }
@@ -256,4 +260,20 @@ fun TrendChart(
             drawText(m, topLeft = Offset(size.width - r - m.size.width, gy - m.size.height - 2.dp.toPx()))
         }
     }
+}
+
+/**
+ * Ronde aswaarden die lo..hi omvatten: stappen van 1, 2 of 5 × 10ⁿ, en nooit kleiner dan 1 (de labels zijn hele getallen).
+ * 4,3..8,6 uur → 4, 6, 8, 10; 51,2..56,8 bpm → 50, 52, 54, 56, 58.
+ */
+internal fun niceTicks(lo: Double, hi: Double, target: Int = 4): List<Double> {
+    if (!lo.isFinite() || !hi.isFinite()) return listOf(0.0, 1.0)
+    val range = (hi - lo).takeIf { it > 0 } ?: 1.0
+    val raw = range / target
+    val mag = Math.pow(10.0, kotlin.math.floor(kotlin.math.log10(raw)))
+    val step = maxOf(1.0, listOf(1.0, 2.0, 5.0, 10.0).first { it * mag >= raw } * mag)
+    val start = kotlin.math.floor(lo / step + 1e-9) * step
+    val end = kotlin.math.ceil(hi / step - 1e-9) * step
+    val n = ((end - start) / step).roundToInt().coerceIn(1, 12)
+    return (0..n).map { val v = start + it * step; if (kotlin.math.abs(v) < step * 1e-9) 0.0 else v }
 }

@@ -100,14 +100,26 @@ fun parseFitness(o: JsonObject?): Fitness? {
 private data class Stand(val title: String, val color: Color, val advice: String)
 
 @Composable
-private fun standOf(i: Int?): Stand {
+private fun standOf(h: Herstel): Stand {
     val p = LocalPalette.current
-    return when (i) {
+    return when (h.stand) {
         0 -> Stand("Goed hersteld", p.good, "Je lichaam is hersteld. Ruimte voor een stevige training.")
-        1 -> Stand("Let op", p.warn, "Eén signaal wijkt af van je normaal. Train gerust, maar luister naar je lichaam.")
-        2 -> Stand("Rustig aan", p.sleep, "Meerdere signalen wijzen op vermoeidheid. Kies vandaag voor rust of een rustige training.")
+        1 -> Stand("Let op", p.caution, deviationText(h) + " Train gerust, maar luister naar je lichaam.")
+        2 -> Stand("Rustig aan", p.sleep, deviationText(h) + " Kies vandaag voor rust of een rustige training.")
         else -> Stand("Nog aan het leren", p.muted, "")
     }
+}
+
+/** Welke signalen afwijken van je normaal, in gewone taal: "Je HRV ligt onder je normaal en je slaap is korter dan je doel." */
+internal fun deviationText(h: Herstel): String {
+    val delen = buildList {
+        if (h.hrv.bad) add("je HRV ligt onder je normaal")
+        if (h.rhr.bad) add("je rusthartslag ligt boven je normaal")
+        if (h.sleep.bad) add("je slaap is deze week korter dan je doel")
+    }
+    if (delen.isEmpty()) return "Een signaal wijkt af van je normaal."
+    val zin = if (delen.size == 1) delen[0] else delen.dropLast(1).joinToString(", ") + " en " + delen.last()
+    return zin.replaceFirstChar { it.uppercase() } + "."
 }
 
 private fun stateText(b: Band, lowerBetter: Boolean): String = when (b.state) {
@@ -125,7 +137,7 @@ private fun learning(b: Band): String =
 fun HerstelTile(vm: MainViewModel, modifier: Modifier = Modifier) {
     val p = LocalPalette.current
     val h = vm.fitness?.herstel ?: return
-    val st = standOf(h.stand)
+    val st = standOf(h)
     VCard(modifier, onClick = { vm.showHerstel = true }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Dot(p.recovery, 9.dp)
@@ -250,7 +262,7 @@ fun HerstelScreen(vm: MainViewModel) {
             return@Column
         }
         val h = fit.herstel
-        val st = standOf(h.stand)
+        val st = standOf(h)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             VCard(Modifier.fillMaxWidth()) {
@@ -286,7 +298,7 @@ fun HerstelScreen(vm: MainViewModel) {
                 if (f.hrmax == null) {
                     Text("Vul je geboortedatum in bij Profiel. Dan berekenen we je maximale hartslag, je hartslagzones en een schatting van je VO2max.",
                         style = MaterialTheme.typography.bodyMedium, color = p.muted)
-                    ActionChip("Naar Profiel") { vm.showHerstel = false; vm.profileTab = ProfileTab.Profile; vm.showSettings = true }
+                    ActionChip("Geboortedatum invullen") { vm.showHerstel = false; vm.profileTab = ProfileTab.Profile; vm.showSettings = true }
                 } else {
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         Stat("Max. hartslag (geschat)", "${f.hrmax} bpm", Modifier.weight(1f))

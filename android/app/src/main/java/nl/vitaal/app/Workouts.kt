@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.text.style.TextAlign
@@ -279,15 +280,18 @@ private fun FilterNote(vm: MainViewModel, f: TrainingFilter) {
     val p = LocalPalette.current
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(filterNoteText(f), style = MaterialTheme.typography.bodySmall, color = p.muted, modifier = Modifier.weight(1f))
-        TextButton(onClick = { vm.openProfile(ProfileTab.Connections) }) { Text("Aanpassen") }
+        TextButton(onClick = { vm.openProfile(ProfileTab.Connections) }) { Text("Filter") }
     }
 }
 
-/** "12 trainingen uit Health Connect en 4 korte of lichte wandelingen tellen niet mee." */
+/**
+ * "Verborgen: 12 dubbele of losse registraties uit Health Connect en 4 korte of lichte wandelingen."
+ * Verborgen, niet weg: de gegevens blijven bewaard en tellen weer mee als je het filter verandert.
+ */
 internal fun filterNoteText(f: TrainingFilter): String {
     val delen = buildList {
         if (f.hiddenSource > 0) add(
-            (if (f.hiddenSource == 1) "1 training " else "${f.hiddenSource} trainingen ") +
+            (if (f.hiddenSource == 1) "1 dubbele of losse registratie " else "${f.hiddenSource} dubbele of losse registraties ") +
                 if (f.mode == "google_health") "uit Health Connect" else "uit andere bronnen"
         )
         if (f.hiddenWalks > 0) {
@@ -299,8 +303,7 @@ internal fun filterNoteText(f: TrainingFilter): String {
             add(if (f.hiddenWalks == 1) "1 $soort wandeling" else "${f.hiddenWalks} $soort wandelingen")
         }
     }
-    val totaal = f.hiddenSource + f.hiddenWalks
-    return delen.joinToString(" en ") + (if (totaal == 1) " telt" else " tellen") + " niet mee."
+    return "Verborgen: " + delen.joinToString(" en ") + "."
 }
 
 /** Acht weken als staafjes; de huidige week in de hoofdkleur. */
@@ -339,7 +342,7 @@ private fun LoadCard(vm: MainViewModel, l: TrainingLoad) {
                         "Google Health of zelf ingevuld) tellen mee."
                 }, style = MaterialTheme.typography.bodyMedium, color = p.ink,
             )
-            if (l.hrmax == null) ActionChip("Naar Profiel") { vm.profileTab = ProfileTab.Profile; vm.showSettings = true }
+            if (l.hrmax == null) ActionChip("Geboortedatum invullen") { vm.profileTab = ProfileTab.Profile; vm.showSettings = true }
         } else {
             val v = vormOf(l.form)
             Text(v.title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = p.ink)
@@ -480,7 +483,7 @@ fun WorkoutFormScreen(vm: MainViewModel, start: Workout) {
 
     Column(Modifier.fillMaxSize()) {
         VTopBar(if (start.id == null) "Training loggen" else "Training bewerken", onBack = { vm.workoutForm = null })
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp),
+        Column(Modifier.weight(1f).imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             VCard(Modifier.fillMaxWidth()) {
                 Text("Sport", style = MaterialTheme.typography.titleMedium, color = p.ink)
