@@ -8,6 +8,7 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
@@ -59,8 +60,8 @@ class HealthSync(context: Context, private val api: Api) {
 
         val today = LocalDate.now(zone)
         // Een andere sleutel laat de geschiedenis één keer opnieuw uitlezen: "hrv-nacht" (1.10, HRV tijdens de slaap),
-        // "training" (1.11, oefensessies als trainingen)
-        val typesKey = "training;hrv-nacht;" + types.joinToString(",") { it.simpleName.orEmpty() }
+        // "training" (1.11, oefensessies als trainingen), "training-bron" (1.12, vastlegmethode per training)
+        val typesKey = "training-bron;training;hrv-nacht;" + types.joinToString(",") { it.simpleName.orEmpty() }
         val saved = prefs.getString(CHANGES_TOKEN, null)
         val history = HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY in granted
 
@@ -182,7 +183,7 @@ class HealthSync(context: Context, private val api: Api) {
                 id = null, source = "health_connect", externalId = s.metadata.id, sport = hcSport(s.exerciseType),
                 title = s.title?.take(80), day = s.startTime.atZone(zone).toLocalDate(), startedAt = s.startTime, durationS = dur,
                 distanceM = dist.takeIf { it > 1 }, kcal = kcal.takeIf { it > 0.5 }, avgHr = null, maxHr = null, ascentM = null,
-                notes = s.notes?.take(1000), origin = origin, load = null,
+                notes = s.notes?.take(1000), origin = origin, load = null, recording = hcRecording(s.metadata.recordingMethod),
             ).toJson()
         }
         rows.chunked(500).forEach { api.rpc("save_workouts", buildJsonObject { put("p_rows", JsonArray(it)) }) }
@@ -312,6 +313,14 @@ class HealthSync(context: Context, private val api: Api) {
 
         fun sdkStatus(ctx: Context): Int = HealthConnectClient.getSdkStatus(ctx)
     }
+}
+
+/** Vastlegmethode van Health Connect: zelf gestart, automatisch herkend (zoals de wandelingen van Google Fit) of ingevoerd. */
+internal fun hcRecording(m: Int): String = when (m) {
+    Metadata.RECORDING_METHOD_ACTIVELY_RECORDED -> "active"
+    Metadata.RECORDING_METHOD_AUTOMATICALLY_RECORDED -> "passive"
+    Metadata.RECORDING_METHOD_MANUAL_ENTRY -> "manual"
+    else -> "unknown"
 }
 
 /** Health Connect-oefentype → vaste sportsleutel (zelfde lijst als de database). */

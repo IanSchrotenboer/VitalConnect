@@ -101,6 +101,7 @@ fun ProfileScreen(
                         style = MaterialTheme.typography.bodyMedium, color = p.muted, modifier = Modifier.padding(horizontal = 4.dp))
                 }
                 item { SyncCard(vm) }
+                item { TrainingSourceCard(vm) }
                 item { SectionTitle("Gekoppeld · ${on.size}", Modifier.padding(start = 4.dp, top = 8.dp), dot = p.good) }
                 if (on.isEmpty()) item {
                     Text("Nog niets gekoppeld. Kies hieronder een bron om je dashboard te vullen.",
@@ -251,6 +252,43 @@ private fun SyncCard(vm: MainViewModel) {
             SYNC_CHOICES.forEach { (min, label) -> Pill(label, vm.syncMinutes == min) { vm.setSyncInterval(min) } }
         }
         Text("Nu: ${syncLabel(vm.syncMinutes)}.", style = MaterialTheme.typography.labelMedium, color = p.ink)
+    }
+}
+
+/** Welke trainingen in het tabblad Training komen. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TrainingSourceCard(vm: MainViewModel) {
+    val p = LocalPalette.current
+    VCard(Modifier.fillMaxWidth()) {
+        Text("Trainingen", style = MaterialTheme.typography.titleMedium, color = p.ink)
+        Text("Welke trainingen in het tabblad Training komen. Wat je zelf logt of importeert, telt altijd mee.",
+            style = MaterialTheme.typography.bodySmall, color = p.muted)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            TRAINING_SOURCES.forEach { (id, label) -> Pill(label, vm.trainingSource == id) { vm.setTrainingFilter(source = id) } }
+        }
+        Text("Nu: ${trainingSourceNow(vm)}.", style = MaterialTheme.typography.labelMedium, color = p.ink)
+        SwitchRow("Alleen trainingen die ik zelf start",
+            "Trainingen die je telefoon of horloge zelf herkent, zoals korte wandelingen, tellen niet mee.", vm.trainingOwnOnly) {
+            vm.setTrainingFilter(ownOnly = it)
+        }
+        Expandable("Meer uitleg") {
+            Text("Google Fit en andere apps leggen veel vast, ook kleine stukjes lopen. Die komen via Health Connect binnen, " +
+                "en Google Health neemt ze ook over. Kies je Google Health, dan tellen alleen de trainingen van je horloge mee, " +
+                "niet wat Google Health uit Health Connect overneemt. Automatisch kiest Google Health als dat gekoppeld is, " +
+                "en anders Health Connect. Alles blijft bewaard: als je dit omzet, zie je het meteen.",
+                style = MaterialTheme.typography.bodySmall, color = p.muted)
+        }
+    }
+}
+
+private fun trainingSourceNow(vm: MainViewModel): String {
+    val mode = if (vm.trainingSource == "auto") vm.training?.filter?.mode.orEmpty() else vm.trainingSource
+    return when (mode) {
+        "google_health" -> "alleen je horloge, via Google Health"
+        "health_connect" -> "Health Connect"
+        "all" -> "alle bronnen, dubbele trainingen één keer"
+        else -> "Google Health als dat gekoppeld is, anders Health Connect"
     }
 }
 

@@ -61,10 +61,22 @@ Leeftijd en geslacht komen uit het profiel. Zonder geboortedatum vraagt de app d
 
 De functie `training(p_today)` (migraties `20261125083904_workouts.sql` en `20261125084109_workouts_dedupe.sql`) levert het tabblad Training, en komt mee in `app_state`.
 
+**Welke trainingen meetellen** (Profiel → Koppelingen → Trainingen; migratie `20261125093517_training_filter.sql`).
+- `profiles.training_source`:
+  - `auto` (standaard): Google Health als dat gekoppeld is, anders Health Connect;
+  - `google_health`: alleen trainingen die Google Health van een horloge heeft. Trainingen die Google Health zelf uit Health Connect overneemt (`origin = 'HEALTH_CONNECT'`) tellen niet mee;
+  - `health_connect`: alleen trainingen uit Health Connect;
+  - `all`: alles.
+- `profiles.training_own_only`: trainingen met vastlegmethode `passive` (automatisch herkend) tellen niet mee.
+- De vastlegmethode (`workouts.recording`) komt uit Google Health (`dataSource.recordingMethod`: `ACTIVELY_MEASURED`, `PASSIVELY_MEASURED`, `MANUAL`, `DERIVED`, `UNKNOWN`; zonder methode telt een START-gebeurtenis als zelf gestart) en uit Health Connect (`metadata.recordingMethod`).
+- Wat je zelf logt (`manual`) of importeert (`file`) telt altijd mee.
+- Alles blijft opgeslagen; het filter zit in `training()` en `workouts_before()` (`workout_counts`), dus omschakelen werkt direct. `training()` geeft ook terug hoeveel trainingen de instelling de laatste 90 dagen verbergt.
+- Waarom: Google Fit legt elke korte wandeling vast. Die komen via Health Connect binnen én via Google Health, met een andere begintijd, zodat ontdubbelen ze niet vangt.
+
 **Dubbele trainingen.** Dezelfde training komt vaak uit twee bronnen, bijvoorbeeld Health Connect én Google Health.
 - Twee trainingen gelden als dezelfde als ze binnen 5 minuten van elkaar beginnen en hun duur hooguit 25% verschilt (minstens 3 minuten).
 - Dan blijft er één over, in deze volgorde: bestand, zelf gelogd, Google Health, Health Connect. Een bestand van je horloge is meestal het meest volledig.
-- De andere blijft opgeslagen maar telt nergens mee (`workout_hidden`).
+- De andere blijft opgeslagen maar telt nergens mee (`workout_hidden`). Het ontdubbelen kijkt alleen naar trainingen die volgens de instelling meetellen: een verborgen training drukt geen zichtbare weg.
 
 **Belasting per training (TRIMP, Banister).**
 - `x = (gemiddelde hartslag − rusthartslag) / (maximale hartslag − rusthartslag)`, begrensd tussen 0 en 1.
