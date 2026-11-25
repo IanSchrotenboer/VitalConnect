@@ -130,8 +130,7 @@ fun EditScreen(vm: MainViewModel, target: EditTarget) {
 @Composable
 private fun RingsCard(vm: MainViewModel) {
     val p = LocalPalette.current
-    val d = DialPalette
-    val ringColors = listOf(d.activity, d.recovery, d.sleep)
+    val ringColors = RING_COLORS
     val rings = vm.rings
     VCard(Modifier.fillMaxWidth()) {
         if (rings.isEmpty()) Text("Nog geen ringen. Kies hieronder tot drie doelen.", style = MaterialTheme.typography.bodySmall, color = p.muted)

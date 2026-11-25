@@ -89,6 +89,13 @@ val DialPalette = Dark
 @Composable
 fun dialPalette(): Palette = DialPalette.copy(dial = LocalPalette.current.dial)
 
+/**
+ * Dagringen: één kleur per positie (abrikoos, zeegroen, indigo), van buiten naar binnen.
+ * Feller dan de categoriekleuren, zodat ze op de dennengroene wijzerplaat (licht) en de tegel op OLED-zwart (donker) oplichten.
+ * Gelijk aan --ring1..3 in prototype/index.html.
+ */
+val RING_COLORS = listOf(Color(0xFFFF8438), Color(0xFF26E8C8), Color(0xFF7B83FF))
+
 enum class Category(val label: String) {
     Activity("Activiteit"), Heart("Hart"), Sleep("Slaap"), Recovery("Herstel"), Body("Lichaam")
 }

@@ -38,6 +38,7 @@ object VIcons {
     val Moon = line("moon", "M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z")
     val Person = line("person", "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M4 20a8 8 0 0 1 16 0")
     val ChevronRight = line("right", "M9 6l6 6-6 6")
+    val ArrowRight = line("arrow-right", "M5 12h14", "M13 6l6 6-6 6")
     val Sync = line("sync", "M20 12a8 8 0 1 1-2.3-5.7", "M20 4v5h-5")
     val Check = line("check", "M5 12.5l4.5 4.5L19 7.5")
     val Alert = line("alert", "M12 9v4", "M12 16.5v.01", "M10.3 4.2L2.8 17.3A2 2 0 0 0 4.5 20.3h15a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z")
