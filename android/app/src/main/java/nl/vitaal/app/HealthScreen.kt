@@ -37,7 +37,7 @@ fun HealthScreen(vm: MainViewModel) {
             Row(verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f).padding(start = 4.dp, top = 8.dp, bottom = 4.dp)) {
                     ScreenTitle("Gezondheid")
-                    Text(if (first != null) "Al je statistieken sinds ${fmtDate(first)}" else "Al je statistieken, zodra er data binnenkomt",
+                    Text(if (first != null) "Al je statistieken sinds ${fmtDate(first).replace(' ', '\u00A0')}" else "Al je statistieken, zodra er data binnenkomt",
                         style = MaterialTheme.typography.bodyMedium, color = p.muted)
                 }
                 IconLabel(VIcons.Sliders, "Aanpassen", p.primary) { vm.editing = EditTarget.Health }
@@ -59,7 +59,7 @@ fun HealthScreen(vm: MainViewModel) {
     }
 }
 
-/** Bovenaan: wat je in totaal al hebt gedaan. */
+/** Bovenaan: wat je in totaal al hebt gedaan. In donker een rustige tegel met gekleurde cijfers, geen fel vlak op zwart. */
 @Composable
 private fun Highlights(vm: MainViewModel) {
     val p = LocalPalette.current
@@ -67,16 +67,26 @@ private fun Highlights(vm: MainViewModel) {
     val dist = vm.stats["dist"]
     val sleep = vm.stats["sleep"]
     if (steps == null && dist == null && sleep == null) return
-    VCard(color = p.primary) {
-        Text("Tot nu toe", style = MaterialTheme.typography.labelMedium, color = p.onPrimary.copy(alpha = 0.8f))
+    val bg = if (p.dark) p.card else p.primary
+    val fg = if (p.dark) p.primary else p.onPrimary
+    VCard(color = bg) {
+        Text("Tot nu toe", style = MaterialTheme.typography.labelMedium, color = if (p.dark) p.muted else p.onPrimary.copy(alpha = 0.8f))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            steps?.totalAll?.let { Stat("Stappen", fmtCompact(it), Modifier.weight(1f), p.onPrimary) }
-            dist?.totalAll?.let { Stat("Kilometer", fmtCompact(it), Modifier.weight(1f), p.onPrimary) }
-            sleep?.avgAll?.let { Stat("Gem. slaap", fmtHours(it), Modifier.weight(1f), p.onPrimary) }
+            steps?.totalAll?.let { Stat("Stappen", fmtCompact(it), Modifier.weight(1f), fg) }
+            dist?.totalAll?.let { Stat("Kilometer", fmtCompact(it), Modifier.weight(1f), fg) }
+            sleep?.avgAll?.let { Stat("Gem. slaap", fmtHours(it), Modifier.weight(1f), fg) }
         }
     }
 }
 
+/** Is de laatste meting ook je record (of beste, bij "lager is beter")? */
+internal fun isRecord(last: Double?, best: Double?, days: Int): Boolean =
+    last != null && best != null && days >= 7 && last == best
+
+/**
+ * Eén kaart per metric, kort: laatste meting, dan 30 dagen, gemiddeld en record op één regel.
+ * Totaal, laagste en hoogste staan op het detailscherm; "x dagen gemeten" staat één keer bovenaan.
+ */
 @Composable
 private fun StatCard(vm: MainViewModel, id: String, modifier: Modifier = Modifier) {
     val p = LocalPalette.current
@@ -97,22 +107,23 @@ private fun StatCard(vm: MainViewModel, id: String, modifier: Modifier = Modifie
             Text("Nog geen metingen", style = MaterialTheme.typography.bodySmall, color = p.muted)
             return@VCard
         }
+        val best = if (m.lowerIsBetter) s.minAll else s.maxAll
         Row(verticalAlignment = Alignment.Bottom) {
             Text(f(s.last), style = MaterialTheme.typography.headlineMedium, color = p.ink)
             if (unit.isNotEmpty()) Text(" $unit", style = MaterialTheme.typography.bodySmall, color = p.muted, modifier = Modifier.padding(bottom = 4.dp))
             Spacer(Modifier.weight(1f))
-            s.lastDay?.let { Text(fmtDate(it), style = MaterialTheme.typography.labelSmall, color = p.muted, modifier = Modifier.padding(bottom = 4.dp)) }
+            if (isRecord(s.last, best, s.days)) {
+                Text(if (m.lowerIsBetter) "Beste ooit" else "Record", style = MaterialTheme.typography.labelMedium, color = p.inkOf(id),
+                    modifier = Modifier.padding(bottom = 4.dp))
+            } else s.lastDay?.let {
+                Text(fmtDate(it), style = MaterialTheme.typography.labelSmall, color = p.muted, modifier = Modifier.padding(bottom = 4.dp))
+            }
         }
         val isSum = m.aggregation == "sum" && id != "sleep"
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Stat("30 dagen", f(s.avg30), Modifier.weight(1f))
             Stat(if (isSum) "Gem. per dag" else "Gemiddeld", f(s.avgAll), Modifier.weight(1f))
-            Stat("Laatste 30 d.", f(s.avg30), Modifier.weight(1f))
+            Stat(if (m.lowerIsBetter) "Beste" else "Record", f(best), Modifier.weight(1f), p.inkOf(id))
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Stat(if (m.lowerIsBetter) "Beste (laagste)" else "Record", f(if (m.lowerIsBetter) s.minAll else s.maxAll), Modifier.weight(1f), p.inkOf(id))
-            if (isSum) Stat("Totaal", s.totalAll?.let { fmtCompact(it) } ?: "–", Modifier.weight(1f))
-            else Stat(if (m.lowerIsBetter) "Hoogste" else "Laagste", f(if (m.lowerIsBetter) s.maxAll else s.minAll), Modifier.weight(1f))
-        }
-        Text("${s.days} ${if (s.days == 1) "dag" else "dagen"} gemeten", style = MaterialTheme.typography.labelSmall, color = p.muted)
     }
 }

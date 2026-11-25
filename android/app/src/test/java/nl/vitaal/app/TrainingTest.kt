@@ -3,6 +3,7 @@ package nl.vitaal.app
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -136,5 +137,45 @@ class AsTest {
         assertEquals(listOf(74.0, 75.0, 76.0), niceTicks(74.2, 75.8))
         assertEquals(listOf(0.0, 1.0), niceTicks(Double.NaN, 3.0))
         assertTrue(niceTicks(5.0, 5.0).size >= 2)
+    }
+}
+
+/** Doelen, records, weken en korte namen (critique 1.16.0). */
+class BetekenisTest {
+    @Test fun doelRegel() {
+        // Lager is beter: afstand in plaats van "98% van 75,0"
+        assertEquals("1,2 kg boven je doel" to false, goalLine("weight", 76.2, 75.0, true, "kg"))
+        assertEquals("Doel gehaald" to true, goalLine("weight", 74.8, 75.0, true, "kg"))
+        assertEquals("60% van 10.000" to false, goalLine("steps", 6000.0, 10000.0, false, ""))
+        assertEquals("Doel gehaald" to true, goalLine("steps", 12000.0, 10000.0, false, ""))
+    }
+
+    @Test fun drempel() {
+        assertEquals(3.0, deltaThreshold("rhr"), 0.0)
+        assertEquals(2.0, deltaThreshold("sleep"), 0.0)
+        assertEquals(1.0, deltaThreshold("steps"), 0.0)
+    }
+
+    @Test fun record() {
+        assertTrue(isRecord(15102.0, 15102.0, 400))
+        assertFalse(isRecord(9000.0, 15102.0, 400))
+        assertFalse(isRecord(5000.0, 5000.0, 3))
+        assertFalse(isRecord(null, 5000.0, 30))
+    }
+
+    @Test fun weken() {
+        val vandaag = java.time.LocalDate.of(2026, 11, 25) // woensdag
+        assertEquals(java.time.LocalDate.of(2026, 11, 23), weekStart(vandaag))
+        assertEquals("Deze week", weekLabel(java.time.LocalDate.of(2026, 11, 23), vandaag))
+        assertEquals("Vorige week", weekLabel(java.time.LocalDate.of(2026, 11, 16), vandaag))
+        assertTrue(weekLabel(java.time.LocalDate.of(2026, 11, 2), vandaag).startsWith("Week van 2 nov"))
+    }
+
+    @Test fun korteNamen() {
+        assertEquals("Garmin", sourceShort("garmin"))
+        assertEquals("Health Connect", sourceShort("health_connect:onbekend"))
+        assertEquals("Google Fit", sourceShort("health_connect:com.google.android.apps.fitness"))
+        assertEquals("18.000", fmtCompact(18000.0))
+        assertEquals("3,5 mln", fmtCompact(3_500_000.0))
     }
 }

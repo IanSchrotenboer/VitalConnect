@@ -95,16 +95,20 @@ fun unitOf(metric: String, unit: String): String = if (metric == "sleep") "" els
 fun hoursText(v: Double): String = if (abs(v - Math.round(v)) < 1.0 / 120) "${Math.round(v)}\u00A0uur" else fmtHours(v)
 
 /** Grote getallen kort, voor totalen: 1.234.567 → "1,2 mln". */
+/** Totalen en aslabels: "18.000", vanaf een miljoen "3,5 mln" (geen Engelse "18k"). */
 fun fmtCompact(v: Double): String = when {
     abs(v) >= 1_000_000 -> String.format(NL, "%.1f mln", v / 1_000_000)
-    abs(v) >= 10_000 -> String.format(NL, "%.0fk", v / 1_000)
     else -> NumberFormat.getIntegerInstance(NL).format(v.roundToLong())
 }
 
 fun fmtDate(d: LocalDate): String = d.format(DateTimeFormatter.ofPattern("d MMM yyyy", NL))
 
 /** Korte bronnaam voor tegels, zoals "Garmin" in plaats van "Garmin Connect". */
-fun sourceShort(source: String): String = sourceLabel(source).removeSuffix(" Connect").removeSuffix(" via Health Connect")
+/** Korte bronnaam voor smalle tegels. "Health Connect" blijft heel: "Health" zou ook Google Health kunnen zijn. */
+fun sourceShort(source: String): String = when (val l = sourceLabel(source)) {
+    "Garmin Connect" -> "Garmin"
+    else -> l.removeSuffix(" via Health Connect")
+}
 
 fun sourceLabel(source: String): String = when {
     source == "garmin" -> "Garmin Connect"
@@ -234,13 +238,39 @@ fun <T> Segmented(options: List<Pair<T, String>>, selected: T?, modifier: Modifi
     }
 }
 
-/** Verschil t.o.v. de week ervoor, groen als het beter is. */
+/**
+ * Vanaf hoeveel procent een verandering telt. Hartslag, HRV en slaap schommelen van nature een paar procent;
+ * rusthartslag 53 tegen 52,4 is geen nieuws. Beweging en lichaam reageren al op 1%.
+ */
+fun deltaThreshold(metric: String): Double = when (categoryOf(metric)) {
+    Category.Heart, Category.Recovery -> 3.0
+    Category.Sleep -> 2.0
+    else -> 1.0
+}
+
+/**
+ * De regel onder een doel. Bij "lager is beter" (gewicht, rusthartslag) zegt een percentage niets
+ * (75 ÷ 76,2 = 98% lijkt bijna gehaald): dan de afstand tot je doel.
+ */
+internal fun goalLine(metric: String, value: Double, goal: Double, lowerIsBetter: Boolean, unit: String): Pair<String, Boolean> {
+    if (lowerIsBetter) {
+        if (value <= goal) return "Doel gehaald" to true
+        return "${fmt(metric, value - goal)}${if (unit.isEmpty()) "" else "\u00A0$unit"} boven je doel" to false
+    }
+    val f = if (goal > 0) value / goal else 0.0
+    return if (f >= 1) "Doel gehaald" to true else "${(f * 100).roundToInt()}% van ${fmt(metric, goal)}" to false
+}
+
+/**
+ * Verschil t.o.v. de week ervoor, groen als het beter is.
+ * short: zonder "vs week", voor smalle tegels; TalkBack hoort altijd de hele zin.
+ * threshold: kleinere veranderingen heten "gelijk" (zie deltaThreshold).
+ */
 @Composable
-/** short: zonder "vs week", voor smalle tegels; TalkBack hoort altijd de hele zin. */
-fun Delta(pc: Double?, lowerIsBetter: Boolean, short: Boolean = false) {
+fun Delta(pc: Double?, lowerIsBetter: Boolean, short: Boolean = false, threshold: Double = 1.0) {
     val p = LocalPalette.current
     if (pc == null) return
-    if (abs(pc) < 1) {
+    if (abs(pc) < threshold) {
         Text(if (short) "gelijk" else "gelijk aan je week", style = MaterialTheme.typography.labelSmall, color = p.muted, maxLines = 1,
             modifier = Modifier.semantics { contentDescription = "gelijk aan vorige week" })
         return

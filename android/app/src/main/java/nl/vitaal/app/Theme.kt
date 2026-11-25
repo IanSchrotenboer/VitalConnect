@@ -76,7 +76,8 @@ private val Dark = Palette(
     activity = Color(0xFFF5935A), heart = Color(0xFFEC7290), sleep = Color(0xFF8C97F2),
     body = Color(0xFFDDB15A), recovery = Color(0xFF4CC3B3),
     good = Color(0xFF4CC79A), bad = Color(0xFFF07D5F), warn = Color(0xFF2E2717), caution = Color(0xFFE8B04A),
-    srcHealthConnect = Color(0xFF3A9483), srcGoogle = Color(0xFF4E9659), srcGarmin = Color(0xFF3B72C4),
+    // Bronlogo's: witte letter, ook in donker ≥ 4,5:1 (daarom dezelfde tinten als in licht)
+    srcHealthConnect = Color(0xFF2F7D6E), srcGoogle = Color(0xFF3F7F4A), srcGarmin = Color(0xFF2B5FA8),
 )
 
 val LocalPalette = staticCompositionLocalOf { Light }

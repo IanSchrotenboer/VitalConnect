@@ -46,4 +46,13 @@ object VIcons {
     val ChevronDown = line("down", "M6 9l6 6 6-6")
     val ChevronUp = line("up", "M6 15l6-6 6 6")
     val Back = line("back", "M15 6l-6 6 6 6")
+
+    // Sporten (lijst op Training)
+    val SportRun = line("sport-run", "M15.5 4.5a1.5 1.5 0 1 0 0 .01", "M13.5 8.5l-3 3.5 3 2.5-1.5 5", "M13.5 8.5l2.5 2.5 3-.5", "M13.5 8.5l-4.5 .5-2 2.5", "M10.5 12l-2 4H4.5")
+    val SportWalk = line("sport-walk", "M13 4.5a1.5 1.5 0 1 0 0 .01", "M12.5 8l-1 6 2.5 2.5V21", "M11.5 14l-2.5 7", "M12.5 8l2.5 3.5 2.5 1", "M12.5 8l-3 2.5-1 3")
+    val SportBike = line("sport-bike", "M2 17.5a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0", "M15 17.5a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0",
+        "M5.5 17.5l3.5-7h6l3.5 7", "M9 10.5l3.5 7h-7", "M15 10.5L13.5 6H11")
+    val SportSwim = line("sport-swim", "M3 18c1.5 0 1.5-1.5 3-1.5s1.5 1.5 3 1.5 1.5-1.5 3-1.5 1.5 1.5 3 1.5 1.5-1.5 3-1.5 1.5 1.5 3 1.5",
+        "M17 8.5a1.5 1.5 0 1 0 0 .01", "M5 13l5-5 3.5 3 2.5-1.5")
+    val SportYoga = line("sport-yoga", "M12 4.5a1.5 1.5 0 1 0 0 .01", "M12 8v6", "M5 9.5l7 1.5 7-1.5", "M7 20l5-6 5 6")
 }

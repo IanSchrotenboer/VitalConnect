@@ -312,17 +312,17 @@ private fun Tile(vm: MainViewModel, pref: Pref, modifier: Modifier) {
                     modifier = Modifier.padding(bottom = 4.dp))
             }
             pref.goal?.let { g ->
-                val f = (if (m.lowerIsBetter) g / v.value else v.value / g).toFloat()
-                Progress(f, color)
-                Text(if (f >= 1f) "Doel gehaald" else "${(f * 100).roundToInt()}% van ${fmt(pref.metric, g)}",
-                    style = MaterialTheme.typography.labelSmall, color = if (f >= 1f) p.good else p.muted)
+                val (line, done) = goalLine(pref.metric, v.value, g, m.lowerIsBetter, unitOf(pref.metric, m.unit))
+                // Bij "lager is beter" geen balk: een bijna volle balk zou "bijna gehaald" suggereren
+                if (!m.lowerIsBetter) Progress((v.value / g).toFloat(), color)
+                Text(line, style = MaterialTheme.typography.labelSmall, color = if (done) p.good else p.muted)
             }
         }
         Sparkline(spark, color, Modifier.fillMaxWidth().height(if (wide) 52.dp else 34.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(v?.let { if (wide) sourceLabel(it.source) else sourceShort(it.source) } ?: "", style = MaterialTheme.typography.labelSmall, color = p.muted,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            Delta(deltaVsWeek(hist), m.lowerIsBetter, short = !wide)
+            Delta(deltaVsWeek(hist), m.lowerIsBetter, short = !wide, threshold = deltaThreshold(pref.metric))
         }
     }
 }

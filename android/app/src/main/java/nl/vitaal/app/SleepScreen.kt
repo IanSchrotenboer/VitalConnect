@@ -67,8 +67,8 @@ fun SleepScreen(vm: MainViewModel) {
                         Spacer(Modifier.weight(1f))
                         vm.history["sscore"]?.get(lastNight.day)?.let { score ->
                             Column(horizontalAlignment = Alignment.End) {
-                                Text("Score", style = MaterialTheme.typography.labelSmall, color = d.dialMuted)
-                                Text(fmt("sscore", score), style = MaterialTheme.typography.headlineMedium, color = d.sleep)
+                                Text("Slaapscore", style = MaterialTheme.typography.labelSmall, color = d.dialMuted)
+                                ScoreOf100(score.roundToInt(), MaterialTheme.typography.headlineMedium, "Slaapscore", color = d.sleep, scaleColor = d.dialMuted)
                             }
                         }
                     }
@@ -151,6 +151,6 @@ private fun RecoveryTile(vm: MainViewModel, id: String, modifier: Modifier) {
             if (last != null && m != null) Text(" ${m.unit}", style = MaterialTheme.typography.labelSmall, color = p.muted,
                 modifier = Modifier.padding(bottom = 3.dp))
         }
-        Delta(deltaVsWeek(hist), m?.lowerIsBetter ?: false, short = true)
+        Delta(deltaVsWeek(hist), m?.lowerIsBetter ?: false, short = true, threshold = deltaThreshold(id))
     }
 }

@@ -503,8 +503,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun openProfile(tab: ProfileTab = ProfileTab.Profile) {
+    /** Item in Profiel om naartoe te scrollen (key van het LazyColumn-item), bijvoorbeeld "training". */
+    var profileFocus by mutableStateOf<String?>(null)
+
+    fun openProfile(tab: ProfileTab = ProfileTab.Profile, focus: String? = null) {
         profileTab = tab
+        profileFocus = focus
         showSettings = true
     }
 
