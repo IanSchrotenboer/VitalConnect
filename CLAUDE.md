@@ -20,6 +20,9 @@
 3. **Belastingtest:** `tests/belasting.sql` via `execute_sql` (500 gebruikers + 1 zware, cron-selectie op de index,
    app openen < 300 ms, dag van een gemiddelde gebruiker < 1 s, cache gelijk aan volledige berekening, 0 logregels bij succes).
    Capaciteit en aannames: `docs/belasting-1-miljoen.md`.
+3a. **Functionele test en bugtest:** `node tests/functioneel-preview.mjs` (elke functie van de preview met de verwachte uitkomst)
+   en de workflow **Bugtest app** (`.github/workflows/bugtest.yml`: unittests in `android/app/src/test` en Android Lint zonder fouten).
+   Bij een nieuwe functie of een opgeloste bug komt er een test bij.
 4. **Opschonen:** `python3 tests/opschonen.py` zoekt ongebruikte imports, functies, CSS-klassen, bestanden en databasefuncties,
    dubbele code en uitgeschakelde code. Verwijder wat echt overbodig is; functies van de app blijven behouden.
 5. **Veiligheidscheck:** `tests/veiligheid.sql` (RLS op elke tabel, geen rechten voor anon, isolatie tussen gebruikers)
@@ -42,11 +45,12 @@
 - Kleuren staan in `android/.../Theme.kt`, `res/values(-night)/colors.xml` (opstartachtergrond), als CSS-variabelen bovenaan `prototype/index.html` en in `site/style.css`; houd ze gelijk. Licht = salie: achtergrond #DCE6E1, tegels #FFFFFF zonder rand, lijnen #CCD7D2. Donker = OLED-zwart: achtergrond #000000, tegels #1D2321, lijnen #333B38.
 - Tabbladen: Vandaag, Gezondheid (statistieken over de hele geschiedenis), Slaap. Koppelingen en account achter het persoon-icoon.
 - De dagringen kleuren per positie, fel en gelijk in licht en donker: abrikoos #FF8438, zeegroen #26E8C8, indigo #7B83FF (`RING_COLORS` in Theme.kt, `--ring1..3` in de preview). De sporen onder de ringen zijn neutraal, nooit een doorzichtige ringkleur.
-- Blok bovenaan Vandaag: licht = dennengroene wijzerplaat (#123430); donker = begroeting los op zwart en de dagringen in een tegel (#1D2321) met percentages per doel (ontwerp C, canvas "Vital Connect – dagringen in donkere modus").
+- Blok bovenaan Vandaag, in licht en donker gelijk (ontwerp C, canvas "Vital Connect – dagringen in donkere modus"): begroeting los op de achtergrond, de dagringen in een tegel (kaartkleur: wit of #1D2321) met percentages per doel en daaronder een lijn met wat er nog te halen is. Sporen: licht #E3E9E6, donker #2A312F. Tekst en pijlen in ringkleur gebruiken in licht de donkere tinten #B8500F, #0C7C6A, #4F57E0 (`ringInk` in Theme.kt, `--ringink1..3` in de preview), in donker de ringkleur zelf.
 
 ## Backend
 - Koppelingen: zie `docs/koppelingen.md`. Eén bestand per bron in `supabase/functions/_shared/providers/`; generieke functies
   `connect`, `connect-callback`, `sync`, `disconnect`; terugkeer via `app.vital-connect.nl/koppelen/<slug>/`; register in de tabel
   `providers` (`sync`, `available`). Nieuwe bron = providerbestand + rij in `providers` + terugkeerpagina + geheimen.
+- Een kolom pas verwijderen nadat de app-versie die hem niet meer gebruikt is uitgebracht; anders mislukt het opslaan in de oude app (400 bij PATCH profiles).
 - Supabase-project `qtythirnpokfptchavgy`. Nieuwe migraties krijgen als bestandsnaam de versie die Supabase toekent.
 - Elke edge function moet in `supabase/config.toml` staan, anders rolt de GitHub-koppeling hem niet uit.
