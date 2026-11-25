@@ -69,7 +69,12 @@ jobs:
               grep -o 'id="[^"]*"[^>]*severity="Error"[^>]*message="[^"]*"' app/build/reports/lint-results-debug.xml | head -30 | sed 's/^/- /' || true
             fi
             grep -E '^e: |FAILED|AssertionError|expected:' test.log 2>/dev/null | head -40 | sed 's/^/    /' || true
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          # Alle Lint-meldingen ook in het log, zodat ze zonder het artefact te lezen zijn
+          for f in app/build/reports/lint-results-debug.txt app/build/intermediates/lint_intermediate_text_report/debug/*/lint-results-debug.txt; do
+            [ -f "$f" ] && { echo "::group::Lint-meldingen"; cat "$f"; echo "::endgroup::"; break; }
+          done
+          grep -h -o 'id="[^"]*"' app/build/reports/lint-results-debug.xml 2>/dev/null | sort | uniq -c | sort -rn || true
 
       - name: Rapporten bewaren
         if: always()
