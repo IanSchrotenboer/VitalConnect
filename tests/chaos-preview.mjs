@@ -59,7 +59,7 @@ for (const [naam, waarde] of [
   ["verkeerd type", "[1,2,3]"],
   ["null-velden", JSON.stringify({ onb: null, order: null, rings: null, goal: null, lay: null, prof: null, conn: null })],
   ["oude versie", JSON.stringify({ order: ["steps", "bestaat_niet"], size: {}, goal: { steps: -5 }, rings: ["x", "y", "z", "q"], conn: {} })],
-  ["rare waarden", JSON.stringify({ onb: null, sync: "vaak", theme: 42, lay: { sleepTiles: "hrv" }, prof: { name: 123, h: "abc" } })],
+  ["rare waarden", JSON.stringify({ onb: null, sync: "vaak", theme: 42, lay: { sleepTiles: "hrv" }, prof: { name: 123, h: "abc" }, wsrc: "strava", wown: "ja" })],
   ["kapotte trainingen", JSON.stringify({ onb: null, wk: [null, 5, "x", { id: 1 }, { id: "a", sport: "raket", source: "manual", day: "2026-01-01", start: 1, dur: 600 },
     { id: "b", sport: "running", source: "manual", day: "gisteren", start: 1, dur: 600 }, { id: "c", sport: "running", source: "file", day: "2026-11-20", start: 1.7e12, dur: 1e9 },
     { id: "<img src=x onerror=alert(1)>", sport: "running", source: "manual", day: "2026-11-20", start: 1.7637e12, dur: 1800, title: "<b>x</b>", avg: "veel", dist: -5 }] })],
@@ -156,6 +156,14 @@ for (const [naam, waarde] of [
   if (await p.locator("[data-wk^=m-]").count()) fouten.push("training: zelf gelogde training niet verwijderd");
   await controleer(p, "training verwijderen");
   for (let i = 0; i < 30; i++) { await p.click("[data-wk]", { delay: 0 }).catch(() => {}); await p.click("[data-act=back]", { delay: 0 }).catch(() => {}); }
+  // Snel wisselen tussen alle trainingsbronnen en de schakelaar
+  await p.click("[data-act=wfilter]").catch(() => {});
+  for (let i = 0; i < 24; i++) {
+    await p.click(`[data-wsrc=${["auto", "google_health", "health_connect", "all"][i % 4]}]`, { delay: 0 }).catch(() => {});
+    if (i % 5 === 0) await p.click("[data-ntf=wown]", { delay: 0 }).catch(() => {});
+  }
+  await controleer(p, "trainingsbron snel wisselen");
+  await p.click("[data-act=back]").catch(() => {});
   await controleer(p, "snel trainingen openen en sluiten");
   await p.context().close();
 }

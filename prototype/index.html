@@ -235,7 +235,7 @@ const dd=i=>new Date(NOW.getTime()-(N-1-i)*DAY);
 
 const KEY='vitalconnect.preview.v1';
 const SPORT_KEYS=new Set(['running','walking','hiking','cycling','swimming','strength','hiit','yoga','rowing','elliptical','team','racket','dance','martial','winter','other']);
-const fresh=()=>({wk:[],order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},goal:{},rings:['steps','active','sleep'],conn:{hc:true,google:true,garmin:false},theme:'system',onb:'login',sync:60,lay:{greetName:true,motivation:true,healthTotals:true,healthHidden:[],sleepTiles:['hrv','rhr','resp'],sleepAdvice:true,herstel:true},nGoals:true,nStatus:false,prof:{name:'Sam de Vries',birth:'1991-04-18',sex:null,h:null,w:null}});
+const fresh=()=>({wk:[],wsrc:'auto',wown:false,order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},goal:{},rings:['steps','active','sleep'],conn:{hc:true,google:true,garmin:false},theme:'system',onb:'login',sync:60,lay:{greetName:true,motivation:true,healthTotals:true,healthHidden:[],sleepTiles:['hrv','rhr','resp'],sleepAdvice:true,herstel:true},nGoals:true,nStatus:false,prof:{name:'Sam de Vries',birth:'1991-04-18',sex:null,h:null,w:null}});
 // Opgeslagen staat wordt veld voor veld gecontroleerd: kapotte, oude of vreemde waarden vallen terug op de standaard.
 function clean(raw){const d=fresh(),o=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
 const ids=a=>Array.isArray(a)?[...new Set(a.filter(x=>x in MI))]:null,obj=x=>x&&typeof x==='object'&&!Array.isArray(x)?x:{};
@@ -247,6 +247,7 @@ for(const k of Object.keys(d.conn))if(typeof obj(o.conn)[k]==='boolean')d.conn[k
 if(['system','light','dark'].includes(o.theme))d.theme=o.theme;
 if(o.onb===null||['login','consent','import','profile'].includes(o.onb))d.onb=o.onb;
 if([15,30,60,180,360,0].includes(o.sync))d.sync=o.sync;
+d.wsrc=['auto','google_health','health_connect','all'].includes(o.wsrc)?o.wsrc:'auto';d.wown=o.wown===true;
 for(const k of ['nGoals','nStatus'])if(typeof o[k]==='boolean')d[k]=o[k];
 const l=obj(o.lay);for(const k of ['greetName','motivation','healthTotals','sleepAdvice','herstel'])if(typeof l[k]==='boolean')d.lay[k]=l[k];
 const hid=ids(l.healthHidden);if(hid)d.lay.healthHidden=hid;const st=ids(l.sleepTiles);if(st&&st.length)d.lay.sleepTiles=st;
@@ -456,17 +457,37 @@ const SPORTS=[['running','Hardlopen'],['walking','Wandelen'],['hiking','Wandelto
 const SPORTN=Object.fromEntries(SPORTS),SPORTK=new Set(SPORTS.map(s=>s[0]));
 const bodyCard=id=>BODY[id]?`<div class="card"><details class="uk"><summary>${id==='load'?'Wat betekent dit voor je lichaam?':'Wat zegt dit over je lichaam?'}</summary>${BODY[id].map(p=>`<p>${p}</p>`).join('')}${id==='load'?'':'<span class="gl">Geen medisch advies. Twijfel je, vraag het je huisarts.</span>'}</details></div>`:'';
 // Voorbeeldtrainingen van de laatste 120 dagen (vast patroon, zodat de preview steeds hetzelfde laat zien)
+// Voorbeeldtrainingen van de laatste 120 dagen (vast patroon, zodat de preview steeds hetzelfde laat zien), zoals ze echt binnenkomen:
+// trainingen van het horloge via Google Health (FITBIT) én via Health Connect (zonder hartslag), af en toe een FIT-bestand,
+// automatisch herkende wandelingen van het horloge, en de kleine wandelingen van Google Fit via Health Connect en via Google Health.
 const SAMPLE_WK=(()=>{const out=[];let s=7;const r=()=>(s=s*16807%2147483647)/2147483647;
   for(let i=0;i<120;i++){const d=new Date(NOW.getTime()-i*DAY),wd=d.getDay();let sp=null;
     if(wd===1||wd===3)sp='running';else if(wd===6)sp=i%14<7?'running':'cycling';else if(wd===2)sp='strength';else if(wd===0)sp='cycling';else if(wd===4&&i%2)sp='yoga';
-    if(!sp)continue;const dur={running:2400+r()*1500,cycling:3600+r()*2400,strength:2700,yoga:1800}[sp]|0;
-    const hr={running:142+r()*14,cycling:128+r()*12,strength:112+r()*10,yoga:92+r()*8}[sp]|0;
-    const start=new Date(d);start.setHours(sp==='yoga'?20:7,15,0,0);
-    out.push({id:'s'+i,source:sp==='cycling'?'google_health':sp==='running'&&wd===6?'file':'health_connect',sport:sp,title:sp==='running'&&wd===6?'Lange duurloop':null,
-      day:start.toISOString().slice(0,10),start:start.getTime(),dur,dist:sp==='running'?dur/330*1000|0:sp==='cycling'?dur/150*1000|0:null,kcal:Math.round(dur/60*(sp==='yoga'?4:sp==='strength'?7:11)),
-      avg:hr,max:hr+18,asc:sp==='cycling'?Math.round(r()*300):null,notes:null,origin:sp==='cycling'?'Google Health':sp==='running'&&wd===6?'FIT-bestand':'Google Fit'})}
+    if(sp){const dur={running:2400+r()*1500,cycling:3600+r()*2400,strength:2700,yoga:1800}[sp]|0;
+      const hr={running:142+r()*14,cycling:128+r()*12,strength:112+r()*10,yoga:92+r()*8}[sp]|0;
+      const start=new Date(d);start.setHours(sp==='yoga'?20:7,15,0,0);const file=sp==='running'&&wd===6;
+      const base={sport:sp,title:file?'Lange duurloop':null,day:start.toISOString().slice(0,10),start:start.getTime(),dur,
+        dist:sp==='running'?dur/330*1000|0:sp==='cycling'?dur/150*1000|0:null,kcal:Math.round(dur/60*(sp==='yoga'?4:sp==='strength'?7:11)),asc:sp==='cycling'?Math.round(r()*300):null,notes:null};
+      out.push({...base,id:'s'+i,source:file?'file':'google_health',avg:hr,max:hr+18,origin:file?'FIT-bestand':'FITBIT',rec:'active'});
+      out.push({...base,id:'h'+i,source:'health_connect',title:null,start:base.start+60000,avg:null,max:null,asc:null,origin:'Fitbit',rec:'active'})}
+    // Kleine wandelingen die Google Fit zelf vastlegt: via Health Connect en (6 minuten verschoven) ook via Google Health
+    for(let k=0;k<1+(i%3);k++){const st=new Date(d);st.setHours(9+k*4,10+(i*7)%40,0,0);const dur=(300+r()*1500)|0,dist=(dur*(.3+r()*.6))|0;
+      const w={sport:'walking',title:null,day:st.toISOString().slice(0,10),dur,dist,kcal:null,avg:null,max:null,asc:null,notes:null};
+      out.push({...w,id:'f'+i+k,source:'health_connect',start:st.getTime(),origin:'Google Fit',rec:'passive'});
+      out.push({...w,id:'g'+i+k,source:'google_health',start:st.getTime()+360000,origin:'HEALTH_CONNECT',rec:'unknown'})}
+    // Een wandeling die het horloge zelf herkent
+    if(i%4===1){const st=new Date(d);st.setHours(17,40,0,0);const dur=(900+r()*900)|0;
+      out.push({id:'a'+i,source:'google_health',sport:'walking',title:null,day:st.toISOString().slice(0,10),start:st.getTime(),dur,dist:dur*1.2|0,kcal:dur/12|0,avg:84,max:101,asc:null,notes:null,origin:'FITBIT',rec:'passive'})}}
   return out})();
-const allWk=()=>[...S.wk,...SAMPLE_WK].sort((a,b)=>b.start-a.start);
+// Welke trainingen meetellen: dezelfde regels als workout_counts() en workout_hidden() op de server
+const WSRC=[['auto','Automatisch'],['google_health','Google Health'],['health_connect','Health Connect'],['all','Alles']];
+const wMode=()=>S.wsrc==='auto'?(S.conn.google?'google_health':'health_connect'):S.wsrc;
+const wCounts=(w,mode,own)=>w.source==='manual'||w.source==='file'?true:own&&w.rec==='passive'?false:mode==='all'?true:mode==='google_health'?w.source==='google_health'&&w.origin!=='HEALTH_CONNECT':mode==='health_connect'?w.source==='health_connect':false;
+const wPrio=x=>({file:1,manual:2,google_health:3}[x]||4);
+function visibleWk(){const mode=wMode(),own=!!S.wown,all=[...S.wk,...SAMPLE_WK],c=all.filter(w=>wCounts(w,mode,own)),t0=NOW.getTime()-90*DAY;
+  const shown=c.filter(w=>!c.some(o=>o!==w&&Math.abs(o.start-w.start)<=300000&&Math.abs(o.dur-w.dur)<=Math.max(180,.25*w.dur)&&(wPrio(o.source)<wPrio(w.source)||(wPrio(o.source)===wPrio(w.source)&&o.id<w.id))));
+  return{list:shown.sort((a,b)=>b.start-a.start),hidden:all.filter(w=>w.start>=t0&&!wCounts(w,mode,own)).length,mode,own}}
+const allWk=()=>visibleWk().list;
 function trimpOf(w,rest,max){if(w.avg==null||rest==null||max==null||max-rest<20)return null;const x=Math.max(0,Math.min(1,(w.avg-rest)/(max-rest))),m=w.dur/60,sx=S.prof.sex;
   return Math.round(10*(sx==='male'?m*x*.64*Math.exp(1.92*x):sx==='female'?m*x*.86*Math.exp(1.67*x):m*x*(.64*Math.exp(1.92*x)+.86*Math.exp(1.67*x))/2))/10}
 function trainingSummary(){const birth=S.prof.birth?new Date(S.prof.birth):null,age=birth?Math.floor((NOW-birth)/31557600000):null,max=age!=null?Math.round(208-.7*age):null;
@@ -489,7 +510,7 @@ function dayLabel(day){const d=new Date(day+'T00:00:00'),t=new Date(NOW);t.setHo
 const vormOf=f=>f>5?['Uitgerust','Je hebt de laatste dagen minder getraind dan je gewend bent. Goed voor een wedstrijd of een stevige training.']:f>=-10?['In balans','Je traint ongeveer zoveel als je gewend bent.']:f>=-30?['Flink aan het trainen','Je traint meer dan je gewend bent. Zo word je fitter, als je ook genoeg rust neemt.']:['Zwaar belast','Je traint veel meer dan je gewend bent. Plan een paar rustige dagen om blessures te voorkomen.'];
 function wkRow(w,click=true){const t=new Date(w.start).toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'}),facts=[w.dist?fmtKm(w.dist):null,fmtPace(w),w.avg?'♥ '+w.avg:null,w.kcal!=null?w.kcal+' kcal':null,w.load!=null?'belasting '+Math.round(w.load):null].filter(Boolean);
   return`<${click?`button class="card tap wk" data-wk="${esc(w.id)}"`:'div class="card wk"'}><span class="wkh"><i class="dot" style="background:var(--act)"></i><span class="wkt"><b>${esc(w.title||SPORTN[w.sport])}</b><span class="gl">${[t,w.title?SPORTN[w.sport]:null,esc(srcLabel(w))].filter(Boolean).join(' · ')}</span></span><b class="num">${fmtDur(w.dur)}</b></span>${facts.length?`<span class="num wkf">${facts.join('&nbsp;&nbsp; ')}</span>`:''}</${click?'button':'div'}>`}
-function renderTraining(){const T=trainingSummary(),L=T.load,mx=Math.max(30,...T.weeks.map(w=>w.min)),by={};T.list.forEach(w=>(by[w.day]=by[w.day]||[]).push(w));
+function renderTraining(){const F=visibleWk(),T=trainingSummary(),L=T.load,mx=Math.max(30,...T.weeks.map(w=>w.min)),by={};T.list.forEach(w=>(by[w.day]=by[w.day]||[]).push(w));
   const v=L.ready?vormOf(L.form):null;
   $('#v-training').innerHTML=`<div class="pad"><div class="sh" style="margin-top:16px"><div><h1 style="margin:0">Training</h1><p class="mut" style="margin:2px 0 0">Je trainingen uit al je bronnen, en wat ze met je lichaam doen</p></div></div>
   <div class="g2" style="margin:4px 0 12px"><button class="btn pri" data-act="wnew">Training loggen</button><button class="btn" data-act="wimp">Importeren</button></div>
@@ -500,6 +521,7 @@ function renderTraining(){const T=trainingSummary(),L=T.load,mx=Math.max(30,...T
   <div class="st" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><small>Deze week</small><b>${Math.round(L.acute)}</b></div><div><small>Gewend</small><b>${Math.round(L.chronic)}</b></div><div><small>Vorm</small><b>${L.form>0?'+':''}${Math.round(L.form)}</b></div></div>
   ${L.days<42?`<span class="gl">Na 6 weken trainen is dit betrouwbaar; nu ${L.days} dagen.</span>`:''}`:`<span>${T.max==null?'Vul je geboortedatum in bij Profiel. Dan rekenen we uit hoe zwaar je trainingen voor je lichaam zijn.':'Belasting rekenen we uit je gemiddelde hartslag per training.'}</span>`}
   <details class="uk"><summary>Wat betekent dit voor je lichaam?</summary>${BODY.load.map(p=>`<p>${p}</p>`).join('')}</details></div>
+  ${F.hidden?`<div class="row" style="margin:0 4px;align-items:center;gap:8px;flex-wrap:nowrap"><span class="gl" style="flex:1">${F.hidden===1?'1 training':F.hidden+' trainingen'} ${F.mode==='google_health'&&F.own?'uit Health Connect en automatisch herkende trainingen':F.mode==='google_health'?'uit Health Connect, zoals de wandelingen van Google Fit,':F.own?'die automatisch zijn herkend':'uit andere bronnen'} ${F.hidden===1?'telt':'tellen'} niet mee.</span><button class="btn" data-act="wfilter">Aanpassen</button></div>`:''}
   ${Object.keys(by).sort().reverse().map(d=>`<h2 class="wkd">${dayLabel(d)}</h2>${by[d].map(w=>wkRow(w)).join('')}`).join('')}</div></div>`}
 function renderWorkout(id){const T=trainingSummary(),w=T.list.find(x=>x.id===id);if(!w){detail=null;show();return}
   const st=new Date(w.start),en=new Date(w.start+w.dur*1000),tm=d=>d.toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'});
@@ -666,7 +688,7 @@ function profileHtml(){
   <div class="sh" style="margin-bottom:0"><h2>Account</h2></div>
   <div class="card"><span class="gl">Je data is van jou. Je kunt alles exporteren of je account met alle data verwijderen.</span>
   <div class="row"><button class="btn">Mijn data exporteren</button><button class="btn" data-act="logout">Uitloggen</button></div><a class="lnk" style="padding:0;text-decoration:none" href="https://app.vital-connect.nl/privacy.html">Privacyverklaring</a><button class="lnk" style="color:var(--bad);padding:0">Account verwijderen</button></div>
-  <p class="gl" style="margin:4px">Vital Connect 1.11.0 · preview</p>`;
+  <p class="gl" style="margin:4px">Vital Connect 1.12.0 · preview</p>`;
 }
 const SRCS={hc:['hc','H','var(--src-hc)','Health Connect','Data van apps op deze telefoon, zoals Google Fit, Samsung Health en de Suunto-app.','@sync'],
   google:['google','F','var(--src-gh)','Google Health','Data van Fitbit, Pixel Watch en de Google Health-app.','@sync'],
@@ -700,6 +722,11 @@ function connHtml(){
   <details class="uk"><summary>Meer uitleg</summary><span class="gl">Dit geldt voor Health Connect en Google Health. Garmin stuurt nieuwe data zelf na elke sync van je horloge. Vaker kost iets meer batterij; Android kan een ronde soms iets uitstellen.</span></details>
   <div class="row">${SYNC_CHOICES.map(([m,l])=>`<button class="pill" data-sync="${m}" aria-pressed="${S.sync===m}">${l}</button>`).join('')}</div>
   <span style="font-size:14px;font-weight:500">Nu: ${syncLabel(S.sync)}.</span></div>
+  <div class="card"><h3>Trainingen</h3><span class="gl">Welke trainingen in het tabblad Training komen. Wat je zelf logt of importeert, telt altijd mee.</span>
+  <div class="row">${WSRC.map(([k,l])=>`<button class="pill" data-wsrc="${k}" aria-pressed="${S.wsrc===k}">${l}</button>`).join('')}</div>
+  <span style="font-size:14px;font-weight:500">Nu: ${{google_health:'alleen je horloge, via Google Health',health_connect:'Health Connect',all:'alle bronnen, dubbele trainingen één keer'}[wMode()]}.</span>
+  ${sw('wown','Alleen trainingen die ik zelf start','Trainingen die je telefoon of horloge zelf herkent, zoals korte wandelingen, tellen niet mee.',S.wown)}
+  <details class="uk"><summary>Meer uitleg</summary><span class="gl">Google Fit en andere apps leggen veel vast, ook kleine stukjes lopen. Die komen via Health Connect binnen, en Google Health neemt ze ook over. Kies je Google Health, dan tellen alleen de trainingen van je horloge mee, niet wat Google Health uit Health Connect overneemt. Automatisch kiest Google Health als dat gekoppeld is, en anders Health Connect. Alles blijft bewaard: als je dit omzet, zie je het meteen.</span></details></div>
   ${head('Gekoppeld',on.length,'var(--good)')}${on.length?on.map(srcCard).join(''):'<p class="mut" style="margin:0 4px">Nog niets gekoppeld. Kies hieronder een bron om je dashboard te vullen.</p>'}
   ${off.length?head('Niet gekoppeld',off.length,'var(--mut)')+off.map(srcCard).join(''):''}`;
 }
@@ -763,7 +790,7 @@ function fitHeads(){for(const el of document.querySelectorAll('.fit')){
   el.style.fontSize=base*s+'px'}}
 addEventListener('resize',()=>fitHeads());
 function renderAll(){renderToday();renderHealth();renderSleep();renderTraining();if(detail)renderDetail();if(settings)renderSettings();if(editing)renderEdit();if(S.onb)renderAuth()}
-const rr=()=>S.onb?renderAuth():renderSettings();
+const rr=()=>{if(S.onb)return renderAuth();renderSettings();renderTraining()};
 const note=t=>{const n=$('#note');if(n)n.textContent=t};
 
 document.addEventListener('click',e=>{
@@ -783,6 +810,7 @@ document.addEventListener('click',e=>{
   else if(d.per){period=+d.per;sel=null;renderDetail()}
   else if(d.act==='back'){detail=null;settings=false;draft=null;show()}
   else if(d.act==='settings'){settings=true;ptab='profile';draft=null;renderSettings();show()}
+  else if(d.act==='wfilter'){settings=true;ptab='conn';draft=null;renderSettings();show()}
   else if(d.ptab){ptab=d.ptab;renderSettings()}
   else if(d.sex){draft.sex=draft.sex===d.sex?null:d.sex;rr()}
   else if(d.themeSet){S.theme=d.themeSet;save();applyTheme();renderSettings()}
@@ -810,6 +838,7 @@ document.addEventListener('click',e=>{
       setTimeout(()=>{if(refreshing!=='done')return;refreshing=null;const b=$('#syncBtn');if(b){b.classList.remove('done');b.innerHTML=I.sync;b.setAttribute('aria-label','Bijwerken')}$('#v-today .upd')?.classList.remove('ok')},2500)},900)}
   else if(d.conn){const k=d.conn;if(S.conn[k]){S.conn[k]=false;save();rr()}else if(k!=='hc'&&!d.ok){disclose(k)}else{closeDisc();busy=k;rr();setTimeout(()=>{S.conn[k]=true;busy=null;save();rr()},1100)}}
   else if(d.act==='discClose'){closeDisc()}
+  else if(d.wsrc){if(WSRC.some(x=>x[0]===d.wsrc)){S.wsrc=d.wsrc;save();rr()}}
   else if(d.sync!=null){S.sync=+d.sync;save();rr()}
   else if(d.exp){openEdit=openEdit===d.exp?null:d.exp;renderEdit()}
   else if(d.size){const[id,v]=d.size.split(':');S.size[id]=v;renderEdit()}

@@ -96,6 +96,16 @@ begin
       and (payload #>> '{load,ready}')::boolean and jsonb_array_length(payload->'workouts') between 50 and 300,
       'd', round(maxms) || ' ms, ' || jsonb_array_length(payload->'workouts') || ' trainingen zichtbaar na ontdubbelen');
 
+    update public.profiles set training_source = 'all' where id = a;
+    maxms := 0;
+    for i in 1..3 loop
+      t0 := clock_timestamp(); payload := public.training(current_date);
+      maxms := greatest(maxms, extract(epoch from clock_timestamp() - t0) * 1000);
+    end loop;
+    rep := rep || jsonb_build_object('c', 'Training met alle bronnen (ontdubbelen over twee bronnen, 5 jaar)', 'ok', maxms < grens
+      and jsonb_array_length(payload->'workouts') between 50 and 300, 'd', round(maxms) || ' ms, ' || jsonb_array_length(payload->'workouts') || ' trainingen');
+    update public.profiles set training_source = 'auto' where id = a;
+
     maxms := 0;
     for i in 1..3 loop
       t0 := clock_timestamp(); perform public.workouts_before(current_date - 1000, 100);

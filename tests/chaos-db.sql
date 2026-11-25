@@ -167,6 +167,36 @@ begin
     rep := rep || jsonb_build_object('c','training, workouts_before en delete_workouts met onzin: geen fout','ok', false, 'd', sqlerrm);
   end;
 
+  -- Welke trainingen meetellen: elke keuze, ontdubbelen alleen binnen wat meetelt, onzin geweigerd
+  perform set_config('role', 'postgres', true);
+  delete from public.workouts where user_id = a;
+  insert into public.workouts (user_id, source, external_id, sport, day, started_at, duration_s, avg_hr, origin, recording) values
+    (a, 'google_health', 'g-run', 'running', current_date - 1, (current_date - 1) + time '12:00', 3600, 150, 'FITBIT', 'active'),
+    (a, 'google_health', 'g-autowalk', 'walking', current_date - 1, (current_date - 1) + time '15:00', 900, 70, 'FITBIT', 'passive'),
+    (a, 'google_health', 'g-fitwalk', 'walking', current_date - 2, (current_date - 2) + time '06:00', 1800, null, 'HEALTH_CONNECT', 'unknown'),
+    (a, 'health_connect', 'h-run', 'running', current_date - 1, (current_date - 1) + time '12:01', 3590, null, 'com.google.android.apps.fitness', 'active'),
+    (a, 'health_connect', 'h-fitwalk', 'walking', current_date - 2, (current_date - 2) + time '06:00', 1800, null, 'com.google.android.apps.fitness', 'passive'),
+    (a, 'manual', 'ok1', 'yoga', current_date - 3, (current_date - 3) + time '20:00', 1200, null, null, 'manual');
+  insert into public.connections (user_id, provider, status) values (a, 'google_health', 'active') on conflict do nothing;
+  perform set_config('role', 'authenticated', true);
+  for k in 1..5 loop
+    update public.profiles set training_source = (array['auto','auto','health_connect','all','google_health'])[k], training_own_only = (k = 2) where id = a;
+    j := public.training(current_date);
+    rep := rep || jsonb_build_object('c', 'trainingen tellen mee volgens instelling ' || (array['auto','auto + zelf gestart','health_connect','all','google_health'])[k],
+      'ok', (select string_agg(x->>'external_id', ',' order by x->>'external_id') from jsonb_array_elements(j->'workouts') x)
+            = (array['g-autowalk,g-run,ok1','g-run,ok1','h-fitwalk,h-run,ok1','g-autowalk,g-fitwalk,g-run,ok1','g-autowalk,g-run,ok1'])[k],
+      'd', (select string_agg(x->>'external_id', ',' order by x->>'external_id') from jsonb_array_elements(j->'workouts') x));
+  end loop;
+  begin update public.profiles set training_source = 'strava' where id = a; ok := false; exception when check_violation then ok := true; end;
+  begin update public.profiles set training_own_only = null where id = a; ok := ok and false; exception when not_null_violation then null; end;
+  rep := rep || jsonb_build_object('c','onbekende trainingsbron en lege schakelaar geweigerd','ok', ok);
+  update public.profiles set training_source = 'auto', training_own_only = false where id = a;
+  n := public.save_workouts(jsonb_build_array(jsonb_build_object('source','manual','external_id','m-rec','sport','yoga','day',current_date,
+        'started_at',now() - interval '2 hours','duration_s',600,'recording','<script>')));
+  rep := rep || jsonb_build_object('c','onbekende vastlegmethode wordt leeg opgeslagen','ok', n = 1
+    and (select recording from public.workouts where user_id = a and external_id = 'm-rec') is null);
+  delete from public.workouts where user_id = a and external_id <> 'ok1';
+
   -- Een andere gebruiker blijft onaangeroerd
   select array_agg(id) into ids from public.workouts where user_id = a;
   perform set_config('request.jwt.claims', jsonb_build_object('sub', b, 'role', 'authenticated')::text, true);

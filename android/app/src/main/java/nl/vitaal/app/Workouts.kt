@@ -274,7 +274,7 @@ private fun FilterNote(vm: MainViewModel, f: TrainingFilter) {
     val p = LocalPalette.current
     val wat = when {
         f.mode == "google_health" && f.ownOnly -> "uit Health Connect en automatisch herkende trainingen"
-        f.mode == "google_health" -> "die Google Health uit Health Connect overneemt, zoals de wandelingen van Google Fit,"
+        f.mode == "google_health" -> "uit Health Connect, zoals de wandelingen van Google Fit,"
         f.ownOnly -> "die automatisch zijn herkend"
         else -> "uit andere bronnen"
     }

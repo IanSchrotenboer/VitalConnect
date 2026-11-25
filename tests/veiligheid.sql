@@ -85,4 +85,10 @@ select 'Controles op invoer trainingen (sport, bron, duur, tekstlengtes)',
        count(*) >= 5,
        count(*)::text || ' controles'
 from pg_constraint
-where conrelid = 'public.workouts'::regclass and contype = 'c';
+where conrelid = 'public.workouts'::regclass and contype = 'c'
+union all
+select 'Trainingsinstelling heeft vaste keuzes (auto, google_health, health_connect, all)',
+       count(*) >= 1,
+       count(*)::text || ' controle'
+from pg_constraint
+where conrelid = 'public.profiles'::regclass and contype = 'c' and pg_get_constraintdef(oid) like '%training_source%';
