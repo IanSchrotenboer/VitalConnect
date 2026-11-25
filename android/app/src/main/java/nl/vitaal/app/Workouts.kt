@@ -118,9 +118,14 @@ data class TrainingLoad(
 )
 /** Keuzes bij Profiel → Koppelingen → Trainingen (zelfde waarden als profiles.training_source). */
 val TRAINING_SOURCES = listOf("auto" to "Automatisch", "google_health" to "Google Health", "health_connect" to "Health Connect", "all" to "Alles")
+/** Keuzes voor korte wandelingen (zelfde waarden als profiles.training_walk_min). */
+val WALK_MINUTES = listOf(0 to "Uit", 10 to "10 min", 20 to "20 min", 30 to "30 min")
 
 /** Welke trainingen meetellen: source = de keuze (auto, google_health, health_connect, all), mode = wat auto werd. */
-data class TrainingFilter(val source: String, val mode: String, val ownOnly: Boolean, val hidden: Int)
+data class TrainingFilter(
+    val source: String, val mode: String, val walkMin: Int, val walkLight: Boolean, val hrLimit: Int?,
+    val hiddenSource: Int, val hiddenWalks: Int,
+)
 data class Training(val workouts: List<Workout>, val week: TrainingWeek, val weeks: List<WeekBar>, val load: TrainingLoad, val filter: TrainingFilter? = null)
 
 /** Leest het veld training van app_state; null bij een oudere server. */
@@ -136,7 +141,8 @@ fun parseTraining(o: JsonObject?): Training? {
         },
         load = TrainingLoad(ld.bool("ready") == true, ld.int("days"), ld.num("acute"), ld.num("chronic"), ld.num("form"), ld.int("hrmax"), ld.num("rest")),
         filter = (o["filter"] as? JsonObject)?.let { f ->
-            TrainingFilter(f.str("source").ifEmpty { "auto" }, f.str("mode"), f.bool("own_only") == true, f.int("hidden") ?: 0)
+            TrainingFilter(f.str("source").ifEmpty { "auto" }, f.str("mode"), f.int("walk_min") ?: 0, f.bool("walk_light") == true,
+                f.int("hr_limit"), f.int("hidden_source") ?: 0, f.int("hidden_walks") ?: 0)
         },
     )
 }
@@ -228,7 +234,7 @@ fun TrainingScreen(vm: MainViewModel) {
         if (t != null) {
             item { WeekCard(t) }
             item { LoadCard(vm, t.load) }
-            t.filter?.takeIf { it.hidden > 0 }?.let { f -> item { FilterNote(vm, f) } }
+            t.filter?.takeIf { it.hiddenSource + it.hiddenWalks > 0 }?.let { f -> item { FilterNote(vm, f) } }
         }
         if (all.isEmpty()) item {
             VCard(Modifier.fillMaxWidth()) {
@@ -267,24 +273,37 @@ private fun WeekCard(t: Training) {
     }
 }
 
-/** Acht weken als staafjes; de huidige week in de hoofdkleur. */
 /** Korte regel dat de instelling trainingen verbergt, met een weg naar die instelling. */
 @Composable
 private fun FilterNote(vm: MainViewModel, f: TrainingFilter) {
     val p = LocalPalette.current
-    val wat = when {
-        f.mode == "google_health" && f.ownOnly -> "uit Health Connect en automatisch herkende trainingen"
-        f.mode == "google_health" -> "uit Health Connect, zoals de wandelingen van Google Fit,"
-        f.ownOnly -> "die automatisch zijn herkend"
-        else -> "uit andere bronnen"
-    }
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text("${if (f.hidden == 1) "1 training" else "${f.hidden} trainingen"} $wat ${if (f.hidden == 1) "telt" else "tellen"} niet mee.",
-            style = MaterialTheme.typography.bodySmall, color = p.muted, modifier = Modifier.weight(1f))
+        Text(filterNoteText(f), style = MaterialTheme.typography.bodySmall, color = p.muted, modifier = Modifier.weight(1f))
         TextButton(onClick = { vm.openProfile(ProfileTab.Connections) }) { Text("Aanpassen") }
     }
 }
 
+/** "12 trainingen uit Health Connect en 4 korte of lichte wandelingen tellen niet mee." */
+internal fun filterNoteText(f: TrainingFilter): String {
+    val delen = buildList {
+        if (f.hiddenSource > 0) add(
+            (if (f.hiddenSource == 1) "1 training " else "${f.hiddenSource} trainingen ") +
+                if (f.mode == "google_health") "uit Health Connect" else "uit andere bronnen"
+        )
+        if (f.hiddenWalks > 0) {
+            val soort = when {
+                f.walkMin > 0 && f.walkLight -> "korte of lichte"
+                f.walkMin > 0 -> "korte"
+                else -> "lichte"
+            }
+            add(if (f.hiddenWalks == 1) "1 $soort wandeling" else "${f.hiddenWalks} $soort wandelingen")
+        }
+    }
+    val totaal = f.hiddenSource + f.hiddenWalks
+    return delen.joinToString(" en ") + (if (totaal == 1) " telt" else " tellen") + " niet mee."
+}
+
+/** Acht weken als staafjes; de huidige week in de hoofdkleur. */
 @Composable
 private fun WeekBars(weeks: List<WeekBar>) {
     val p = LocalPalette.current

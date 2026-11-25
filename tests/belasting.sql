@@ -9,7 +9,7 @@ begin
   insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
   select '00000000-0000-0000-0000-000000000000', id, 'authenticated', 'authenticated', 'load'||g||'@vitalconnect.invalid', '{}', '{}', now(), now() from tu;
   -- Met geboortedatum en 70 dagen data rekent herstel en fitheid (in app_state) echt mee
-  update public.profiles set birth_date = '1988-05-05', sex = 'male' where id in (select id from tu);
+  update public.profiles set birth_date = '1988-05-05', sex = 'male', training_walk_min = 20, training_walk_light = true where id in (select id from tu);
   t0 := clock_timestamp();
   insert into public.daily_metrics (user_id, day, metric, source, provider, value, updated_at)
   select tu.id, d::date, m.id, 'garmin', 'garmin', round(m.min_value + (m.max_value - m.min_value) * (0.25 + 0.1 * random())::numeric, 1), now()
@@ -18,7 +18,7 @@ begin
   rep := rep || jsonb_build_object('c','vullen 500 gebruikers','d', n||' rijen in '||round(extract(epoch from clock_timestamp()-t0))||' s');
   -- Trainingen: ongeveer 3 per week per gebruiker, deels dubbel uit twee bronnen (app_state rekent belasting en ontdubbelt)
   insert into public.workouts (user_id, source, external_id, sport, day, started_at, duration_s, distance_m, avg_hr)
-  select tu.id, s.src, s.src || d, 'running', (current_date - d), (current_date - d)::timestamptz + interval '7 hours' + s.shift, 2400, 8000, 140 + d % 20
+  select tu.id, s.src, s.src || d, case when d % 2 = 0 then 'walking' else 'running' end, (current_date - d), (current_date - d)::timestamptz + interval '7 hours' + s.shift, 2400, 8000, 90 + d % 60
   from tu cross join generate_series(0, 69) d cross join (values ('health_connect', interval '0'), ('google_health', interval '1 minute')) s(src, shift)
   where d % 7 in (1, 3, 6);
   get diagnostics n = row_count;

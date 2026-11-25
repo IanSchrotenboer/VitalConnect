@@ -38,7 +38,7 @@ begin
   -- A: 5 jaar trainingen (bijna elke dag één, plus kopieën uit een tweede bron die als dubbel wegvallen)
   update public.profiles set birth_date = '1985-06-01', sex = 'male' where id = a;
   insert into public.workouts (user_id, source, external_id, sport, day, started_at, duration_s, distance_m, kcal, avg_hr, max_hr)
-  select a, s.src, s.src || '-' || g, (array['running','cycling','strength','yoga'])[1 + g % 4], current_date - g,
+  select a, s.src, s.src || '-' || g, (array['running','cycling','strength','yoga','walking'])[1 + g % 5], current_date - g,
          (current_date - g)::timestamptz + interval '7 hours' + s.shift, 1800 + (g % 5) * 600, 8000 + (g % 7) * 1000, 400 + g % 300, 120 + g % 40, 170
   from generate_series(0, 1825) g
   cross join (values ('health_connect', interval '0'), ('google_health', interval '2 minutes')) s(src, shift)
@@ -96,15 +96,15 @@ begin
       and (payload #>> '{load,ready}')::boolean and jsonb_array_length(payload->'workouts') between 50 and 300,
       'd', round(maxms) || ' ms, ' || jsonb_array_length(payload->'workouts') || ' trainingen zichtbaar na ontdubbelen');
 
-    update public.profiles set training_source = 'all' where id = a;
+    update public.profiles set training_source = 'all', training_walk_min = 20, training_walk_light = true where id = a;
     maxms := 0;
     for i in 1..3 loop
       t0 := clock_timestamp(); payload := public.training(current_date);
       maxms := greatest(maxms, extract(epoch from clock_timestamp() - t0) * 1000);
     end loop;
-    rep := rep || jsonb_build_object('c', 'Training met alle bronnen (ontdubbelen over twee bronnen, 5 jaar)', 'ok', maxms < grens
+    rep := rep || jsonb_build_object('c', 'Training met alle bronnen en wandelfilters (ontdubbelen over twee bronnen, 5 jaar)', 'ok', maxms < grens
       and jsonb_array_length(payload->'workouts') between 50 and 300, 'd', round(maxms) || ' ms, ' || jsonb_array_length(payload->'workouts') || ' trainingen');
-    update public.profiles set training_source = 'auto' where id = a;
+    update public.profiles set training_source = 'auto', training_walk_min = 0, training_walk_light = false where id = a;
 
     maxms := 0;
     for i in 1..3 loop

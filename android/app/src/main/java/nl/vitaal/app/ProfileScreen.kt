@@ -268,15 +268,26 @@ private fun TrainingSourceCard(vm: MainViewModel) {
             TRAINING_SOURCES.forEach { (id, label) -> Pill(label, vm.trainingSource == id) { vm.setTrainingFilter(source = id) } }
         }
         Text("Nu: ${trainingSourceNow(vm)}.", style = MaterialTheme.typography.labelMedium, color = p.ink)
-        SwitchRow("Alleen trainingen die ik zelf start",
-            "Trainingen die je telefoon of horloge zelf herkent, zoals korte wandelingen, tellen niet mee.", vm.trainingOwnOnly) {
-            vm.setTrainingFilter(ownOnly = it)
+        Text("Wandelingen", style = MaterialTheme.typography.titleSmall, color = p.ink, modifier = Modifier.padding(top = 8.dp))
+        Text("Korte wandelingen verbergen: wandelingen korter dan dit tellen niet mee.",
+            style = MaterialTheme.typography.bodySmall, color = p.muted)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            WALK_MINUTES.forEach { (min, label) -> Pill(label, vm.trainingWalkMin == min) { vm.setTrainingFilter(walkMin = min) } }
         }
+        val limit = vm.training?.filter?.hrLimit
+        SwitchRow("Lichte wandelingen verbergen",
+            (if (limit != null) "Een wandeling telt alleen mee als je hartslag duidelijk omhoog ging: gemiddeld $limit of hoger. "
+            else "Vul je geboortedatum in, dan rekenen we een hartslaggrens uit. ") +
+                "Zonder hartslag telt een wandeling mee als je sneller liep dan 4 km/u.",
+            vm.trainingWalkLight) { vm.setTrainingFilter(walkLight = it) }
         Expandable("Meer uitleg") {
             Text("Google Fit en andere apps leggen veel vast, ook kleine stukjes lopen. Die komen via Health Connect binnen, " +
                 "en Google Health neemt ze ook over. Kies je Google Health, dan tellen alleen de trainingen van je horloge mee, " +
                 "niet wat Google Health uit Health Connect overneemt. Automatisch kiest Google Health als dat gekoppeld is, " +
-                "en anders Health Connect. Alles blijft bewaard: als je dit omzet, zie je het meteen.",
+                "en anders Health Connect. Alles blijft bewaard: als je dit omzet, zie je het meteen.\n\n" +
+                "De hartslaggrens is je rusthartslag plus 30% van het verschil tot je maximale hartslag (methode van Karvonen). " +
+                "Daaronder is een wandeling rustig bewegen: goed voor je, maar geen training. " +
+                "Hardlopen, fietsen, krachttraining en alles wat je zelf logt of importeert tellen altijd mee.",
                 style = MaterialTheme.typography.bodySmall, color = p.muted)
         }
     }
