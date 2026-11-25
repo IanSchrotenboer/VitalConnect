@@ -60,12 +60,19 @@ class ApiError extends Error {
 }
 
 async function call(token: string, path: string, init: RequestInit = {}) {
-  const r = await fetch(`${API}${path}`, {
-    ...init,
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "Content-Type": "application/json", ...(init.headers ?? {}) },
-  });
-  if (!r.ok) throw new ApiError(r.status, await r.text());
-  return await r.json();
+  // Google Health geeft soms even 503 (tijdelijk niet beschikbaar) of 429 (te veel verzoeken): één keer opnieuw proberen
+  for (let poging = 1; ; poging++) {
+    const r = await fetch(`${API}${path}`, {
+      ...init,
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "Content-Type": "application/json", ...(init.headers ?? {}) },
+    });
+    if (r.ok) return await r.json();
+    const tijdelijk = r.status === 429 || r.status === 502 || r.status === 503 || r.status === 504;
+    if (!tijdelijk || poging >= 2) throw new ApiError(r.status, await r.text());
+    await r.body?.cancel();
+    const wacht = Math.min(3000, Math.max(800, Number(r.headers.get("retry-after") ?? 0) * 1000));
+    await new Promise((ok) => setTimeout(ok, wacht));
+  }
 }
 
 async function rollups(token: string, uid: string, days: number): Promise<Row[]> {
