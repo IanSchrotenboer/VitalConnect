@@ -91,10 +91,17 @@ fun dialPalette(): Palette = DialPalette.copy(dial = LocalPalette.current.dial)
 
 /**
  * Dagringen: één kleur per positie (abrikoos, zeegroen, indigo), van buiten naar binnen.
- * Feller dan de categoriekleuren, zodat ze op de dennengroene wijzerplaat (licht) en de tegel op OLED-zwart (donker) oplichten.
+ * Feller dan de categoriekleuren, zodat ze in de tegel bovenaan Vandaag oplichten, in licht en donker.
  * Gelijk aan --ring1..3 in prototype/index.html.
  */
 val RING_COLORS = listOf(Color(0xFFFF8438), Color(0xFF26E8C8), Color(0xFF7B83FF))
+
+/** Tekst en pijlen in de ringkleur: in licht een donkerdere tint (contrast ≥ 4,5:1 op wit), in donker gelijk aan de ring. */
+private val RING_INK_LIGHT = listOf(Color(0xFFB8500F), Color(0xFF0C7C6A), Color(0xFF4F57E0))
+fun Palette.ringInk(i: Int): Color = if (dark) RING_COLORS[i] else RING_INK_LIGHT[i]
+
+/** Neutraal spoor onder de dagringen, op de tegelkleur. Gelijk aan --track in de preview. */
+val Palette.ringTrack: Color get() = if (dark) Color(0xFF2A312F) else Color(0xFFE3E9E6)
 
 enum class Category(val label: String) {
     Activity("Activiteit"), Heart("Hart"), Sleep("Slaap"), Recovery("Herstel"), Body("Lichaam")
