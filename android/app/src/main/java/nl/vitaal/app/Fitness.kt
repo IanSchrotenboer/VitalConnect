@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -110,6 +111,18 @@ private fun standOf(h: Herstel): Stand {
     }
 }
 
+/** Een score met zijn schaal: "70" groot en "/100" klein ernaast, zodat je weet waar 70 staat. */
+@Composable
+internal fun ScoreOf100(score: Int?, style: TextStyle, label: String, color: Color = LocalPalette.current.ink, scaleColor: Color = LocalPalette.current.muted) {
+    Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.semantics(mergeDescendants = true) {
+        contentDescription = if (score == null) "$label onbekend" else "$label $score van 100"
+    }) {
+        Text(score?.toString() ?: "–", style = style.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"), color = color)
+        if (score != null) Text("/100", style = MaterialTheme.typography.bodyMedium, color = scaleColor,
+            modifier = Modifier.padding(start = 2.dp, bottom = 6.dp))
+    }
+}
+
 /** Welke signalen afwijken van je normaal, in gewone taal: "Je HRV ligt onder je normaal en je slaap is korter dan je doel." */
 internal fun deviationText(h: Herstel): String {
     val delen = buildList {
@@ -158,8 +171,7 @@ fun HerstelTile(vm: MainViewModel, modifier: Modifier = Modifier) {
                     Text(st.title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = p.ink)
                 }
             }
-            Text("${h.score}", style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"),
-                color = p.ink, modifier = Modifier.semantics { contentDescription = "Herstelscore ${h.score} van 100" })
+            ScoreOf100(h.score, MaterialTheme.typography.displaySmall, "Herstelscore")
         }
         Text(st.advice, style = MaterialTheme.typography.bodyMedium, color = p.ink)
         FactorRow("HRV, 7 dagen", h.hrv, "ms", lowerBetter = false, short = true)
@@ -274,7 +286,7 @@ fun HerstelScreen(vm: MainViewModel) {
                             Text(st.title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = p.ink)
                         }
                     }
-                    Text(h.score?.toString() ?: "–", style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"), color = p.ink)
+                    ScoreOf100(h.score, MaterialTheme.typography.displayMedium, "Herstelscore")
                 }
                 if (st.advice.isNotEmpty()) Text(st.advice, style = MaterialTheme.typography.bodyMedium, color = p.ink)
                 FactorRow("HRV, 7 dagen", h.hrv, "ms", lowerBetter = false, short = false)

@@ -21,7 +21,7 @@
 --dial:#123430;--dink:#f3f7f5;--dmut:#a9bdb7;
 --act:light-dark(#d86f31,#f5935a);--hart:light-dark(#d04e6a,#ec7290);--slaap:light-dark(#5865d6,#8c97f2);--herst:light-dark(#2f9c8f,#4cc3b3);--lich:light-dark(#ad7e24,#ddb15a);
 --actink:light-dark(#b85a23,#f5935a);--hartink:light-dark(#cd4260,#ec7290);--slaapink:var(--slaap);--herstink:light-dark(#278176,#4cc3b3);--lichink:light-dark(#966d1f,#ddb15a);--caution:light-dark(#b36b00,#e8b04a);
---good:light-dark(#1e7f5c,#4cc79a);--src-hc:light-dark(#2f7d6e,#3a9483);--src-gh:light-dark(#3f7f4a,#4e9659);--src-gm:light-dark(#2b5fa8,#3b72c4);--bad:light-dark(#b4462b,#f07d5f);
+--good:light-dark(#1e7f5c,#4cc79a);--src-hc:#2f7d6e;--src-gh:#3f7f4a;--src-gm:#2b5fa8;--bad:light-dark(#b4462b,#f07d5f);
 --ring1:#ff8438;--ring2:#26e8c8;--ring3:#7b83ff;--dact:#f5935a;--dhart:#ec7290;--dslaap:#8c97f2;--dherst:#4cc3b3;--dlich:#ddb15a;--dgood:#4cc79a}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
@@ -85,15 +85,19 @@ p.mot{border-top:0;padding:0;margin:12px 0 0 4px;color:var(--mut)}
 .lnk svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .uk summary{list-style:none;cursor:pointer;min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:600;font-size:15px;color:var(--pri);border-radius:12px}
 .uk summary::-webkit-details-marker{display:none}.uk summary::after{content:'';width:9px;height:9px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-3px) rotate(45deg);transition:transform .2s;margin-right:6px}
-.uk[open] summary::after{transform:translateY(2px) rotate(-135deg)}.uk[open]>:not(summary){animation:ukIn .2s ease-out}.uk>*+*{margin-top:8px!important}.uk{display:flex;flex-direction:column;gap:8px}.uk p{margin:0 0 8px}
+.uk[open] summary::after{transform:translateY(2px) rotate(-135deg)}.uk[open]>:not(summary){animation:ukIn .2s ease-out}.uk>*+*{margin-top:8px!important}.uk{display:flex;flex-direction:column;gap:8px}.uk:not([open]){gap:0}.uk:not([open])>*+*{margin-top:0!important}.uk p{margin:0 0 8px}
 @keyframes ukIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.uk summary::after{transition:none}.uk[open]>:not(summary){animation:none}}
 .wk{display:flex;flex-direction:column;gap:6px;text-align:left;width:100%}.wkh{display:flex;align-items:center;gap:10px}.wkt{flex:1;min-width:0;display:flex;flex-direction:column}
 .wkt b{font-size:15px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wkh>b{font-size:15px;color:var(--ink)}.wkf{font-size:13px;color:var(--ink)}
-.wkd{font-size:17px;margin:12px 4px 0}.wbars{display:flex;gap:6px;align-items:flex-end;height:72px}.wbars span{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end;height:100%}
+.wkd{font-size:14px;font-weight:600;color:var(--mut);margin:4px 4px 0}
+.wkw{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;padding:8px 4px 4px;color:var(--ink);font:inherit;cursor:pointer;border-radius:12px;min-height:48px}
+.wkw>span{flex:1;display:flex;flex-direction:column}.wkw b{font-size:17px;font-weight:600}.wkw svg{width:20px;height:20px;fill:none;stroke:var(--mut);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.spi{width:36px;height:36px;border-radius:10px;background:var(--bg);display:grid;place-items:center;flex:none}
+.spi svg{width:20px;height:20px;fill:none;stroke:var(--actink);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.wbars{display:flex;gap:6px;align-items:flex-end;height:72px}.wbars span{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end;height:100%}
 .wbars i{display:block;width:100%;border-radius:4px;background:var(--pri)}.wbars small{font-size:11px;color:var(--mut)}.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.wf .fld{flex-direction:column;align-items:stretch;gap:4px}.wf .fld span{font-size:13px;color:var(--mut)}.wf .fld input,.wf textarea{width:100%;box-sizing:border-box;text-align:left}.wf textarea{min-height:64px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:10px;font:inherit;color:var(--ink)}
 .tile.herst{grid-column:1/-1}.herst{gap:10px}.hct{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;width:100%}.hct>span:first-child{display:flex;flex-direction:column;gap:4px}
-.hl{display:flex;align-items:center;gap:8px;font-weight:600;font-size:17px;color:var(--ink)}.hs{font-size:44px;font-weight:700;line-height:1;color:var(--ink)}.hadv{font-size:15px;color:var(--ink);text-align:left}
+.hl{display:flex;align-items:center;gap:8px;font-weight:600;font-size:17px;color:var(--ink)}.hs{font-size:44px;font-weight:700;line-height:1;color:var(--ink)}.of{font-size:15px;font-weight:500;color:var(--mut);margin-left:2px;letter-spacing:0}.hadv{font-size:15px;color:var(--ink);text-align:left}
 .hf{display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--line);width:100%;text-align:left}.hft{display:flex;justify-content:space-between;gap:8px;font-size:15px;color:var(--ink)}
 .hb{position:relative;display:block;height:10px;border-radius:5px;background:var(--bg);margin:3px 0}.hbn{position:absolute;top:0;bottom:0;border-radius:5px;background:color-mix(in srgb,var(--herst) 45%,transparent)}
 .hbv{position:absolute;top:-3px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--ink);border:2px solid var(--card)}.hbv.uit{background:var(--bad)}
@@ -115,8 +119,10 @@ p.mot{border-top:0;padding:0;margin:12px 0 0 4px;color:var(--mut)}
 .st div small{display:block;color:var(--mut);font-size:13px;font-weight:500}
 .st div b{font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .big{display:flex;align-items:baseline;gap:4px}.big .num{font-size:28px}.big small{color:var(--mut);font-size:14px}.big em{margin-left:auto;font-style:normal;color:var(--mut);font-size:13px}
-.hero{background:var(--pri);color:var(--onpri);border:0}
-.hero .st div small{color:color-mix(in srgb,var(--onpri) 75%,transparent)}
+/* Toptegel Gezondheid: in licht dennengroen; in donker geen fel vlak op zwart maar een gewone tegel met gekleurde cijfers (gelijk aan Highlights in de app) */
+.hero{background:light-dark(#1c4d46,#1d2321);color:light-dark(#fff,#9db0aa);border:0}
+.hero .st b{color:light-dark(#fff,#7fd1c1)}
+.hero .st div small{color:light-dark(rgba(255,255,255,.75),#9db0aa)}
 .chev{width:20px;height:20px;fill:none;stroke:var(--mut);stroke-width:2;stroke-linecap:round;margin-left:auto}
 /* slaap */
 .night{background:var(--dial);color:var(--dink);border:0}
@@ -232,7 +238,7 @@ const M=[
 {id:'weight',n:'Gewicht',u:'kg',cat:'lich',d:1,b:76.2,v:.3,t:-.003,g:75,lo:1,agg:'last'}
 ];
 const MI=Object.fromEntries(M.map(m=>[m.id,m]));
-const SRC={steps:'Garmin Connect',active:'Garmin Connect',kcal:'Garmin Connect',dist:'Garmin Connect',floors:'Garmin Connect',rhr:'Garmin Connect',hrv:'Garmin Connect',spo2:'Google Health',sleep:'Garmin Connect',sscore:'Garmin Connect',resp:'Google Health',stress:'Garmin Connect',energy:'Garmin Connect',recov:'Garmin Connect',vo2:'Garmin Connect',weight:'Health Connect'};
+const SRC={steps:'Garmin via Health Connect',active:'Garmin via Health Connect',kcal:'Garmin via Health Connect',dist:'Garmin via Health Connect',floors:'Garmin via Health Connect',rhr:'Garmin via Health Connect',hrv:'Garmin via Health Connect',spo2:'Google Health',sleep:'Garmin via Health Connect',sscore:'Garmin via Health Connect',resp:'Google Health',stress:'Garmin via Health Connect',energy:'Garmin via Health Connect',recov:'Garmin via Health Connect',vo2:'Garmin via Health Connect',weight:'Health Connect'};
 
 const hash=k=>{let h=7;for(const c of k)h=(h*31+c.charCodeAt(0))%2147483647;return h||1};
 const cache={};
@@ -285,10 +291,12 @@ function niceTicks(lo,hi,target=4){if(!isFinite(lo)||!isFinite(hi))return[0,1];c
   return Array.from({length:n+1},(_,i)=>a+i*step)}
 const fmt=(id,v)=>v==null?'–':id==='sleep'?fmtH(v):nl(v,MI[id].d);
 const unit=id=>id==='sleep'?'':MI[id].u;
-const compact=v=>Math.abs(v)>=1e6?nl(v/1e6,1)+' mln':Math.abs(v)>=1e4?nl(v/1e3,0)+'k':nl(v,0);
+const compact=v=>Math.abs(v)>=1e6?nl(v/1e6,1)+' mln':nl(v,0);
 const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
 const dlt=id=>{const a=series(id),v=a[N-1],p=mean(a.slice(N-8,N-1));return p?(v-p)/p*100:0};
-const deltaHtml=(id,short)=>{const pc=dlt(id),m=MI[id];if(Math.abs(pc)<1)return`<span>${short?'gelijk':'gelijk aan je week'}</span>`;const good=m.lo?pc<0:pc>0;return`<span class="${good?'up':'dn'}" aria-label="${nl(Math.abs(pc))} procent ${pc>0?'hoger':'lager'} dan vorige week">${pc>0?'▲':'▼'} ${nl(Math.abs(pc))}%${short?'':' vs week'}</span>`};
+// Vanaf hoeveel procent een verandering telt (gelijk aan deltaThreshold in de app)
+const DREMPEL={hart:3,herst:3,slaap:2};
+const deltaHtml=(id,short)=>{const pc=dlt(id),m=MI[id];if(Math.abs(pc)<(DREMPEL[m.cat]||1))return`<span>${short?'gelijk':'gelijk aan je week'}</span>`;const good=m.lo?pc<0:pc>0;return`<span class="${good?'up':'dn'}" aria-label="${nl(Math.abs(pc))} procent ${pc>0?'hoger':'lager'} dan vorige week">${pc>0?'▲':'▼'} ${nl(Math.abs(pc))}%${short?'':' vs week'}</span>`};
 const spark=(id,days)=>{const a=series(id).slice(N-days),lo=Math.min(...a),hi=Math.max(...a),rg=hi-lo||1;const pts=a.map((v,i)=>`${(i/(a.length-1)*100).toFixed(1)},${(28-(v-lo)/rg*24).toFixed(1)}`);const last=pts[pts.length-1].split(',');
 return`<svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts.join(' ')}" fill="none" style="stroke:${col(id)}" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>`};
 const I={
@@ -297,7 +305,8 @@ sync:'<svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></s
 person:'<svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20a8 8 0 0 1 16 0"/></svg>',
 back:'<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>',
 sliders:'<svg viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M15 4v4M4 12h3M11 12h9M9 10v4M4 18h11M19 18h1M17 16v4"/></svg>',
-chev:'<svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>'};
+chev:'<svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>',
+up:'<svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>',down:'<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>'};
 
 let tab='today',detail=null,period=30,sel=null,settings=false,ptab='profile',editing=null,busy=null,syncedAt=new Date(NOW.getTime()-6e5),refreshing=null;
 const views=['today','health','sleep','training','detail','settings','edit','auth'];
@@ -339,30 +348,33 @@ function renderToday(){
   fitHeads();
   requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelectorAll('#v-today .rp').forEach(c=>c.setAttribute('stroke-dasharray',c.dataset.d))));
 }
-function tile(id){const m=MI[id],v=today(id),g=goal(id),wide=S.size[id]==='l';const f=g?(m.lo?g/v:v/g):null;
+// De regel onder een doel (gelijk aan goalLine in de app): bij "lager is beter" de afstand, geen percentage of balk
+function goalLine(id,v,g){const m=MI[id];if(m.lo)return v<=g?['Doel gehaald',true]:[`${fmt(id,v-g)}${unit(id)?'\u00a0'+unit(id):''} boven je doel`,false];
+  const f=v/g;return f>=1?['Doel gehaald',true]:[`${nl(f*100)}% van ${fmt(id,g)}`,false]}
+function tile(id){const m=MI[id],v=today(id),g=goal(id),wide=S.size[id]==='l';const f=g?v/g:null,gl=g?goalLine(id,v,g):null;
   return`<button class="card tap tile ${wide?'l':''}" data-open="${id}"><span class="tn"><i class="dot" style="background:${col(id)}"></i>${m.n}</span>
   <span class="tv"><span class="num">${fmt(id,v)}</span>${unit(id)?`<small>${unit(id)}</small>`:''}</span>
-  ${f!=null?`<span class="bar" style="background:color-mix(in srgb,${col(id)} 18%,transparent)"><b style="width:${Math.min(f,1)*100}%;background:${f>=1?'var(--good)':col(id)}"></b></span><span class="gl ${f>=1?'ok':''}">${f>=1?'Doel gehaald':`${nl(f*100)}% van ${fmt(id,g)}`}</span>`:''}
-  ${spark(id,wide?14:7)}<span class="tm"><span>${wide?SRC[id]:SRC[id].replace(' Connect','')}</span>${deltaHtml(id,!wide)}</span></button>`}
+  ${gl?`${m.lo?'':`<span class="bar" style="background:color-mix(in srgb,${col(id)} 18%,transparent)"><b style="width:${Math.min(f,1)*100}%;background:${f>=1?'var(--good)':col(id)}"></b></span>`}<span class="gl ${gl[1]?'ok':''}">${gl[0]}</span>`:''}
+  ${spark(id,wide?14:7)}<span class="tm"><span>${wide?SRC[id]:SRC[id].replace(' via Health Connect','').replace(/^Garmin Connect$/,'Garmin')}</span>${deltaHtml(id,!wide)}</span></button>`}
 
 // ---------- Gezondheid ----------
 function stats(id){const a=series(id),m=MI[id];return{last:a[N-1],avg:mean(a),avg30:mean(a.slice(N-30)),max:Math.max(...a),min:Math.min(...a),total:a.reduce((x,y)=>x+y,0)}}
 function renderHealth(){
   const first=dd(0).toLocaleDateString(NL,{day:'numeric',month:'short',year:'numeric'});
   const s=stats('steps'),k=stats('dist'),sl=stats('sleep');
-  $('#v-health').innerHTML=`<div class="ph" style="display:flex;align-items:flex-start;gap:8px"><div style="flex:1"><h1>Gezondheid</h1><p>Al je statistieken sinds ${first}</p></div><button class="lnk" data-edit="health">${I.sliders}Aanpassen</button></div>
+  $('#v-health').innerHTML=`<div class="ph" style="display:flex;align-items:flex-start;gap:8px"><div style="flex:1"><h1>Gezondheid</h1><p>Al je statistieken sinds ${first.replace(/ /g,'\u00a0')} · ${nl(N)} dagen</p></div><button class="lnk" data-edit="health">${I.sliders}Aanpassen</button></div>
   <div class="pad stack">${S.lay.healthTotals?`<div class="card hero"><small style="opacity:.8;font-weight:500">Tot nu toe</small><div class="st" style="grid-template-columns:repeat(3,minmax(0,1fr))">
   <div><small>Stappen</small><b>${compact(s.total)}</b></div><div><small>Kilometer</small><b>${compact(k.total)}</b></div><div><small>Gem. slaap</small><b>${fmtH(sl.avg)}</b></div></div></div>`:''}
   ${Object.keys(CAT).filter(c=>M.some(m=>m.cat===c&&!S.lay.healthHidden.includes(m.id))).map(c=>`<div class="cat"><i class="dot" style="background:var(--${c});width:10px;height:10px"></i><h2>${CAT[c]}</h2></div>
   <div class="stack hl">${M.filter(m=>m.cat===c&&!S.lay.healthHidden.includes(m.id)).map(m=>statCard(m.id)).join('')}</div>`).join('')}</div>`;
 }
-function statCard(id){const m=MI[id],s=stats(id),sum=m.agg==='sum'&&id!=='sleep',f=v=>fmt(id,v);
+// Eén kaart per metric, kort (gelijk aan StatCard in de app): laatste meting, dan 30 dagen, gemiddeld en record op één regel.
+// Totaal, laagste en hoogste staan op het detailscherm; "x dagen gemeten" staat één keer bovenaan.
+function statCard(id){const m=MI[id],s=stats(id),sum=m.agg==='sum'&&id!=='sleep',f=v=>fmt(id,v),best=m.lo?s.min:s.max,rec=N>=7&&s.last===best;
   return`<button class="card tap" data-open="${id}"><span style="display:flex;align-items:center;gap:8px"><i class="dot" style="background:${col(id)}"></i><h3>${m.n}</h3>${I.chev}</span>
-  <span class="big"><span class="num">${f(s.last)}</span>${unit(id)?`<small>${unit(id)}</small>`:''}<em>vandaag</em></span>
-  <span class="st"><div><small>${sum?'Gem. per dag':'Gemiddeld'}</small><b>${f(s.avg)}</b></div><div><small>Laatste 30 d.</small><b>${f(s.avg30)}</b></div>
-  <div><small>${m.lo?'Beste (laagste)':'Record'}</small><b style="color:var(--${MI[id].cat}ink)">${f(m.lo?s.min:s.max)}</b></div>
-  <div><small>${sum?'Totaal':m.lo?'Hoogste':'Laagste'}</small><b>${sum?compact(s.total):f(m.lo?s.max:s.min)}</b></div></span>
-  <span class="gl">${N} dagen gemeten</span></button>`}
+  <span class="big"><span class="num">${f(s.last)}</span>${unit(id)?`<small>${unit(id)}</small>`:''}${rec?`<em style="color:var(--${m.cat}ink);font-weight:600">${m.lo?'Beste ooit':'Record'}</em>`:'<em>vandaag</em>'}</span>
+  <span class="st" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><small>30 dagen</small><b>${f(s.avg30)}</b></div><div><small>${sum?'Gem. per dag':'Gemiddeld'}</small><b>${f(s.avg)}</b></div>
+  <div><small>${m.lo?'Beste':'Record'}</small><b style="color:var(--${m.cat}ink)">${f(best)}</b></div></span></button>`}
 
 // ---------- Slaap ----------
 let sleepSel=13;
@@ -373,7 +385,7 @@ function renderSleep(){
   const rt=S.lay.sleepTiles.filter(id=>MI[id]);
   $('#v-sleep').innerHTML=`<div class="ph" style="display:flex;align-items:flex-start;gap:8px"><div style="flex:1"><h1>Slaap</h1><p>Hoe goed je rust, en hoe je lichaam herstelt</p></div><button class="lnk" data-edit="sleep">${I.sliders}Aanpassen</button></div>
   <div class="pad stack"><button class="card tap night" data-open="sleep"><span class="mut" style="font-size:14px;font-weight:500">Afgelopen nacht</span>
-  <span style="display:flex;align-items:flex-end;gap:12px"><span class="num xl">${fmtH(last)}</span><span style="margin-left:auto;text-align:right"><small class="mut" style="display:block;font-size:13px">Score</small><span class="num" style="font-size:28px;color:var(--dslaap)">${nl(score)}</span></span></span>
+  <span style="display:flex;align-items:flex-end;gap:12px"><span class="num xl">${fmtH(last)}</span><span style="margin-left:auto;text-align:right"><small class="mut" style="display:block;font-size:13px">Slaapscore</small><span class="num" style="font-size:28px;color:var(--dslaap)" aria-label="Slaapscore ${nl(score)} van 100">${nl(score)}<small class="of">/100</small></span></span></span>
   <span class="bar" style="height:10px;background:rgba(140,151,242,.2)"><b style="width:${Math.min(f,1)*100}%;background:${f>=1?'var(--dgood)':'var(--dslaap)'}"></b></span>
   <span style="font-weight:600;font-size:15px;${f>=1?'color:var(--dgood)':''}">${f>=1?`Slaapdoel van ${fmtH(g)} gehaald`:`${nl(f*100)}% van je doel van ${fmtH(g)}`}</span></button>
   <div class="card"><h2 class="h3">Laatste 14 nachten</h2><p class="mut" style="margin:0;font-size:15px">${si.toLocaleDateString(NL,{weekday:'long',day:'numeric',month:'short'})}: ${fmtH(nights[sleepSel])}</p>
@@ -400,6 +412,12 @@ function drawChart(s,pts,o){
       g+=`<line x1="${x(o.sel)}" x2="${x(o.sel)}" y1="${T}" y2="${T+ih}" stroke="var(--mut)" stroke-dasharray="3 3"/><circle cx="${x(o.sel)}" cy="${y(pts[o.sel].v)}" r="5.5" style="fill:${o.color}" stroke="var(--card)" stroke-width="2.5"/>`}
     if(o.goal&&o.goal>=lo&&o.goal<=hi)g+=`<line x1="${L}" x2="${W-R}" y1="${y(o.goal)}" y2="${y(o.goal)}" stroke="var(--ink)" stroke-dasharray="6 4" stroke-width="1.5"/><text x="${W-R}" y="${y(o.goal)-6}" text-anchor="end" style="fill:var(--ink)">Doel</text>`;
     s.innerHTML=g;
+    // Ook met het toetsenbord: pijl links/rechts kiest een andere dag (zoals de TalkBack-acties in de app)
+    s.setAttribute('tabindex','0');s.setAttribute('role','slider');s.setAttribute('aria-label','Kies een dag');
+    s.setAttribute('aria-valuemin','0');s.setAttribute('aria-valuemax',String(n-1));s.setAttribute('aria-valuenow',String(o.sel));
+    s.setAttribute('aria-valuetext',pts[o.sel].d.toLocaleDateString(NL,{weekday:'long',day:'numeric',month:'long'}));
+    s.onkeydown=e=>{const k={ArrowLeft:-1,ArrowDown:-1,ArrowRight:1,ArrowUp:1}[e.key];if(!k)return;e.preventDefault();const i=Math.max(0,Math.min(n-1,o.sel+k));
+      const q=s.id?'#'+s.id:'#'+s.parentElement.id+' svg';if(i!==o.sel){o.onSel(i);requestAnimationFrame(()=>document.querySelector(q)?.focus())}};
     s.onpointerdown=s.onpointermove=e=>{if(e.type==='pointermove'&&!e.buttons&&e.pointerType!=='mouse')return;if(e.type==='pointermove'&&e.pointerType==='mouse'&&!e.buttons)return;const r=s.getBoundingClientRect(),i=Math.max(0,Math.min(n-1,Math.floor((e.clientX-r.left-L)/bw)));if(i!==o.sel)o.onSel(i)}};
   draw();const ro=new ResizeObserver(draw);ro.observe(s);
 }
@@ -438,7 +456,7 @@ function factor(naam,b,u,lower,kort){const pos=x=>Math.max(0,Math.min(100,(x-b.m
 function sleepF(s,kort){return`<span class="hf"><span class="hft"><b>Slaap</b><span class="num">${fmtH(s.last)}</span></span><span class="gl">7 nachten ${fmtH(s.week)} gemiddeld, doel ${fmtH(s.need)}</span>
   ${!kort||s.bad?`<span class="gl">${s.bad?'Je slaapt deze week minder dan 90% van je doel.':'Je slaapt deze week genoeg.'}</span>`:''}</span>`}
 function herstelHead(h){const[lab,c,a0]=STAND[h.stand],adv=h.stand?afwijking(h)+a0:a0;return`<span class="hct"><span><span class="tn"><i class="dot" style="background:var(--herst)"></i>Herstel vandaag</span>
-  <span class="hl"><i class="dot" style="background:${c}"></i>${lab}</span></span><span class="hs num" aria-label="Herstelscore ${h.score} van 100">${h.score}</span></span><span class="hadv">${adv}</span>`}
+  <span class="hl"><i class="dot" style="background:${c}"></i>${lab}</span></span><span class="hs num" aria-label="Herstelscore ${h.score} van 100">${h.score}<small class="of">/100</small></span></span><span class="hadv">${adv}</span>`}
 function herstelTile(){const h=herstel();return`<button class="card tap tile herst" data-open="herstel">${herstelHead(h)}
   ${factor('HRV, 7 dagen',h.hrv,'ms',false,true)}${factor('Rusthartslag, 7 dagen',h.rhr,'bpm',true,true)}${sleepF(h.sleep,true)}</button>`}
 function renderHerstel(){const h=herstel(),f=h.fit,W=320,H=140,tr=h.trend,all=tr.flatMap(p=>[p.v,p.lo,p.hi]),lo=Math.min(...all)*.95,hi=Math.max(...all)*1.05;
@@ -466,7 +484,7 @@ function renderDetail(){
   if(String(detail).startsWith('w:'))return renderWorkout(detail.slice(2));
   const id=detail,m=MI[id],a=series(id),shown=a.slice(N-period),prev=a.slice(N-2*period,N-period);if(sel==null||sel>=period)sel=period-1;
   const ch=prev.length&&mean(prev)?(mean(shown)-mean(prev))/mean(prev)*100:null,good=m.lo?ch<0:ch>0,sum=m.agg==='sum';
-  $('#v-detail').innerHTML=`<div class="back"><button class="ib" data-act="back" aria-label="Terug">${I.back}</button><div><h2>${m.n}</h2><span style="color:${col(id)};font-weight:500;font-size:14px">${CAT[m.cat]}</span></div></div>
+  $('#v-detail').innerHTML=`<div class="back"><button class="ib" data-act="back" aria-label="Terug">${I.back}</button><div><h2>${m.n}</h2><span style="color:var(--mut);font-weight:500;font-size:14px">${CAT[m.cat]}</span></div></div>
   <div class="pills">${[[7,'7 dagen'],[30,'30 dagen'],[90,'90 dagen'],[365,'Jaar']].map(([d,l])=>`<button class="pill" data-per="${d}" aria-pressed="${d===period}">${l}</button>`).join('')}</div>
   <div class="pad stack"><div class="card"><span class="big"><span class="num" style="font-size:36px">${fmt(id,shown[sel])}</span>${unit(id)?`<small>${unit(id)}</small>`:''}</span>
   <span class="gl">${dd(N-period+sel).toLocaleDateString(NL,{weekday:'long',day:'numeric',month:'long',year:'numeric'})} · ${SRC[id]}</span>
@@ -545,8 +563,22 @@ const srcLabel=w=>w.source==='health_connect'?'Health Connect · '+(w.origin||'a
 function dayLabel(day){const d=new Date(day+'T00:00:00'),t=new Date(NOW);t.setHours(0,0,0,0);const n=Math.round((t-d)/DAY);
   if(n===0)return'Vandaag';if(n===1)return'Gisteren';const s=d.toLocaleDateString(NL,{weekday:'long',day:'numeric',month:'long',...(d.getFullYear()!==t.getFullYear()?{year:'numeric'}:{})});return s[0].toUpperCase()+s.slice(1)}
 const vormOf=f=>f>5?['Uitgerust','Je hebt de laatste dagen minder getraind dan je gewend bent. Goed voor een wedstrijd of een stevige training.']:f>=-10?['In balans','Je traint ongeveer zoveel als je gewend bent.']:f>=-30?['Flink aan het trainen','Je traint meer dan je gewend bent. Zo word je fitter, als je ook genoeg rust neemt.']:['Zwaar belast','Je traint veel meer dan je gewend bent. Plan een paar rustige dagen om blessures te voorkomen.'];
-function wkRow(w,click=true){const t=new Date(w.start).toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'}),facts=[w.dist?fmtKm(w.dist):null,fmtPace(w),w.avg?'♥ '+w.avg:null,w.kcal!=null?w.kcal+' kcal':null,w.load!=null?'belasting '+Math.round(w.load):null].filter(Boolean);
-  return`<${click?`button class="card tap wk" data-wk="${esc(w.id)}"`:'div class="card wk"'}><span class="wkh"><i class="dot" style="background:var(--act)"></i><span class="wkt"><b>${esc(w.title||SPORTN[w.sport])}</b><span class="gl">${[t,w.title?SPORTN[w.sport]:null,esc(srcLabel(w))].filter(Boolean).join(' · ')}</span></span><b class="num">${fmtDur(w.dur)}</b></span>${facts.length?`<span class="num wkf">${facts.join('&nbsp;&nbsp; ')}</span>`:''}</${click?'button':'div'}>`}
+// Icoon per sport (gelijk aan sportIcon in de app)
+const SPI={run:['M15.5 4.5a1.5 1.5 0 1 0 0 .01','M13.5 8.5l-3 3.5 3 2.5-1.5 5','M13.5 8.5l2.5 2.5 3-.5','M13.5 8.5l-4.5 .5-2 2.5','M10.5 12l-2 4H4.5'],
+  walk:['M13 4.5a1.5 1.5 0 1 0 0 .01','M12.5 8l-1 6 2.5 2.5V21','M11.5 14l-2.5 7','M12.5 8l2.5 3.5 2.5 1','M12.5 8l-3 2.5-1 3'],
+  bike:['M2 17.5a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0','M15 17.5a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0','M5.5 17.5l3.5-7h6l3.5 7','M9 10.5l3.5 7h-7','M15 10.5L13.5 6H11'],
+  swim:['M3 18c1.5 0 1.5-1.5 3-1.5s1.5 1.5 3 1.5 1.5-1.5 3-1.5 1.5 1.5 3 1.5 1.5-1.5 3-1.5 1.5 1.5 3 1.5','M17 8.5a1.5 1.5 0 1 0 0 .01','M5 13l5-5 3.5 3 2.5-1.5'],
+  strength:['M6.5 7v10','M17.5 7v10','M4 9.5v5','M20 9.5v5','M6.5 12h11'],yoga:['M12 4.5a1.5 1.5 0 1 0 0 .01','M12 8v6','M5 9.5l7 1.5 7-1.5','M7 20l5-6 5 6'],
+  other:['M3 12h4l2.5-6 5 12 2.5-6H21']};
+const spIcon=k=>{const g={running:'run',walking:'walk',hiking:'walk',cycling:'bike',swimming:'swim',rowing:'swim',strength:'strength',hiit:'strength',martial:'strength',yoga:'yoga',dance:'yoga'}[k]||'other';
+  return`<span class="spi" aria-hidden="true"><svg viewBox="0 0 24 24">${SPI[g].map(d=>`<path d="${d}"/>`).join('')}</svg></span>`};
+// Maandag van de week (YYYY-MM-DD) en het label erbij
+const wkStart=day=>{const d=new Date(day+'T00:00:00');d.setDate(d.getDate()-((d.getDay()+6)%7));return d.toISOString().slice(0,10)};
+const wkLabel=m=>{const now=wkStart(new Date(NOW-new Date(NOW).getTimezoneOffset()*6e4).toISOString().slice(0,10)),prev=new Date(now+'T00:00:00');prev.setDate(prev.getDate()-7);
+  return m===now?'Deze week':m===prev.toISOString().slice(0,10)?'Vorige week':'Week van '+new Date(m+'T00:00:00').toLocaleDateString(NL,{day:'numeric',month:'short'}).replace(/\.$/,'')};
+let openWeeks=new Set();
+function wkRow(w,click=true){const t=new Date(w.start).toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'}),facts=[w.dist?fmtKm(w.dist):null,fmtPace(w),w.avg?'♥ '+w.avg+' bpm':null,w.kcal!=null?nl(w.kcal)+' kcal':null,w.load!=null?'belasting '+Math.round(w.load):null].filter(Boolean);
+  return`<${click?`button class="card tap wk" data-wk="${esc(w.id)}"`:'div class="card wk"'}><span class="wkh">${spIcon(w.sport)}<span class="wkt"><b>${esc(w.title||SPORTN[w.sport])}</b><span class="gl">${[t,w.title?SPORTN[w.sport]:null,esc(srcLabel(w))].filter(Boolean).join(' · ')}</span></span><b class="num">${fmtDur(w.dur)}</b></span>${facts.length?`<span class="num wkf">${facts.join('&nbsp;&nbsp; ')}</span>`:''}</${click?'button':'div'}>`}
 function renderTraining(){const F=visibleWk(),T=trainingSummary(),L=T.load,mx=Math.max(30,...T.weeks.map(w=>w.min)),by={};T.list.forEach(w=>(by[w.day]=by[w.day]||[]).push(w));
   const v=L.ready?vormOf(L.form):null;
   $('#v-training').innerHTML=`<div class="pad"><div class="sh" style="margin-top:16px"><div><h1 style="margin:0">Training</h1><p class="mut" style="margin:2px 0 0">Je trainingen uit al je bronnen, en wat ze met je lichaam doen</p></div></div>
@@ -559,7 +591,11 @@ function renderTraining(){const F=visibleWk(),T=trainingSummary(),L=T.load,mx=Ma
   ${L.days<42?`<span class="gl">Na 6 weken trainen is dit betrouwbaar; nu ${L.days} dagen.</span>`:''}`:`<span>${T.max==null?'Vul je geboortedatum in bij Profiel. Dan rekenen we uit hoe zwaar je trainingen voor je lichaam zijn.':'Belasting rekenen we uit je gemiddelde hartslag per training.'}</span>${T.max==null?'<button class="btn" data-act="birth" style="align-self:flex-start">Geboortedatum invullen</button>':''}`}
   <details class="uk"><summary>Wat betekent dit voor je lichaam?</summary>${BODY.load.map(p=>`<p>${p}</p>`).join('')}</details></div>
   ${F.hidden?`<div class="row" style="margin:0 4px;align-items:center;gap:8px;flex-wrap:nowrap"><span class="gl" style="flex:1">Verborgen: ${[F.hs?(F.hs===1?'1 dubbele of losse registratie ':F.hs+' dubbele of losse registraties ')+(F.mode==='google_health'?'uit Health Connect':'uit andere bronnen'):'',F.hw?(F.hw===1?'1 ':F.hw+' ')+(S.wmin&&S.wlight?'korte of lichte':S.wmin?'korte':'lichte')+(F.hw===1?' wandeling':' wandelingen'):''].filter(Boolean).join(' en ')}.</span><button class="btn" data-act="wfilter">Filter</button></div>`:''}
-  ${Object.keys(by).sort().reverse().map(d=>`<h2 class="wkd">${dayLabel(d)}</h2>${by[d].map(w=>wkRow(w)).join('')}`).join('')}</div></div>`}
+  ${(()=>{const days=Object.keys(by).sort().reverse(),weeks={};days.forEach(d=>(weeks[wkStart(d)]=weeks[wkStart(d)]||[]).push(d));
+    // Per week; deze en vorige week open, oudere weken ingeklapt tot één regel (gelijk aan de app)
+    return Object.keys(weeks).sort().reverse().map(m=>{const ws=weeks[m].flatMap(d=>by[d]),open=wkLabel(m)==='Deze week'||wkLabel(m)==='Vorige week'||openWeeks.has(m);
+      return`<button class="wkw" data-week="${m}" aria-expanded="${open}"><span><b>${wkLabel(m)}</b><span class="gl">${ws.length===1?'1 training':ws.length+' trainingen'} · ${fmtDur(ws.reduce((x,w)=>x+w.dur,0))}</span></span>${open?I.up:I.down}</button>
+      ${open?weeks[m].map(d=>`<h3 class="wkd">${dayLabel(d)}</h3>${by[d].map(w=>wkRow(w)).join('')}`).join(''):''}`}).join('')})()}</div></div>`}
 function renderWorkout(id){const T=trainingSummary(),w=T.list.find(x=>x.id===id);if(!w){detail=null;show();return}
   const st=new Date(w.start),en=new Date(w.start+w.dur*1000),tm=d=>d.toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'});
   const stats=[['Duur',fmtDur(w.dur)],w.dist?['Afstand',fmtKm(w.dist)]:null,fmtPace(w)?[w.sport==='cycling'?'Snelheid':'Tempo',fmtPace(w)]:null,w.kcal!=null?['Calorieën',w.kcal+' kcal']:null,w.avg?['Gem. hartslag',w.avg+' bpm']:null,w.max?['Max. hartslag',w.max+' bpm']:null,w.asc!=null?['Hoogtemeters',w.asc+' m']:null,w.load!=null?['Belasting',Math.round(w.load)]:null].filter(Boolean);
@@ -704,7 +740,7 @@ function personalCard(label,onboarding){
   const p=draft||(draft={...S.prof}),a=age(p.birth);
   const sx=(k,l)=>`<button class="pill" style="flex:1" data-sex="${k}" aria-pressed="${p.sex===k}">${l}</button>`;
   const changed=onboarding||JSON.stringify(p)!==JSON.stringify(S.prof);
-  return`<div class="card"><h3>Persoonlijke gegevens</h3><span class="gl">sam@voorbeeld.nl</span>
+  return`<div class="card"><h3>Persoonlijke gegevens</h3><span class="gl">${esc(((S.prof.name||'sam').trim().split(/\s+/)[0]||'sam').toLowerCase())}@voorbeeld.nl</span>
   <label class="fld" for="p-name">Naam<input id="p-name" data-prof="name" value="${esc(p.name||'')}" maxlength="60" autocomplete="name" style="width:12em;text-align:left"></label>
   <label class="fld" for="p-birth">Geboortedatum${a!=null?` <span class="gl">(${a} jaar)</span>`:''}<input id="p-birth" type="date" data-prof="birth" value="${p.birth||''}" max="${NOW.toISOString().slice(0,10)}" style="width:11em"></label>
   <span class="gl" style="margin-top:4px">Geslacht</span><div class="row">${sx('female','Vrouw')}${sx('male','Man')}${sx('other','Anders')}</div>
@@ -726,16 +762,16 @@ function profileHtml(){
   <div class="sh" style="margin-bottom:0"><h2>Account</h2></div>
   <div class="card"><span class="gl">Je data is van jou. Je kunt alles exporteren of je account met alle data verwijderen.</span>
   <div class="row"><button class="btn">Mijn data exporteren</button><button class="btn" data-act="logout">Uitloggen</button></div><a class="lnk" style="padding:0;text-decoration:none" href="https://app.vital-connect.nl/privacy.html">Privacyverklaring</a><button class="lnk" style="color:var(--bad);padding:0">Account verwijderen</button></div>
-  <p class="gl" style="margin:4px">Vital Connect 1.16.0 · preview</p>`;
+  <p class="gl" style="margin:4px">Vital Connect 1.17.0 · preview</p>`;
 }
 const SRCS={hc:['hc','H','var(--src-hc)','Health Connect','Data van apps op deze telefoon, zoals Google Fit, Samsung Health en de Suunto-app.','@sync'],
-  google:['google','F','var(--src-gh)','Google Health','Data van Fitbit, Pixel Watch en de Google Health-app.','@sync'],
+  google:['google','GH','var(--src-gh)','Google Health','Data van Fitbit, Pixel Watch en de Google Health-app.','@sync'],
   garmin:['garmin','G','var(--src-gm)','Garmin Connect','Data van je Garmin-horloge via Garmin Connect.','Na elke sync van je horloge']};
 // Zoals in de app: een bron die (nog) niet open staat in het register op de server, toont "Binnenkort beschikbaar"
 const SOON=new Set(['garmin']);
 function srcCard([k,l,c,name,desc,okText]){
   if(SOON.has(k)&&!S.conn[k])return`<div class="card"><div class="src"><span class="mk" style="background:${c}">${l}</span><div><h3>${name}</h3><span class="mut" style="font-size:14px">Binnenkort beschikbaar</span></div></div>
-  <span class="gl">${desc}</span><span class="gl">We wachten op toegang van ${name}. Zodra die er is, kun je hier koppelen.</span></div>`;
+  <span class="gl">${desc}</span><span class="gl">We wachten op toegang van ${name}. Zodra die er is, kun je hier koppelen.${k==='garmin'?' Tot dan: zet in de Garmin Connect-app het delen met Health Connect aan, dan komt je data via Health Connect binnen.':''}</span></div>`;
   const on=S.conn[k],b=busy===k,t=syncedAt.toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'});
   return`<div class="card"><div class="src"><span class="mk" style="background:${c}">${l}</span><div><h3>${name}</h3><span class="${on?'ok':'mut'}" style="font-size:14px">${on?`${okText==='@sync'?'Bijwerken: '+syncLabel(S.sync):okText} · bijgewerkt om ${t}`:'Niet gekoppeld'}</span></div></div>
   <span class="gl">${desc}</span><div class="row">${on?`<button class="btn pri" data-act="sync">${k==='hc'?'Nu synchroniseren':'Nu ophalen'}</button>${k==='hc'?'':`<button class="btn" data-conn="${k}">Ontkoppelen</button>`}`:`<button class="btn pri" data-conn="${k}" ${b?'disabled':''}>${b?'Verbinden…':'Koppelen'}</button>`}</div>
@@ -755,20 +791,22 @@ function connHtml(){
   const src=['hc','google','garmin'].map(k=>SRCS[k]);
   const on=src.filter(x=>S.conn[x[0]]),off=src.filter(x=>!S.conn[x[0]]).sort((a,b)=>SOON.has(a[0])-SOON.has(b[0]));
   const head=(t,n,c)=>`<div class="sh" style="margin-bottom:0"><h2 style="display:flex;align-items:center;gap:10px"><i class="dot" style="background:${c}"></i>${t} · ${n}</h2></div>`;
-  return`<p class="mut" style="margin:0 4px">Kies welke bronnen je data leveren. Per metric stel je de voorkeursbron in onder Vandaag → Aanpassen.</p>
+  // Eerst de vraag "is mijn horloge gekoppeld?", daarna de instellingen (gelijk aan de app)
+  return`${head('Gekoppeld',on.length,'var(--good)')}${on.length?on.map(srcCard).join(''):'<p class="mut" style="margin:0 4px">Nog niets gekoppeld. Kies hieronder een bron om je dashboard te vullen.</p>'}
+  ${off.length?head('Niet gekoppeld',off.length,'var(--mut)')+off.map(srcCard).join(''):''}
+  <div class="sh" style="margin-bottom:0"><h2>Instellingen</h2></div>
   <div class="card"><h3>Synchroniseren</h3><span class="gl">Hoe vaak Vital Connect je bronnen bijwerkt, ook als de app dicht is.</span>
   <details class="uk"><summary>Meer uitleg</summary><span class="gl">Dit geldt voor Health Connect en Google Health. Garmin stuurt nieuwe data zelf na elke sync van je horloge. Vaker kost iets meer batterij; Android kan een ronde soms iets uitstellen.</span></details>
   <div class="row">${SYNC_CHOICES.map(([m,l])=>`<button class="pill" data-sync="${m}" aria-pressed="${S.sync===m}">${l}</button>`).join('')}</div>
   <span style="font-size:14px;font-weight:500">Nu: ${syncLabel(S.sync)}.</span></div>
-  <div class="card"><h3>Trainingen</h3><span class="gl">Welke trainingen in het tabblad Training komen. Wat je zelf logt of importeert, telt altijd mee.</span>
+  <div class="card" id="c-training"><h3>Trainingen</h3><span class="gl">Welke trainingen in het tabblad Training komen. Wat je zelf logt of importeert, telt altijd mee.</span>
   <div class="row">${WSRC.map(([k,l])=>`<button class="pill" data-wsrc="${k}" aria-pressed="${S.wsrc===k}">${l}</button>`).join('')}</div>
   <span style="font-size:14px;font-weight:500">Nu: ${{google_health:'alleen je horloge, via Google Health',health_connect:'Health Connect',all:'alle bronnen, dubbele trainingen één keer'}[wMode()]}.</span>
   <h3 style="margin:8px 0 0;font-size:15px">Wandelingen</h3><span class="gl">Korte wandelingen verbergen: wandelingen korter dan dit tellen niet mee.</span>
   <div class="row">${WMIN.map(([m,l])=>`<button class="pill" data-wmin="${m}" aria-pressed="${S.wmin===m}">${l}</button>`).join('')}</div>
   ${sw('wlight','Lichte wandelingen verbergen',(hrLimit()!=null?`Een wandeling telt alleen mee als je hartslag duidelijk omhoog ging: gemiddeld ${hrLimit()} of hoger. `:'Vul je geboortedatum in, dan rekenen we een hartslaggrens uit. ')+'Zonder hartslag telt een wandeling mee als je sneller liep dan 4 km/u.',S.wlight)}
   <details class="uk"><summary>Meer uitleg</summary><span class="gl">Google Fit en andere apps leggen veel vast, ook kleine stukjes lopen. Die komen via Health Connect binnen, en Google Health neemt ze ook over. Kies je Google Health, dan tellen alleen de trainingen van je horloge mee, niet wat Google Health uit Health Connect overneemt. Automatisch kiest Google Health als dat gekoppeld is, en anders Health Connect. Alles blijft bewaard: als je dit omzet, zie je het meteen.<br><br>De hartslaggrens is je rusthartslag plus 30% van het verschil tot je maximale hartslag (methode van Karvonen). Daaronder is een wandeling rustig bewegen: goed voor je, maar geen training. Hardlopen, fietsen, krachttraining en alles wat je zelf logt of importeert tellen altijd mee.</span></details></div>
-  ${head('Gekoppeld',on.length,'var(--good)')}${on.length?on.map(srcCard).join(''):'<p class="mut" style="margin:0 4px">Nog niets gekoppeld. Kies hieronder een bron om je dashboard te vullen.</p>'}
-  ${off.length?head('Niet gekoppeld',off.length,'var(--mut)')+off.map(srcCard).join(''):''}`;
+  <p class="gl" style="margin:0 4px">De bron per metric kies je onder Vandaag → Aanpassen.</p>`;
 }
 
 // ---------- Aanpassen ----------
@@ -800,7 +838,7 @@ function renderEdit(){
     ${rings.map((id,i)=>`<div class="er"><i class="dot" style="background:${RING[i]};width:12px;height:12px"></i><div class="t"><h3>${MI[id].n}</h3><span class="gl">Doel ${fmt(id,goal(id))} · ${i===rings.length-1&&i>0?pos[2]:pos[i]}</span></div>
     <button class="ib" data-rmv="${id}:-1" ${i===0?'disabled':''} aria-label="${MI[id].n} naar buiten"><svg viewBox="0 0 24 24" style="stroke:var(--mut)"><path d="M6 15l6-6 6 6"/></svg></button>
     <button class="ib" data-rmv="${id}:1" ${i===rings.length-1?'disabled':''} aria-label="${MI[id].n} naar binnen"><svg viewBox="0 0 24 24" style="stroke:var(--mut)"><path d="M6 9l6 6 6-6"/></svg></button>
-    <button class="lnk" data-rdel="${id}" style="color:var(--bad)">Weg</button></div>`).join('')}
+    <button class="lnk" data-rdel="${id}">Weg</button></div>`).join('')}
     ${rings.length<3?`<span class="gl">Toevoegen</span><div class="row">${M.filter(m=>!m.lo&&!rings.includes(m.id)).sort((a,b)=>a.n.localeCompare(b.n)).map(m=>`<button class="pill" data-radd="${m.id}">+ ${m.n}</button>`).join('')}</div>`:''}</div>
     <div class="sh" style="margin-bottom:0"><h2>Begroeting</h2></div>
     <div class="card">${tog('data-lay','greetName','Je voornaam','Goedemorgen, '+esc((S.prof.name||'Sam').trim().split(/\s+/)[0]),S.lay.greetName)}${tog('data-lay','motivation','Motiverende zin','Wat je vandaag nog kunt halen',S.lay.motivation)}</div>
@@ -838,6 +876,7 @@ document.addEventListener('click',e=>{
   if(d.tab){tab=d.tab;detail=null;settings=false;show()}
   else if(d.open){detail=d.open;sel=null;renderDetail();show()}
   else if(d.wk){detail='w:'+d.wk;renderDetail();show()}
+  else if(d.week){openWeeks.has(d.week)?openWeeks.delete(d.week):openWeeks.add(d.week);renderTraining()}
   else if(d.act==='wnew'){const st=new Date(NOW.getTime()-36e5);st.setSeconds(0,0);wdraft={id:'m-'+Date.now(),source:'manual',sport:'running',title:null,start:st.getTime(),dur:1800,isNew:true};detail='wform';renderDetail();show()}
   else if(d.act==='wedit'){const w=S.wk.find(x=>x.id===d.id);if(w){wdraft={...w};detail='wform';renderDetail();show()}}
   else if(d.wsport){wdraft.sport=d.wsport;document.querySelectorAll('[data-wsport]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.wsport===d.wsport))}
@@ -850,7 +889,7 @@ document.addEventListener('click',e=>{
   else if(d.per){period=+d.per;sel=null;renderDetail()}
   else if(d.act==='back'){detail=null;settings=false;draft=null;show()}
   else if(d.act==='settings'){settings=true;ptab='profile';draft=null;renderSettings();show()}
-  else if(d.act==='wfilter'){settings=true;ptab='conn';draft=null;renderSettings();show()}
+  else if(d.act==='wfilter'){settings=true;ptab='conn';draft=null;renderSettings();show();$('#c-training')?.scrollIntoView({block:'start'})}
   else if(d.act==='birth'){detail=null;settings=true;ptab='profile';draft=null;renderSettings();show();$('#p-birth')?.focus()}
   else if(d.ptab){ptab=d.ptab;renderSettings()}
   else if(d.sex){draft.sex=draft.sex===d.sex?null:d.sex;rr()}

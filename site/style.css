@@ -13,8 +13,9 @@ a{color:var(--pri)}
 .klein{color:var(--mut);font-size:15px}
 .kaart{background:var(--card);border:1px solid transparent;border-radius:18px;padding:18px 20px;margin:16px 0}
 ol li,ul li{margin:6px 0}
-footer{border-top:1px solid var(--line);color:var(--mut);font-size:15px;padding:24px max(5vw,16px);text-align:center}
-footer a{margin:0 8px}
+footer{border-top:1px solid var(--line);color:var(--mut);font-size:15px;padding:24px max(5vw,16px);display:flex;flex-wrap:wrap;justify-content:center;gap:8px 16px}
+/* Alinea's zonder één los woord op de laatste regel */
+p,li{text-wrap:pretty}
 table{border-collapse:collapse;width:100%;font-size:15px}
 th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
 .scroll{overflow-x:auto}

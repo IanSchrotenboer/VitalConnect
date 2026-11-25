@@ -150,7 +150,7 @@ private fun RingsCard(vm: MainViewModel) {
                 IconButton(onClick = { vm.moveRing(pref.metric, 1) }, enabled = i < rings.lastIndex && !vm.busy) {
                     Icon(VIcons.ChevronDown, contentDescription = "${m?.name} naar binnen", tint = p.muted)
                 }
-                TextButton(onClick = { vm.removeRing(pref.metric) }, enabled = !vm.busy) { Text("Weg", color = p.bad) }
+                TextButton(onClick = { vm.removeRing(pref.metric) }, enabled = !vm.busy) { Text("Weg") }
             }
         }
         if (rings.size < 3) {

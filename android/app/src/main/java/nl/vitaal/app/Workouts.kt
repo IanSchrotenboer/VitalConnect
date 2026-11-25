@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -78,6 +80,27 @@ val SPORTS: List<Pair<String, String>> = listOf(
 )
 val SPORT_KEYS: Set<String> = SPORTS.map { it.first }.toSet()
 fun sportName(k: String) = SPORTS.firstOrNull { it.first == k }?.second ?: "Training"
+
+/** Icoon per sport, zodat je in de lijst ziet wat voor training het was. */
+fun sportIcon(k: String) = when (k) {
+    "running" -> VIcons.SportRun
+    "walking", "hiking" -> VIcons.SportWalk
+    "cycling" -> VIcons.SportBike
+    "swimming", "rowing" -> VIcons.SportSwim
+    "strength", "hiit", "martial" -> VIcons.Training
+    "yoga", "dance" -> VIcons.SportYoga
+    else -> VIcons.Health
+}
+
+/** Maandag van de week van d. */
+internal fun weekStart(d: LocalDate): LocalDate = d.minusDays((d.dayOfWeek.value - 1).toLong())
+
+/** "Deze week", "Vorige week" of "Week van 10 nov". */
+internal fun weekLabel(monday: LocalDate, today: LocalDate = LocalDate.now()): String = when (monday) {
+    weekStart(today) -> "Deze week"
+    weekStart(today).minusWeeks(1) -> "Vorige week"
+    else -> "Week van " + monday.format(DateTimeFormatter.ofPattern("d MMM", NL)).removeSuffix(".")
+}
 
 /** Eén training. id is null voor een training die nog niet is opgeslagen (formulier of import). */
 data class Workout(
@@ -218,6 +241,7 @@ fun TrainingScreen(vm: MainViewModel) {
     val t = vm.training
     val all = (t?.workouts.orEmpty() + vm.olderWorkouts)
     val byDay = all.groupBy { it.day }.toSortedMap(compareByDescending { it })
+    var openWeeks by remember { mutableStateOf(setOf<LocalDate>()) }
 
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -245,9 +269,19 @@ fun TrainingScreen(vm: MainViewModel) {
                     style = MaterialTheme.typography.bodyMedium, color = p.muted)
             }
         }
-        byDay.forEach { (d, list) ->
-            item(key = "dag-$d") { SectionTitle(dayLabel(d), Modifier.padding(start = 4.dp, top = 4.dp)) }
-            items(list, key = { it.id ?: it.externalId }) { w -> WorkoutRow(w) { vm.workoutDetail = w } }
+        // Per week; deze en vorige week open, oudere weken ingeklapt tot één regel
+        byDay.entries.groupBy { weekStart(it.key) }.forEach { (monday, days) ->
+            val ws = days.flatMap { it.value }
+            val open = monday >= weekStart(LocalDate.now()).minusWeeks(1) || monday in openWeeks
+            item(key = "week-$monday") {
+                WeekHeader(weekLabel(monday), ws.size, ws.sumOf { it.durationS }, open) {
+                    openWeeks = if (monday in openWeeks) openWeeks - monday else openWeeks + monday
+                }
+            }
+            if (open) days.forEach { (d, list) ->
+                item(key = "dag-$d") { Text(dayLabel(d), style = MaterialTheme.typography.labelLarge, color = p.muted, modifier = Modifier.padding(start = 4.dp)) }
+                items(list, key = { it.id ?: it.externalId }) { w -> WorkoutRow(w) { vm.workoutDetail = w } }
+            }
         }
         if (all.isNotEmpty() && !vm.olderDone) item {
             TextButton(onClick = { vm.loadOlderWorkouts() }, enabled = !vm.busy, modifier = Modifier.fillMaxWidth()) {
@@ -280,7 +314,7 @@ private fun FilterNote(vm: MainViewModel, f: TrainingFilter) {
     val p = LocalPalette.current
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(filterNoteText(f), style = MaterialTheme.typography.bodySmall, color = p.muted, modifier = Modifier.weight(1f))
-        TextButton(onClick = { vm.openProfile(ProfileTab.Connections) }) { Text("Filter") }
+        TextButton(onClick = { vm.openProfile(ProfileTab.Connections, focus = "training") }) { Text("Filter") }
     }
 }
 
@@ -359,13 +393,30 @@ private fun LoadCard(vm: MainViewModel, l: TrainingLoad) {
     }
 }
 
+/** Kop van een week: "Vorige week · 4 trainingen · 3u 05m"; oudere weken klap je hiermee open. */
+@Composable
+private fun WeekHeader(label: String, count: Int, seconds: Int, open: Boolean, onToggle: () -> Unit) {
+    val p = LocalPalette.current
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onToggle).padding(start = 4.dp, top = 8.dp, bottom = 4.dp, end = 4.dp)
+        .semantics { stateDescription = if (open) "open" else "dicht" }, verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = p.ink)
+            Text("${if (count == 1) "1 training" else "$count trainingen"} · ${fmtDuration(seconds)}",
+                style = MaterialTheme.typography.bodySmall, color = p.muted)
+        }
+        Icon(if (open) VIcons.ChevronUp else VIcons.ChevronDown, contentDescription = null, tint = p.muted, modifier = Modifier.size(20.dp))
+    }
+}
+
 @Composable
 private fun WorkoutRow(w: Workout, onClick: () -> Unit) {
     val p = LocalPalette.current
     VCard(Modifier.fillMaxWidth(), onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Dot(p.activity, 10.dp)
-            Spacer(Modifier.width(10.dp))
+            Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(p.bg), contentAlignment = Alignment.Center) {
+                Icon(sportIcon(w.sport), contentDescription = null, tint = p.inkOf("active"), modifier = Modifier.size(20.dp))
+            }
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(w.title ?: sportName(w.sport), style = MaterialTheme.typography.titleSmall, color = p.ink, maxLines = 1)
                 Text(
@@ -378,7 +429,7 @@ private fun WorkoutRow(w: Workout, onClick: () -> Unit) {
             }
             Text(fmtDuration(w.durationS), style = MaterialTheme.typography.titleSmall.copy(fontFeatureSettings = "tnum"), color = p.ink)
         }
-        val facts = listOfNotNull(w.distanceM?.takeIf { it > 0 }?.let(::fmtKm), fmtPace(w), w.avgHr?.let { "♥ $it" }, w.kcal?.let { "${it.roundToInt()} kcal" },
+        val facts = listOfNotNull(w.distanceM?.takeIf { it > 0 }?.let(::fmtKm), fmtPace(w), w.avgHr?.let { "♥ $it bpm" }, w.kcal?.let { "${fmtCompact(it)} kcal" },
             w.load?.let { "belasting ${it.roundToInt()}" })
         if (facts.isNotEmpty()) Text(facts.joinToString("   "), style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"), color = p.ink)
     }

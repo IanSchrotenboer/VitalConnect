@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
@@ -29,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.imePadding
@@ -38,6 +40,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +54,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.Period
 import java.time.ZoneOffset
+import kotlinx.coroutines.flow.first
 
 /**
  * Profiel, bereikbaar via het persoon-icoon op Vandaag.
@@ -71,7 +75,15 @@ fun ProfileScreen(
     Column(Modifier.fillMaxSize()) {
     VTopBar("Profiel", onBack = { vm.showSettings = false })
     // imePadding: invulvelden blijven boven het toetsenbord
-    LazyColumn(Modifier.weight(1f).imePadding(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    // Elke tab begint bovenaan; "Filter" op Training opent Koppelingen bij het trainingsfilter (onderaan)
+    val list = remember(vm.profileTab) { LazyListState() }
+    LaunchedEffect(vm.profileTab, vm.profileFocus) {
+        if (vm.profileFocus != "training" || vm.profileTab != ProfileTab.Connections) return@LaunchedEffect
+        vm.profileFocus = null
+        val n = snapshotFlow { list.layoutInfo.totalItemsCount }.first { it > 0 }
+        list.scrollToItem((n - 2).coerceAtLeast(0))
+    }
+    LazyColumn(Modifier.weight(1f).imePadding(), state = list, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Segmented(listOf(ProfileTab.Profile to "Profiel", ProfileTab.Connections to "Koppelingen"), vm.profileTab,
                 Modifier.padding(horizontal = 4.dp)) { vm.profileTab = it }
@@ -96,13 +108,8 @@ fun ProfileScreen(
                 val on = sources.filter { if (it == "health_connect") hcOn else vm.isConnected(it) }
                 // Eerst wat je nu kunt koppelen, daarna wat binnenkort open gaat
                 val off = (sources - on.toSet()).sortedBy { !vm.isAvailable(it) }
-                item {
-                    Text("Kies welke bronnen je data leveren. Per metric stel je de voorkeursbron in onder Vandaag → Aanpassen.",
-                        style = MaterialTheme.typography.bodyMedium, color = p.muted, modifier = Modifier.padding(horizontal = 4.dp))
-                }
-                item { SyncCard(vm) }
-                item { TrainingSourceCard(vm) }
-                item { SectionTitle("Gekoppeld · ${on.size}", Modifier.padding(start = 4.dp, top = 8.dp), dot = p.good) }
+                // Eerst de vraag "is mijn horloge gekoppeld?", daarna de instellingen
+                item { SectionTitle("Gekoppeld · ${on.size}", Modifier.padding(start = 4.dp), dot = p.good) }
                 if (on.isEmpty()) item {
                     Text("Nog niets gekoppeld. Kies hieronder een bron om je dashboard te vullen.",
                         style = MaterialTheme.typography.bodyMedium, color = p.muted, modifier = Modifier.padding(horizontal = 4.dp))
@@ -110,6 +117,13 @@ fun ProfileScreen(
                 on.forEach { s -> item(key = "on-$s") { SourceCard(vm, s, onRequestHc, onOpenUrl) { disconnecting = it } } }
                 if (off.isNotEmpty()) item { SectionTitle("Niet gekoppeld · ${off.size}", Modifier.padding(start = 4.dp, top = 12.dp), dot = p.muted) }
                 off.forEach { s -> item(key = "off-$s") { SourceCard(vm, s, onRequestHc, onOpenUrl) { disconnecting = it } } }
+                item { SectionTitle("Instellingen", Modifier.padding(start = 4.dp, top = 12.dp)) }
+                item(key = "sync") { SyncCard(vm) }
+                item(key = "training") { TrainingSourceCard(vm) }
+                item {
+                    Text("De bron per metric kies je onder Vandaag → Aanpassen.",
+                        style = MaterialTheme.typography.bodySmall, color = p.muted, modifier = Modifier.padding(horizontal = 4.dp))
+                }
             }
         }
     }
@@ -440,7 +454,7 @@ private fun sourceLook(provider: String): SourceLook {
     val p = LocalPalette.current
     return when (provider) {
         "garmin" -> SourceLook("G", p.srcGarmin, "Data van je Garmin-horloge via Garmin Connect.")
-        else -> SourceLook("F", p.srcGoogle, "Data van Fitbit, Pixel Watch en de Google Health-app.")
+        else -> SourceLook("GH", p.srcGoogle, "Data van Fitbit, Pixel Watch en de Google Health-app.")
     }
 }
 
@@ -480,7 +494,8 @@ private fun CloudCard(vm: MainViewModel, provider: String, onOpenUrl: (String) -
         SourceHeader(look.letter, look.color, providerName(provider), status, connected)
         Text(look.about, style = MaterialTheme.typography.bodySmall, color = p.muted)
         if (!available && !connected) {
-            Text("We wachten op toegang van ${providerName(provider)}. Zodra die er is, kun je hier koppelen.",
+            Text("We wachten op toegang van ${providerName(provider)}. Zodra die er is, kun je hier koppelen." +
+                if (provider == "garmin") " Tot dan: zet in de Garmin Connect-app het delen met Health Connect aan, dan komt je data via Health Connect binnen." else "",
                 style = MaterialTheme.typography.bodySmall, color = p.muted)
         }
         c?.takeIf { it.status != "revoked" }?.lastError?.let {
