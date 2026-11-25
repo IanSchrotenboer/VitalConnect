@@ -179,3 +179,28 @@ class BetekenisTest {
         assertEquals("3,5 mln", fmtCompact(3_500_000.0))
     }
 }
+
+/** In- en uitklappen van weken op Training (bug in 1.17.0: deze en vorige week klapten niet dicht). */
+class WeekOpenTest {
+    private val vandaag = java.time.LocalDate.of(2026, 11, 25)
+    private val deze = java.time.LocalDate.of(2026, 11, 23)
+    private val vorige = java.time.LocalDate.of(2026, 11, 16)
+    private val oud = java.time.LocalDate.of(2026, 11, 2)
+
+    @Test fun standaard() {
+        assertTrue(weekOpen(deze, emptyMap(), vandaag))
+        assertTrue(weekOpen(vorige, emptyMap(), vandaag))
+        assertFalse(weekOpen(oud, emptyMap(), vandaag))
+    }
+
+    @Test fun eigenKeuzeWint() {
+        // Zoals de knop: keuze = niet wat het nu is
+        var keuze = mapOf<java.time.LocalDate, Boolean>()
+        keuze = keuze + (deze to !weekOpen(deze, keuze, vandaag))
+        assertFalse(weekOpen(deze, keuze, vandaag))
+        keuze = keuze + (deze to !weekOpen(deze, keuze, vandaag))
+        assertTrue(weekOpen(deze, keuze, vandaag))
+        keuze = keuze + (oud to !weekOpen(oud, keuze, vandaag))
+        assertTrue(weekOpen(oud, keuze, vandaag))
+    }
+}

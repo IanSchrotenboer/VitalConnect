@@ -97,6 +97,13 @@ fun sportIcon(k: String) = when (k) {
 /** Maandag van de week van d. */
 internal fun weekStart(d: LocalDate): LocalDate = d.minusDays((d.dayOfWeek.value - 1).toLong())
 
+/**
+ * Staat een week open? Je eigen keuze wint; zonder keuze zijn deze en vorige week open en oudere weken dicht.
+ * (1.17.0 hield deze en vorige week altijd open, waardoor een tik daar niets deed.)
+ */
+internal fun weekOpen(monday: LocalDate, choice: Map<LocalDate, Boolean>, today: LocalDate = LocalDate.now()): Boolean =
+    choice[monday] ?: (monday >= weekStart(today).minusWeeks(1))
+
 /** "Deze week", "Vorige week" of "Week van 10 nov". */
 internal fun weekLabel(monday: LocalDate, today: LocalDate = LocalDate.now()): String = when (monday) {
     weekStart(today) -> "Deze week"
@@ -243,7 +250,8 @@ fun TrainingScreen(vm: MainViewModel) {
     val t = vm.training
     val all = (t?.workouts.orEmpty() + vm.olderWorkouts)
     val byDay = all.groupBy { it.day }.toSortedMap(compareByDescending { it })
-    var openWeeks by remember { mutableStateOf(setOf<LocalDate>()) }
+    // Wat je zelf open- of dichtklapt; zonder keuze zijn deze en vorige week open (zie weekOpen)
+    var weekChoice by remember { mutableStateOf(mapOf<LocalDate, Boolean>()) }
 
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -274,10 +282,10 @@ fun TrainingScreen(vm: MainViewModel) {
         // Per week; deze en vorige week open, oudere weken ingeklapt tot één regel
         byDay.entries.groupBy { weekStart(it.key) }.forEach { (monday, days) ->
             val ws = days.flatMap { it.value }
-            val open = monday >= weekStart(LocalDate.now()).minusWeeks(1) || monday in openWeeks
+            val open = weekOpen(monday, weekChoice)
             item(key = "week-$monday") {
                 WeekHeader(weekLabel(monday), ws.size, ws.sumOf { it.durationS }, open) {
-                    openWeeks = if (monday in openWeeks) openWeeks - monday else openWeeks + monday
+                    weekChoice = weekChoice + (monday to !open)
                 }
             }
             if (open) days.forEach { (d, list) ->
