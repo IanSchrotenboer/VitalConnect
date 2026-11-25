@@ -77,6 +77,11 @@ button,input,select{font:inherit;color:inherit}button{cursor:pointer}
 .sh{display:flex;align-items:center;gap:10px;margin:20px 0 12px;padding:0 4px}.sh h2{flex:1}
 .lnk{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;border:0;border-radius:22px;background:transparent;color:var(--pri);font-weight:600}
 .lnk svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.tile.herst{grid-column:1/-1}.herst{gap:10px}.hct{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;width:100%}.hct>span:first-child{display:flex;flex-direction:column;gap:4px}
+.hl{display:flex;align-items:center;gap:8px;font-weight:600;font-size:17px;color:var(--ink)}.hs{font-size:44px;font-weight:700;line-height:1;color:var(--ink)}.hadv{font-size:15px;color:var(--ink);text-align:left}
+.hf{display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--line);width:100%;text-align:left}.hft{display:flex;justify-content:space-between;gap:8px;font-size:15px;color:var(--ink)}
+.hb{position:relative;display:block;height:10px;border-radius:5px;background:var(--bg);margin:3px 0}.hbn{position:absolute;top:0;bottom:0;border-radius:5px;background:color-mix(in srgb,var(--herst) 45%,transparent)}
+.hbv{position:absolute;top:-3px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--ink);border:2px solid var(--card)}.hbv.uit{background:var(--bad)}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:row dense;gap:12px}
 .tile.l{grid-column:span 2}
 .tn{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -218,7 +223,7 @@ for(let i=0;i<N;i++){const n=(r()+r()+r()-1.5)/.75;w=.5*w+.5*n;const wk=Math.sin
 const dd=i=>new Date(NOW.getTime()-(N-1-i)*DAY);
 
 const KEY='vitalconnect.preview.v1';
-const fresh=()=>({order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},goal:{},rings:['steps','active','sleep'],conn:{hc:true,google:true,garmin:false},theme:'system',onb:'login',sync:60,lay:{greetName:true,motivation:true,healthTotals:true,healthHidden:[],sleepTiles:['hrv','rhr','resp'],sleepAdvice:true},nGoals:true,nStatus:false,prof:{name:'Sam de Vries',birth:'1991-04-18',sex:null,h:null,w:null}});
+const fresh=()=>({order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},goal:{},rings:['steps','active','sleep'],conn:{hc:true,google:true,garmin:false},theme:'system',onb:'login',sync:60,lay:{greetName:true,motivation:true,healthTotals:true,healthHidden:[],sleepTiles:['hrv','rhr','resp'],sleepAdvice:true,herstel:true},nGoals:true,nStatus:false,prof:{name:'Sam de Vries',birth:'1991-04-18',sex:null,h:null,w:null}});
 // Opgeslagen staat wordt veld voor veld gecontroleerd: kapotte, oude of vreemde waarden vallen terug op de standaard.
 function clean(raw){const d=fresh(),o=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
 const ids=a=>Array.isArray(a)?[...new Set(a.filter(x=>x in MI))]:null,obj=x=>x&&typeof x==='object'&&!Array.isArray(x)?x:{};
@@ -231,7 +236,7 @@ if(['system','light','dark'].includes(o.theme))d.theme=o.theme;
 if(o.onb===null||['login','consent','import','profile'].includes(o.onb))d.onb=o.onb;
 if([15,30,60,180,360,0].includes(o.sync))d.sync=o.sync;
 for(const k of ['nGoals','nStatus'])if(typeof o[k]==='boolean')d[k]=o[k];
-const l=obj(o.lay);for(const k of ['greetName','motivation','healthTotals','sleepAdvice'])if(typeof l[k]==='boolean')d.lay[k]=l[k];
+const l=obj(o.lay);for(const k of ['greetName','motivation','healthTotals','sleepAdvice','herstel'])if(typeof l[k]==='boolean')d.lay[k]=l[k];
 const hid=ids(l.healthHidden);if(hid)d.lay.healthHidden=hid;const st=ids(l.sleepTiles);if(st&&st.length)d.lay.sleepTiles=st;
 const pr=obj(o.prof),txt=(x,n)=>typeof x==='string'?x.slice(0,n):null,num=(x,lo,hi)=>Number.isFinite(x)&&x>=lo&&x<=hi?x:null;
 d.prof={name:txt(pr.name,60)??d.prof.name,birth:/^\d{4}-\d{2}-\d{2}$/.test(pr.birth)&&!isNaN(new Date(pr.birth))?pr.birth:null,sex:['female','male','other'].includes(pr.sex)?pr.sex:null,h:num(pr.h,50,260),w:num(pr.w,20,400)};
@@ -287,7 +292,7 @@ function renderToday(){
     <p class="upd${refreshing==='done'?' ok':''}" aria-live="polite">Bijgewerkt om ${syncedAt.toLocaleTimeString(NL,{hour:'2-digit',minute:'2-digit'})}</p>
     <p class="demo">Preview met voorbeelddata</p></header>
   <div class="pad"><div class="sh"><h2>Jouw metrics</h2><button class="lnk" data-act="edit">${I.sliders}Aanpassen</button></div>
-  <div class="grid">${rows.map(r=>r.map(tile).join('')).join('')}</div></div>`;
+  <div class="grid">${S.lay.herstel?herstelTile():''}${rows.map(r=>r.map(tile).join('')).join('')}</div></div>`;
   fitHeads();
   requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelectorAll('#v-today .rp').forEach(c=>c.setAttribute('stroke-dasharray',c.dataset.d))));
 }
@@ -356,7 +361,59 @@ function drawChart(s,pts,o){
 }
 
 // ---------- Detail ----------
+
+/* Herstel en fitheid: dezelfde berekening als de server (functie fitness, docs/berekeningen.md).
+   HRV als ln(RMSSD), 7 dagen tegen je basislijn van de 60 dagen ervoor; normaal = basislijn ± 0,5 SD (Plews e.a.; AIS).
+   Score: HRV 50%, rusthartslag 25%, slaap 25% (eigen weging). Max. hartslag 208 − 0,7 × leeftijd (Tanaka); VO2max ≈ factor × max ÷ rust (Uth). */
+const sdev=a=>{const m=mean(a);return Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/(a.length-1))};
+function bandOf(a,t,log,lower){const f=log?Math.log:x=>x,u=log?Math.exp:x=>x,w=a.slice(t-6,t+1).map(f),b=a.slice(t-66,t-6).map(f);
+  const mu=mean(b),sd=sdev(b),swc=.5*sd,v=mean(w),z=(v-mu)/sd,st=v<mu-swc?'laag':v>mu+swc?'hoog':'normaal';
+  return{value:u(v),low:u(mu-swc),high:u(mu+swc),min:u(mu-2.5*sd),max:u(mu+2.5*sd),state:st,bad:lower?st==='hoog':st==='laag',points:Math.max(0,Math.min(100,Math.round(50+(lower?-25:25)*z)))}}
+function herstel(){
+  const t=N-1,hrv=bandOf(series('hrv'),t,true,false),rhr=bandOf(series('rhr'),t,false,true);
+  const need=goal('sleep')||8,sl=series('sleep'),last=sl[t],wk=mean(sl.slice(t-6,t+1));
+  const sleep={last,week:wk,need,bad:wk<.9*need,points:Math.round(100*Math.min(1,(.5*last+.5*wk)/need))};
+  const score=Math.round(.5*hrv.points+.25*rhr.points+.25*sleep.points),uit=[hrv.bad,rhr.bad].filter(Boolean).length;
+  const stand=uit===2||(uit===1&&sleep.bad)?2:uit===1||sleep.bad?1:0;
+  const a=series('hrv'),trend=[];for(let i=t-29;i<=t;i++){const b=bandOf(a,i,true,false);trend.push({d:dd(i),v:b.value,lo:b.low,hi:b.high})}
+  const birth=S.prof.birth?new Date(S.prof.birth):null,age=birth?Math.floor((NOW-birth)/31557600000):null,hrmax=age!=null?Math.round(208-.7*age):null;
+  const pf=S.prof.sex==='male'?15.3:S.prof.sex==='female'?14.5:15;
+  return{score,stand,hrv,rhr,sleep,trend,fit:{age,hrmax,pf,rhr7:rhr.value,vo2:today('vo2'),est:hrmax?pf*hrmax/rhr.value:null,
+    zones:hrmax?[1,2,3,4,5].map(z=>[z,Math.round(hrmax*(.4+.1*z)),Math.round(hrmax*(.5+.1*z))]):[]}}}
+const STAND=[['Goed hersteld','var(--good)','Je lichaam is hersteld. Ruimte voor een stevige training.'],
+  ['Let op','var(--act)','Eén signaal wijkt af van je normaal. Train gerust, maar luister naar je lichaam.'],
+  ['Rustig aan','var(--slaap)','Meerdere signalen wijzen op vermoeidheid. Kies vandaag voor rust of een rustige training.']];
+const stateTxt=(b,lower)=>b.state==='normaal'?'Binnen je normale bereik.':b.state==='hoog'?(lower?'Hoger dan normaal: vaak een teken van vermoeidheid of een opkomende verkoudheid.':'Hoger dan normaal: goed hersteld.'):(lower?'Lager dan normaal: goed hersteld.':'Lager dan normaal: je lichaam staat onder spanning.');
+function factor(naam,b,u,lower,kort){const pos=x=>Math.max(0,Math.min(100,(x-b.min)/(b.max-b.min)*100)),r=Math.round;
+  return`<span class="hf"><span class="hft"><b>${naam}</b><span class="num">${r(b.value)} ${u}</span></span><span class="gl">Normaal ${r(b.low)}–${r(b.high)} ${u}</span>
+  <span class="hb" role="img" aria-label="${naam} ${r(b.value)} ${u}, normaal ${r(b.low)} tot ${r(b.high)}"><i class="hbn" style="left:${pos(b.low)}%;width:${pos(b.high)-pos(b.low)}%"></i><i class="hbv${b.bad?' uit':''}" style="left:${pos(b.value)}%"></i></span>
+  ${!kort||b.bad?`<span class="gl">${stateTxt(b,lower)}</span>`:''}</span>`}
+function sleepF(s,kort){return`<span class="hf"><span class="hft"><b>Slaap</b><span class="num">${fmtH(s.last)}</span></span><span class="gl">7 nachten ${fmtH(s.week)} gemiddeld, doel ${fmtH(s.need)}</span>
+  ${!kort||s.bad?`<span class="gl">${s.bad?'Je slaapt deze week minder dan 90% van je doel.':'Je slaapt deze week genoeg.'}</span>`:''}</span>`}
+function herstelHead(h){const[lab,c,adv]=STAND[h.stand];return`<span class="hct"><span><span class="tn"><i class="dot" style="background:var(--herst)"></i>Herstel vandaag</span>
+  <span class="hl"><i class="dot" style="background:${c}"></i>${lab}</span></span><span class="hs num" aria-label="Herstelscore ${h.score} van 100">${h.score}</span></span><span class="hadv">${adv}</span>`}
+function herstelTile(){const h=herstel();return`<button class="card tap tile herst" data-open="herstel">${herstelHead(h)}
+  ${factor('HRV, 7 dagen',h.hrv,'ms',false,true)}${factor('Rusthartslag, 7 dagen',h.rhr,'bpm',true,true)}${sleepF(h.sleep,true)}</button>`}
+function renderHerstel(){const h=herstel(),f=h.fit,W=320,H=140,tr=h.trend,all=tr.flatMap(p=>[p.v,p.lo,p.hi]),lo=Math.min(...all)*.95,hi=Math.max(...all)*1.05;
+  const x=i=>i/(tr.length-1)*W,y=v=>H-(v-lo)/(hi-lo)*H,line=tr.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)} ${y(p.v).toFixed(1)}`).join(' ');
+  const area=tr.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)} ${y(p.hi).toFixed(1)}`).join(' ')+' '+tr.map((p,i)=>[i,p]).reverse().map(([i,p])=>`L${x(i).toFixed(1)} ${y(p.lo).toFixed(1)}`).join(' ')+'Z';
+  const zn=['Herstel','Basis','Tempo','Drempel','Maximaal'];
+  $('#v-detail').innerHTML=`<div class="back"><button class="ib" data-act="back" aria-label="Terug">${I.back}</button><div><h2>Herstel en fitheid</h2></div></div>
+  <div class="pad stack"><div class="card herst">${herstelHead(h)}${factor('HRV, 7 dagen',h.hrv,'ms',false,false)}${factor('Rusthartslag, 7 dagen',h.rhr,'bpm',true,false)}${sleepF(h.sleep,false)}</div>
+  <div class="card"><h3>HRV, laatste 30 dagen</h3><span class="gl">Lijn: je 7-daagse gemiddelde. Band: je normale bereik.</span>
+  <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;overflow:visible" role="img" aria-label="HRV over 30 dagen met je normale bereik"><path d="${area}" fill="color-mix(in srgb,var(--herst) 30%,transparent)"/><path d="${line}" fill="none" stroke="var(--ink)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${x(tr.length-1)}" cy="${y(tr[tr.length-1].v)}" r="4" fill="var(--ink)"/></svg></div>
+  <div class="card"><h3>Fitheid</h3>${f.hrmax==null?`<span class="gl">Vul je geboortedatum in bij Profiel. Dan berekenen we je maximale hartslag, je hartslagzones en een schatting van je VO2max.</span>`:`
+  <div class="st"><div><small>Max. hartslag (geschat)</small><b>${f.hrmax} bpm</b></div><div><small>Rusthartslag, 7 dagen</small><b>${Math.round(f.rhr7)} bpm</b></div>
+  <div><small>VO2max van je horloge</small><b>${nl(f.vo2,1)} ml/kg/min</b></div><div><small>VO2max (schatting)</small><b>${nl(f.est,1)} ml/kg/min</b></div></div>
+  <b style="margin-top:4px">Hartslagzones</b>${f.zones.map(([z,a,b])=>`<span class="tm" style="font-size:15px;color:var(--ink)"><span>Zone ${z} · ${zn[z-1]}</span><span class="num">${a}–${b} bpm</span></span>`).join('')}
+  ${S.prof.sex==null||S.prof.sex==='other'?'<span class="gl">Geslacht niet ingevuld: de VO2max-schatting gebruikt de middelste factor (15).</span>':''}`}</div>
+  <div class="card"><h3>Hoe berekenen we dit?</h3>
+  <p style="margin:0">Herstel volgt de methode die sportwetenschappers gebruiken om herstel te volgen met HRV. Je HRV (RMSSD, gemeten tijdens je slaap) wordt logaritmisch omgerekend en over 7 dagen gemiddeld; één losse nacht zegt weinig. Dat gemiddelde zetten we tegen je eigen basislijn van de 60 dagen ervoor. Je normale bereik is die basislijn plus en min de kleinste zinvolle verandering (een halve standaardafwijking). Je rusthartslag volgen we op dezelfde manier.</p>
+  <p style="margin:0">De score van 0 tot 100 telt HRV voor de helft, rusthartslag en slaap elk voor een kwart. Die weging is onze keuze; het oordeel (goed, let op, rustig aan) komt uit de banden. Na 14 dagen meten is er een eerste basislijn, na 60 dagen een volledige.</p>
+  <p style="margin:0">Maximale hartslag: 208 − 0,7 × leeftijd (Tanaka). Hartslagzones: 50–60, 60–70, 70–80, 80–90 en 90–100% daarvan. VO2max-schatting: factor × maximale hartslag ÷ rusthartslag (Uth), met factor 15,3 voor mannen en 14,5 voor vrouwen. De schatting is ontwikkeld bij getrainde volwassenen; een waarde van je horloge of een inspanningstest is nauwkeuriger.</p>
+  <span class="gl">Bronnen: Plews e.a. (2012, 2013, 2014); Australian Institute of Sport, richtlijn HRV; Tanaka e.a. (2001); Uth e.a. (2004, 2005). Geen medisch advies.</span></div></div>`}
 function renderDetail(){
+  if(detail==='herstel')return renderHerstel();
   const id=detail,m=MI[id],a=series(id),shown=a.slice(N-period),prev=a.slice(N-2*period,N-period);if(sel==null||sel>=period)sel=period-1;
   const ch=prev.length&&mean(prev)?(mean(shown)-mean(prev))/mean(prev)*100:null,good=m.lo?ch<0:ch>0,sum=m.agg==='sum';
   $('#v-detail').innerHTML=`<div class="back"><button class="ib" data-act="back" aria-label="Terug">${I.back}</button><div><h2>${m.n}</h2><span style="color:${col(id)};font-weight:500;font-size:14px">${CAT[m.cat]}</span></div></div>
@@ -443,7 +500,7 @@ function profileHtml(){
   <div class="sh" style="margin-bottom:0"><h2>Account</h2></div>
   <div class="card"><span class="gl">Je data is van jou. Je kunt alles exporteren of je account met alle data verwijderen.</span>
   <div class="row"><button class="btn">Mijn data exporteren</button><button class="btn" data-act="logout">Uitloggen</button></div><a class="lnk" style="padding:0;text-decoration:none" href="https://app.vital-connect.nl/privacy.html">Privacyverklaring</a><button class="lnk" style="color:var(--bad);padding:0">Account verwijderen</button></div>
-  <p class="gl" style="margin:4px">Vital Connect 1.9.2 · preview</p>`;
+  <p class="gl" style="margin:4px">Vital Connect 1.10.0 · preview</p>`;
 }
 const SRCS={hc:['hc','H','var(--src-hc)','Health Connect','Data van apps op deze telefoon, zoals Google Fit, Samsung Health en de Suunto-app.','@sync'],
   google:['google','F','var(--src-gh)','Google Health','Data van Fitbit, Pixel Watch en de Google Health-app.','@sync'],
@@ -510,6 +567,7 @@ function renderEdit(){
     <button class="lnk" data-rdel="${id}" style="color:var(--bad)">Weg</button></div>`).join('')}
     ${rings.length<3?`<span class="gl">Toevoegen</span><div class="row">${M.filter(m=>!m.lo&&!rings.includes(m.id)).sort((a,b)=>a.n.localeCompare(b.n)).map(m=>`<button class="pill" data-radd="${m.id}">+ ${m.n}</button>`).join('')}</div>`:''}</div>
     <div class="sh" style="margin-bottom:0"><h2>Begroeting</h2></div>
+    <div class="card">${tog('data-lay','herstel','Herstel vandaag','Score uit HRV, rusthartslag en slaap, boven je metrics',S.lay.herstel)}</div>
     <div class="card">${tog('data-lay','greetName','Je voornaam','Goedemorgen, Sam',S.lay.greetName)}${tog('data-lay','motivation','Motiverende zin','Wat je vandaag nog kunt halen',S.lay.motivation)}</div>
     <div class="sh" style="margin-bottom:0"><h2>Tegels</h2></div>`+
     ids.map(id=>{const m=MI[id],ring=rings.includes(id),on=S.order.includes(id)&&!ring,o=openEdit===id;

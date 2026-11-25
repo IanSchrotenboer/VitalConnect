@@ -20,6 +20,8 @@ begin
   rep := rep || jsonb_build_object('c','upload zonder inlog geweigerd','ok', ok);
   select count(*) into n from public.metric_stats();
   rep := rep || jsonb_build_object('c','statistieken zonder inlog leeg','ok', n = 0, 'd', n);
+  begin perform public.fitness(current_date); ok := false; exception when others then ok := true; end;
+  rep := rep || jsonb_build_object('c','herstel zonder inlog geweigerd','ok', ok);
 
   perform set_config('request.jwt.claims', jsonb_build_object('sub', a, 'role', 'authenticated')::text, true);
 
@@ -28,6 +30,11 @@ begin
   rep := rep || jsonb_build_object('c','statistieken zonder data: leeg, geen fout','ok', n = 0);
   j := public.app_state(current_date - 13, current_date, true);
   rep := rep || jsonb_build_object('c','app_state zonder data werkt','ok', j ? 'daily' and jsonb_array_length(j->'daily') = 0);
+  rep := rep || jsonb_build_object('c','herstel zonder data: nog aan het leren, geen fout','ok',
+    j #> '{fitness,herstel,score}' = 'null'::jsonb and j #>> '{fitness,herstel,hrv,ready}' = 'false');
+  begin perform public.fitness(null); perform public.fitness('1900-01-01'); perform public.fitness('9999-12-31'); ok := true;
+  exception when others then ok := false; end;
+  rep := rep || jsonb_build_object('c','herstel met vreemde datums: geen fout','ok', ok);
 
   -- Verkeerde perioden
   begin perform public.app_state(current_date, current_date - 1, true); ok := false; exception when others then ok := true; end;
@@ -101,10 +108,29 @@ begin
   rep := rep || jsonb_build_object('c','zelfde waarde opnieuw van Google of Garmin: cache blijft geldig','ok', t1 is not distinct from t2);
   perform set_config('role', 'authenticated', true);
 
+  -- Herstel: constante HRV (standaardafwijking 0) en uitschieters geven geen deling door nul of fout
+  perform set_config('role', 'postgres', true);
+  insert into public.daily_metrics (user_id, day, metric, source, provider, value, updated_at)
+  select a, current_date - g, 'hrv', 'garmin', 'garmin', 50, now() from generate_series(0, 70) g
+  on conflict (user_id, day, metric, source) do update set value = excluded.value;
+  insert into public.daily_metrics (user_id, day, metric, source, provider, value, updated_at)
+  select a, current_date - g, 'rhr', 'garmin', 'garmin', case when g = 3 then 200 when g = 4 then 20 else 55 + g % 3 end, now() from generate_series(0, 70) g
+  on conflict (user_id, day, metric, source) do update set value = excluded.value;
+  update public.profiles set birth_date = '1900-01-01', sex = 'female' where id = a;
+  perform set_config('role', 'authenticated', true);
+  begin
+    j := public.fitness(current_date);
+    rep := rep || jsonb_build_object('c','herstel met constante HRV en uitschieters: geen fout','ok',
+      j #>> '{herstel,hrv,ready}' = 'false' and (j #>> '{herstel,score}')::int between 0 and 100 and (j #>> '{fitheid,hrmax}')::int > 0);
+  exception when others then
+    rep := rep || jsonb_build_object('c','herstel met constante HRV en uitschieters: geen fout','ok', false, 'd', sqlerrm);
+  end;
+
   -- Een andere gebruiker blijft onaangeroerd
   perform set_config('request.jwt.claims', jsonb_build_object('sub', b, 'role', 'authenticated')::text, true);
   j := public.app_state(current_date - 400, current_date, true);
-  rep := rep || jsonb_build_object('c','gebruiker B ziet niets van A','ok', jsonb_array_length(j->'daily') = 0 and jsonb_array_length(j->'stats') = 0);
+  rep := rep || jsonb_build_object('c','gebruiker B ziet niets van A','ok', jsonb_array_length(j->'daily') = 0 and jsonb_array_length(j->'stats') = 0
+    and j #> '{fitness,herstel,score}' = 'null'::jsonb and j #> '{fitness,fitheid,hrmax}' = 'null'::jsonb);
 
   -- Account verwijderen ruimt ook de cache op (koppeling met cascade)
   perform set_config('role', 'postgres', true);

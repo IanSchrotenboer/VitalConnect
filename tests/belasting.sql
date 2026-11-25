@@ -8,17 +8,19 @@ begin
   create temp table tu on commit drop as select gen_random_uuid() id, g from generate_series(1,500) g;
   insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
   select '00000000-0000-0000-0000-000000000000', id, 'authenticated', 'authenticated', 'load'||g||'@vitalconnect.invalid', '{}', '{}', now(), now() from tu;
+  -- Met geboortedatum en 70 dagen data rekent herstel en fitheid (in app_state) echt mee
+  update public.profiles set birth_date = '1988-05-05', sex = 'male' where id in (select id from tu);
   t0 := clock_timestamp();
   insert into public.daily_metrics (user_id, day, metric, source, provider, value, updated_at)
-  select tu.id, d::date, m.id, 'garmin', 'garmin', round(m.min_value + (m.max_value - m.min_value) * 0.3, 1), now()
-  from tu cross join generate_series(current_date - 59, current_date, interval '1 day') d cross join public.metrics m;
+  select tu.id, d::date, m.id, 'garmin', 'garmin', round(m.min_value + (m.max_value - m.min_value) * (0.25 + 0.1 * random())::numeric, 1), now()
+  from tu cross join generate_series(current_date - 69, current_date, interval '1 day') d cross join public.metrics m;
   get diagnostics n = row_count;
   rep := rep || jsonb_build_object('c','vullen 500 gebruikers','d', n||' rijen in '||round(extract(epoch from clock_timestamp()-t0))||' s');
   insert into public.connections (user_id, provider, status, last_sync_at) select id, 'google_health', 'active', now() - (g||' minutes')::interval from tu;
   heavy := (select id from tu where g = 1);
   insert into public.daily_metrics (user_id, day, metric, source, provider, value, updated_at)
   select heavy, d::date, m.id, s.src, s.prov, round(m.min_value + (m.max_value - m.min_value) * 0.3, 1), now()
-  from generate_series(current_date - 1825, current_date - 60, interval '1 day') d cross join public.metrics m
+  from generate_series(current_date - 1825, current_date - 70, interval '1 day') d cross join public.metrics m
   cross join (values ('garmin','garmin'),('health_connect:x','health_connect')) s(src,prov);
   analyze public.daily_metrics; analyze public.connections;
 

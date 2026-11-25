@@ -69,6 +69,13 @@ begin
     end loop;
     rep := rep || jsonb_build_object('c', 'App openen in één verzoek (app_state, 5 jaar)', 'ok', maxms < grens, 'd', round(maxms) || ' ms');
 
+    maxms := 0;
+    for i in 1..3 loop
+      t0 := clock_timestamp(); perform public.fitness(current_date);
+      maxms := greatest(maxms, extract(epoch from clock_timestamp() - t0) * 1000);
+    end loop;
+    rep := rep || jsonb_build_object('c', 'Herstel en fitheid (fitness, 5 jaar)', 'ok', maxms < grens, 'd', round(maxms) || ' ms');
+
     t0 := clock_timestamp(); perform public.export_my_data();
     ms := extract(epoch from clock_timestamp() - t0) * 1000;
     rep := rep || jsonb_build_object('c', 'Data exporteren (export_my_data, ~60.000 regels)', 'ok', ms < 3000, 'd', round(ms) || ' ms (grens 3000)');

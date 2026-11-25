@@ -65,6 +65,10 @@ fun TodayScreen(vm: MainViewModel) {
                 IconLabel(VIcons.Sliders, "Aanpassen", p.primary) { vm.editing = EditTarget.Today }
             }
         }
+        // Herstel als losse tegel, over de volle breedte, boven de andere tegels
+        if (vm.layout.herstel && vm.fitness != null) item {
+            HerstelTile(vm, Modifier.padding(horizontal = 16.dp).fillMaxWidth())
+        }
         if (rows.isEmpty()) item {
             Text("Je dashboard is leeg. Kies metrics via Aanpassen.", style = MaterialTheme.typography.bodyMedium, color = p.muted, modifier = Modifier.padding(horizontal = 20.dp))
         }

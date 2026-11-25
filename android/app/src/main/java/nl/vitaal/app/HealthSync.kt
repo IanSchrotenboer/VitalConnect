@@ -57,7 +57,8 @@ class HealthSync(context: Context, private val api: Api) {
         if (types.isEmpty()) return 0
 
         val today = LocalDate.now(zone)
-        val typesKey = types.joinToString(",") { it.simpleName.orEmpty() }
+        // "hrv-nacht": sinds 1.10 telt HRV tijdens de slaap; een andere sleutel laat de geschiedenis één keer opnieuw berekenen
+        val typesKey = "hrv-nacht;" + types.joinToString(",") { it.simpleName.orEmpty() }
         val saved = prefs.getString(CHANGES_TOKEN, null)
         val history = HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY in granted
 
@@ -122,8 +123,9 @@ class HealthSync(context: Context, private val api: Api) {
         val end = to.plusDays(1).atStartOfDay(zone).toInstant()
         val acc = Accumulator(zone)
         for (type in types) {
-            // Slaap die 's avonds begint telt voor de dag waarop je wakker wordt
-            val readStart = if (type == SleepSessionRecord::class) start.minus(Duration.ofHours(18)) else start
+            // Slaap die 's avonds begint telt voor de dag waarop je wakker wordt; HRV van die nacht ook
+            val night = type == SleepSessionRecord::class || type == HeartRateVariabilityRmssdRecord::class
+            val readStart = if (night) start.minus(Duration.ofHours(18)) else start
             readAll(type, readStart, end).forEach(acc::add)
         }
         val rows = acc.rows().filter { !it.day.isBefore(from) && !it.day.isAfter(to) }
@@ -192,6 +194,8 @@ class HealthSync(context: Context, private val api: Api) {
         private val sums = HashMap<Key, Double>()
         private val avgs = HashMap<Key, Pair<Double, Int>>()
         private val lasts = HashMap<Key, Pair<Instant, Double>>()
+        private val sleeps = mutableListOf<Pair<Instant, Instant>>()
+        private val hrvs = mutableListOf<Triple<Instant, String, Double>>()
 
         private fun day(t: Instant) = t.atZone(zone).toLocalDate()
         private fun sum(t: Instant, m: String, o: String, v: Double) {
@@ -213,9 +217,9 @@ class HealthSync(context: Context, private val api: Api) {
                 is ActiveCaloriesBurnedRecord -> sum(r.startTime, "kcal", o, r.energy.inKilocalories)
                 is FloorsClimbedRecord -> sum(r.startTime, "floors", o, r.floors)
                 is ExerciseSessionRecord -> sum(r.startTime, "active", o, minutes(r.startTime, r.endTime))
-                is SleepSessionRecord -> sum(r.endTime, "sleep", o, minutes(r.startTime, r.endTime) / 60.0)
+                is SleepSessionRecord -> { sum(r.endTime, "sleep", o, minutes(r.startTime, r.endTime) / 60.0); sleeps += r.startTime to r.endTime }
                 is RestingHeartRateRecord -> avg(r.time, "rhr", o, r.beatsPerMinute.toDouble())
-                is HeartRateVariabilityRmssdRecord -> avg(r.time, "hrv", o, r.heartRateVariabilityMillis)
+                is HeartRateVariabilityRmssdRecord -> hrvs += Triple(r.time, o, r.heartRateVariabilityMillis)
                 is OxygenSaturationRecord -> avg(r.time, "spo2", o, r.percentage.value)
                 is RespiratoryRateRecord -> avg(r.time, "resp", o, r.rate)
                 is WeightRecord -> last(r.time, "weight", o, r.weight.inKilograms)
@@ -226,7 +230,24 @@ class HealthSync(context: Context, private val api: Api) {
         fun rows(): List<Row> =
             sums.map { (k, v) -> Row(k.day, k.metric, k.origin, v) } +
             avgs.map { (k, p) -> Row(k.day, k.metric, k.origin, p.first / p.second) } +
-            lasts.map { (k, p) -> Row(k.day, k.metric, k.origin, p.second) }
+            lasts.map { (k, p) -> Row(k.day, k.metric, k.origin, p.second) } +
+            hrvRows()
+
+        /**
+         * HRV zoals Garmin, Google en Suunto hem meten: het gemiddelde tijdens de slaap, voor de dag waarop je wakker wordt.
+         * Alleen als er die dag geen meting in de slaap is, het gemiddelde van de hele dag.
+         */
+        private fun hrvRows(): List<Row> {
+            val night = HashMap<Key, Pair<Double, Int>>()
+            val allDay = HashMap<Key, Pair<Double, Int>>()
+            for ((t, o, v) in hrvs) {
+                val s = sleeps.firstOrNull { !t.isBefore(it.first) && !t.isAfter(it.second) }
+                val map = if (s != null) night else allDay
+                val k = Key(day(s?.second ?: t), "hrv", o)
+                val p = map[k] ?: (0.0 to 0); map[k] = (p.first + v) to (p.second + 1)
+            }
+            return (allDay + night).map { (k, p) -> Row(k.day, k.metric, k.origin, p.first / p.second) }
+        }
     }
 
     companion object {

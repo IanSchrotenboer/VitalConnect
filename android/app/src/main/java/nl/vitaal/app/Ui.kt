@@ -65,12 +65,13 @@ fun VitaalRoot(
     }
 
     val inAuth = !vm.signedIn || vm.authStep !is AuthStep.Login || vm.needsConsent || vm.onboarding != null
-    val overlay = vm.editing != null || vm.detailMetric != null || vm.showSettings
+    val overlay = vm.editing != null || vm.detailMetric != null || vm.showHerstel || vm.showSettings
     val showTabs = !inAuth && !overlay
 
     BackHandler(enabled = !inAuth && overlay) {
         when {
             vm.detailMetric != null -> vm.closeDetail()
+            vm.showHerstel -> vm.showHerstel = false
             vm.editing != null -> vm.editing = null
             else -> vm.showSettings = false
         }
@@ -138,6 +139,7 @@ fun VitaalRoot(
                             vm.onboarding == Onboarding.Profile -> OnboardingProfileScreen(vm)
                             vm.editing != null -> EditScreen(vm, vm.editing!!)
                             vm.detailMetric != null -> DetailScreen(vm)
+                            vm.showHerstel -> HerstelScreen(vm)
                             vm.showSettings -> ProfileScreen(vm, onRequestHc, onOpenUrl, onShare, onSignOut, onRequestNotifications)
                             else -> PullToRefresh(vm) {
                                 HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 1) { page ->

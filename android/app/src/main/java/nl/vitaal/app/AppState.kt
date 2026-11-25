@@ -27,6 +27,8 @@ class AppState(
     val daily: Map<String, Map<LocalDate, DayValue>>,
     /** Null als niet gevraagd (achtergrondtaak). */
     val stats: Map<String, MetricStats>?,
+    /** Herstel en fitheid, door de server berekend; null bij een oudere server. */
+    val fitness: Fitness?,
 )
 
 // Verdraagzaam lezen: een veld met een onverwacht type geldt als leeg, de app crasht er niet op.
@@ -79,5 +81,6 @@ suspend fun Api.appState(from: LocalDate, to: LocalDate, withStats: Boolean): Ap
                 totalAll = s.num("total_all"), avg30 = s.num("avg_30"),
             )
         },
+        fitness = parseFitness(o["fitness"] as? JsonObject),
     )
 }

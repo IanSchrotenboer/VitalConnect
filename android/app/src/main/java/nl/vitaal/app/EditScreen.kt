@@ -78,6 +78,13 @@ fun EditScreen(vm: MainViewModel, target: EditTarget) {
                     }
                 }
                 item { SectionTitle("Tegels", Modifier.padding(start = 4.dp, top = 8.dp)) }
+                item {
+                    VCard(Modifier.fillMaxWidth()) {
+                        ToggleRow("Herstel vandaag", "Score uit HRV, rusthartslag en slaap, boven je metrics", vm.layout.herstel) {
+                            vm.saveLayout(vm.layout.copy(herstel = it))
+                        }
+                    }
+                }
                 items(vm.allForEdit, key = { it.metric }) { pref ->
                     EditRow(vm, pref, open == pref.metric) { open = if (open == pref.metric) null else pref.metric }
                 }

@@ -74,12 +74,15 @@ data class Layout(
     val healthHidden: Set<String> = emptySet(),
     val sleepTiles: List<String> = listOf("hrv", "rhr", "resp"),
     val sleepAdvice: Boolean = true,
+    /** Tegel Herstel vandaag bovenaan Jouw metrics. */
+    val herstel: Boolean = true,
 ) {
     fun toJson(): JsonObject = buildJsonObject {
         put("greetName", greetName); put("motivation", motivation); put("healthTotals", healthTotals)
         put("healthHidden", JsonArray(healthHidden.sorted().map { JsonPrimitive(it) }))
         put("sleepTiles", JsonArray(sleepTiles.map { JsonPrimitive(it) }))
         put("sleepAdvice", sleepAdvice)
+        put("herstel", herstel)
     }
 
     companion object {
@@ -92,6 +95,7 @@ data class Layout(
                 healthHidden = list("healthHidden")?.toSet() ?: emptySet(),
                 sleepTiles = list("sleepTiles")?.takeIf { it.isNotEmpty() }?.take(6) ?: Layout().sleepTiles,
                 sleepAdvice = b("sleepAdvice", true),
+                herstel = b("herstel", true),
             )
         }
     }
@@ -170,6 +174,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var notifyGoals by mutableStateOf(device.notifyGoals); private set
     var notifyStatus by mutableStateOf(device.notifyStatus); private set
     var notificationsAllowed by mutableStateOf(Notifier.allowed(app)); private set
+    /** Herstel en fitheid (server, app_state). */
+    var fitness by mutableStateOf<Fitness?>(null); private set
+    /** Detailscherm Herstel en fitheid open. */
+    var showHerstel by mutableStateOf(false)
     /** Metric waarvan het detailscherm (grafiek) open staat. */
     var detailMetric by mutableStateOf<String?>(null); private set
     var stats by mutableStateOf<Map<String, MetricStats>>(emptyMap()); private set
@@ -297,7 +305,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun signOut() {
         api.signOut(); hc.reset(); Notifier.clear(getApplication())
         signedIn = false; authStep = AuthStep.Login
-        tab = Tab.Today; showSettings = false; detailMetric = null; editing = null; layout = Layout()
+        tab = Tab.Today; showSettings = false; detailMetric = null; showHerstel = false; fitness = null; editing = null; layout = Layout()
         profile = Profile(); profileTab = ProfileTab.Profile; onboarding = null
         // Niets van de vorige gebruiker laten staan op dit toestel
         prefs = emptyMap(); today = emptyMap(); connections = emptyMap(); history = emptyMap(); stats = emptyMap()
@@ -435,6 +443,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         history = st.daily.mapValues { (_, days) -> days.mapValues { it.value.value } }
         today = st.daily.mapNotNull { (metric, days) -> days[now]?.let { metric to it } }.toMap()
         stats = st.stats.orEmpty()
+        fitness = st.fitness
         lastLoaded = Instant.now()
         refreshHcStatusNow()
         Notifier.checkGoals(getApplication(), prefs.values, today, metrics)

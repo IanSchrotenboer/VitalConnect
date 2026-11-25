@@ -6,6 +6,11 @@ VANDAAG
 • Tegels met je metrics, een minigrafiek van de afgelopen week en het verschil met je weekgemiddelde
 • Zelf indelen: kies welke metrics je ziet, in welke volgorde, groot of klein, met je eigen dagdoelen
 
+HERSTEL EN FITHEID
+• Herstel vandaag: je HRV en rusthartslag van de afgelopen week naast je eigen normale bereik, plus je slaap
+• Volgens de methode die sportwetenschappers gebruiken, met uitleg bij elke score
+• Geschatte maximale hartslag, hartslagzones en VO2max uit je leeftijd en rusthartslag
+
 GEZONDHEID
 • Al je statistieken over je hele geschiedenis: gemiddelde, laatste 30 dagen, record en totaal
 • Ingedeeld in activiteit, hart, slaap, herstel en lichaam
