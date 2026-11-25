@@ -1,0 +1,84 @@
+name: Bugtest app
+
+# Unittests (bestandsimport, opmaak, serverantwoorden) en Android Lint (fouten die de compiler niet ziet:
+# rechten, API-niveaus, ontbrekende vertalingen, Compose-valkuilen). Draait bij elke push naar main die de app raakt,
+# bij een pull request, en met de hand (Actions → Bugtest app → Run workflow).
+# De rapporten staan als artefact "bugtest-rapporten" bij de run; de uitkomst staat in de samenvatting.
+
+on:
+  push:
+    branches: [main]
+    paths: ["android/**", ".github/workflows/bugtest.yml"]
+  pull_request:
+    paths: ["android/**", ".github/workflows/bugtest.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: bugtest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bugtest:
+    name: Unittests en Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: "8.14.3"
+
+      - name: Unittests
+        working-directory: android
+        run: |
+          set -o pipefail
+          gradle testDebugUnitTest --no-daemon --console=plain 2>&1 | tee test.log
+
+      - name: Android Lint
+        if: always()
+        working-directory: android
+        run: |
+          set -o pipefail
+          gradle lintDebug --no-daemon --console=plain 2>&1 | tee lint.log
+
+      - name: Samenvatting
+        if: always()
+        working-directory: android
+        run: |
+          {
+            echo "## Bugtest app"
+            for f in app/build/test-results/testDebugUnitTest/*.xml; do
+              [ -f "$f" ] || continue
+              n=$(grep -o 'tests="[0-9]*"' "$f" | head -1 | grep -o '[0-9]*')
+              fl=$(grep -o 'failures="[0-9]*"' "$f" | head -1 | grep -o '[0-9]*')
+              er=$(grep -o 'errors="[0-9]*"' "$f" | head -1 | grep -o '[0-9]*')
+              echo "- $(basename "$f" .xml | sed 's/TEST-nl.vitaal.app.//'): $n tests, $fl mislukt, $er fouten"
+            done
+            if [ -f app/build/reports/lint-results-debug.xml ]; then
+              echo ""
+              echo "### Lint"
+              echo "- fouten: $(grep -c 'severity="Error"' app/build/reports/lint-results-debug.xml || true)"
+              echo "- waarschuwingen: $(grep -c 'severity="Warning"' app/build/reports/lint-results-debug.xml || true)"
+              echo ""
+              grep -o 'id="[^"]*"[^>]*severity="Error"[^>]*message="[^"]*"' app/build/reports/lint-results-debug.xml | head -30 | sed 's/^/- /' || true
+            fi
+            grep -E '^e: |FAILED|AssertionError|expected:' test.log 2>/dev/null | head -40 | sed 's/^/    /' || true
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Rapporten bewaren
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: bugtest-rapporten
+          path: |
+            android/app/build/reports/
+            android/app/build/test-results/
+            android/test.log
+            android/lint.log
+          retention-days: 14
