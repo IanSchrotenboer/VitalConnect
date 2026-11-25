@@ -621,7 +621,7 @@ function parseJsonWk(text,hash){let root=JSON.parse(text.replace(/^﻿/,'')),ite
     // Sleutel: id als tekst of geheel getal (Strava, Garmin Connect) of de naam van een Google Health-datapunt; nooit de titel
     const whole=k=>Number.isInteger(o0[k])?String(o0[k]):null,id=str(o0,'external_id','id','activityId')??whole('id')??whole('activityId')??(str(o0,'name')?.startsWith('users/')?str(o0,'name').split('/').pop():null);
     const rng=(v,lo,hi)=>v!=null&&v>=lo&&v<=hi?v:null;
-    list.push({id:'json-'+(id?id.replace(/[^A-Za-z0-9_.:@+=-]/g,'_'):hash+'-'+i),source:'file',sport:SPORTK.has(type)?type:sportText(type),title:str(o,'title','displayName','activityName'),day,start,dur,
+    list.push({id:'json-'+(id?id.replace(/[^A-Za-z0-9_.:@+=-]/g,'_'):hash+'-'+i),source:'file',sport:SPORTK.has(type)?type:sportText(type),title:(str(o,'title','displayName','activityName')??(str(o0,'name')?.startsWith('users/')?null:str(o0,'name')))?.slice(0,80)??null,day,start,dur,
       dist:rng(num(o,'distance_m','distance')??(num(m,'distanceMillimeters')!=null?num(m,'distanceMillimeters')/1000:ag('distance')),0,1e6),kcal:rng(num(o,'kcal','calories','active_calories')??num(m,'caloriesKcal')??ag('calories'),0,20000),
       avg:rng(num(o,'avg_hr','average_heartrate','averageHR','averageHeartRate')??num(m,'averageHeartRateBeatsPerMinute'),25,250),max:rng(num(o,'max_hr','max_heartrate','maxHR','maxHeartRate'),25,250),
       asc:rng(num(o,'ascent_m','total_elevation_gain','elevationGain')??(num(m,'elevationGainMillimeters')!=null?num(m,'elevationGainMillimeters')/1000:null),0,20000),notes:str(o,'notes','description'),origin:'JSON-bestand'})
@@ -896,6 +896,8 @@ function setProf(t){const k=t.dataset.prof;let v=t.value;if(k==='h'||k==='w'){v=
     const i=TABS.indexOf(tab),j=i+(dx<0?1:-1);if(j<0||j>=TABS.length)return;
     tab=TABS[j];show();const v=$('#v-'+tab);v.classList.remove('in-l','in-r');void v.offsetWidth;v.classList.add(dx<0?'in-r':'in-l')},{passive:true})}
 renderAll();show();
+// Alleen lezen, voor de functionele test (tests/functioneel-preview.mjs)
+window.__vc={state:()=>S,today,goal,MI,visibleWk,hrLimit,period:()=>period};
 }
 </script>
 <script>setTimeout(()=>{const s=document.getElementById('splash');if(!s)return;s.classList.add('out');setTimeout(()=>s.remove(),400)},1200)</script>

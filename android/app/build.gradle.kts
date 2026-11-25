@@ -8,6 +8,13 @@ android {
     namespace = "nl.vitaal.app"
     compileSdk = 36
 
+    // Android Lint (bugtest-workflow): fouten breken de bugtest af; alle meldingen ook leesbaar in het log
+    lint {
+        abortOnError = true
+        textReport = true
+        textOutput = file("stdout")
+    }
+
     defaultConfig {
         applicationId = "nl.vitaal.app"
         minSdk = 28            // Health Connect werkt vanaf Android 9
