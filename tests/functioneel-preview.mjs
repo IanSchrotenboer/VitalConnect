@@ -226,6 +226,17 @@ const naarKoppelingen = async (p) => { await p.click("[data-tab=today]"); await 
   const voor = await p.evaluate(() => document.querySelectorAll("#v-training .wk").length);
   await p.locator("#v-training .wkw").nth(2).click();
   verwacht(await p.evaluate((v) => document.querySelectorAll("#v-training .wk").length > v, voor), "Training: oudere week klapt niet open");
+  // Bug 1.17.0: deze en vorige week klapten niet dicht
+  for (const i of [0, 1]) {
+    const kop = p.locator("#v-training .wkw").nth(i);
+    const n0 = await p.evaluate(() => document.querySelectorAll("#v-training .wk").length);
+    await kop.click();
+    const dicht = await p.locator("#v-training .wkw").nth(i).getAttribute("aria-expanded");
+    const n1 = await p.evaluate(() => document.querySelectorAll("#v-training .wk").length);
+    verwacht(dicht === "false" && n1 < n0, `Training: week ${i + 1} klapt niet dicht (${dicht}, ${n0} → ${n1})`);
+    await p.locator("#v-training .wkw").nth(i).click();
+    verwacht(await p.locator("#v-training .wkw").nth(i).getAttribute("aria-expanded") === "true", `Training: week ${i + 1} klapt niet weer open`);
+  }
   await p.click("[data-act=wfilter]");
   const k = await p.evaluate(() => ({ eerste: document.querySelector("#v-settings .sh h2")?.textContent ?? "",
     zichtbaar: (() => { const b = document.querySelector("#c-training")?.getBoundingClientRect(); return !!b && b.top < innerHeight && b.bottom > 0; })() }));
