@@ -80,12 +80,12 @@ fun fmt(metric: String, v: Double): String = when (metric) {
     else -> NumberFormat.getIntegerInstance(NL).format(v.roundToLong())
 }
 
-/** 7,25 → "7u 15m" */
+/** 7,25 → "7u 15m"; onder het uur 0,93 → "56 min" (zoals de duur van trainingen) */
 fun fmtHours(v: Double): String {
-    var h = v.toInt()
-    var m = ((v - h) * 60).roundToInt()
-    if (m == 60) { h++; m = 0 }
-    return "${h}u ${m.toString().padStart(2, '0')}m"
+    val totaal = (v.coerceAtLeast(0.0) * 60).roundToInt()
+    val h = totaal / 60
+    val m = totaal % 60
+    return if (h == 0) "$m min" else "${h}u ${m.toString().padStart(2, '0')}m"
 }
 
 /** Eenheid zoals hij naast het getal staat; slaap heeft die al in het getal. */

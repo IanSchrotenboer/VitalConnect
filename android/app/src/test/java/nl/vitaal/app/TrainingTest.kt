@@ -81,3 +81,15 @@ class TrainingTest {
         assertTrue(SPORT_KEYS.containsAll(listOf("running", "walking", "other")))
     }
 }
+
+/** Slaapduur en andere uren. */
+class UrenTest {
+    @Test fun uren() {
+        assertEquals("7u 15m", fmtHours(7.25))
+        assertEquals("8u 00m", fmtHours(7.999))
+        assertEquals("56 min", fmtHours(0.93))
+        assertEquals("0 min", fmtHours(0.0))
+        assertEquals("0 min", fmtHours(-1.0))
+        assertEquals("1u 00m", fmtHours(0.9999))
+    }
+}
