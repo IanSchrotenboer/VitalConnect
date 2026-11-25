@@ -5,6 +5,13 @@ import type { ProviderId } from "../shared.ts";
 /** Eén dagwaarde, zoals writeDaily hem wegschrijft. */
 export type Row = { user_id: string; day: string; metric: string; value: number };
 
+/** Eén training, zoals writeWorkouts hem wegschrijft (tabel workouts). */
+export type WorkoutRow = {
+  user_id: string; external_id: string; sport: string; title?: string | null; day: string; started_at: string;
+  duration_s: number; distance_m?: number | null; kcal?: number | null; avg_hr?: number | null; max_hr?: number | null;
+  ascent_m?: number | null; origin?: string | null;
+};
+
 /** Mislukte stap met een status die de app begrijpt (vitaal://<slug>?status=...). */
 export class ConnectError extends Error {
   constructor(public status: string, message?: string) { super(message ?? status); }
@@ -33,6 +40,8 @@ export interface CloudProvider {
   identify(accessToken: string): Promise<string | null>;
   /** Dagwaarden van de laatste `days` dagen ophalen (alleen pull-bronnen). */
   fetchDays?(accessToken: string, userId: string, days: number): Promise<Row[]>;
+  /** Trainingen van de laatste `days` dagen ophalen (alleen pull-bronnen die trainingen leveren). */
+  fetchWorkouts?(accessToken: string, userId: string, days: number): Promise<WorkoutRow[]>;
   /** Toestemming intrekken bij de bron. Geeft een korte status terug; fouten blokkeren niets. */
   revoke(tokens: { access: string | null; refresh: string | null }): Promise<string>;
 }

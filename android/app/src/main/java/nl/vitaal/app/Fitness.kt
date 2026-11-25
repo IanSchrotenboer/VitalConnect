@@ -270,6 +270,10 @@ fun HerstelScreen(vm: MainViewModel) {
                 SleepRow(h.sleep, short = false)
             }
 
+            VCard(Modifier.fillMaxWidth()) {
+                Expandable("Wat zegt dit over je lichaam?") { BODY_INFO["herstel"]?.forEach { InfoParagraph(it) } }
+            }
+
             if (h.trend.size >= 2) VCard(Modifier.fillMaxWidth()) {
                 Text("HRV, laatste 30 dagen", style = MaterialTheme.typography.titleMedium, color = p.ink)
                 Text("Lijn: je 7-daagse gemiddelde. Band: je normale bereik.", style = MaterialTheme.typography.bodySmall, color = p.muted)

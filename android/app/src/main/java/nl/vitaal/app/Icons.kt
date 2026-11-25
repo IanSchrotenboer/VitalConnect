@@ -33,6 +33,8 @@ object VIcons {
         "M15 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1z",
     )
     val Health = line("health", "M3 12h4l2.5-6 5 12 2.5-6h4")
+    /** Halter: tabblad Training. */
+    val Training = line("training", "M6.5 7v10", "M17.5 7v10", "M3.5 9.5v5", "M20.5 9.5v5", "M6.5 12h11")
     val Moon = line("moon", "M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z")
     val Person = line("person", "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M4 20a8 8 0 0 1 16 0")
     val ChevronRight = line("right", "M9 6l6 6-6 6")

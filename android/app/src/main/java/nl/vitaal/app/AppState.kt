@@ -29,6 +29,8 @@ class AppState(
     val stats: Map<String, MetricStats>?,
     /** Herstel en fitheid, door de server berekend; null bij een oudere server. */
     val fitness: Fitness?,
+    /** Tabblad Training: trainingen van 90 dagen, week, verloop en belasting; null bij een oudere server. */
+    val training: Training?,
 )
 
 // Verdraagzaam lezen: een veld met een onverwacht type geldt als leeg, de app crasht er niet op.
@@ -82,5 +84,6 @@ suspend fun Api.appState(from: LocalDate, to: LocalDate, withStats: Boolean): Ap
             )
         },
         fitness = parseFitness(o["fitness"] as? JsonObject),
+        training = parseTraining(o["training"] as? JsonObject),
     )
 }

@@ -41,6 +41,7 @@ private val TABS = listOf(
     Triple(Tab.Today, "Vandaag", VIcons.Today),
     Triple(Tab.Health, "Gezondheid", VIcons.Health),
     Triple(Tab.Sleep, "Slaap", VIcons.Moon),
+    Triple(Tab.Training, "Training", VIcons.Training),
 )
 
 /**
@@ -65,13 +66,17 @@ fun VitaalRoot(
     }
 
     val inAuth = !vm.signedIn || vm.authStep !is AuthStep.Login || vm.needsConsent || vm.onboarding != null
-    val overlay = vm.editing != null || vm.detailMetric != null || vm.showHerstel || vm.showSettings
+    val overlay = vm.editing != null || vm.detailMetric != null || vm.showHerstel || vm.showSettings ||
+        vm.workoutDetail != null || vm.workoutForm != null || vm.workoutImport != null
     val showTabs = !inAuth && !overlay
 
     BackHandler(enabled = !inAuth && overlay) {
         when {
             vm.detailMetric != null -> vm.closeDetail()
             vm.showHerstel -> vm.showHerstel = false
+            vm.workoutForm != null -> vm.workoutForm = null
+            vm.workoutImport != null -> vm.workoutImport = null
+            vm.workoutDetail != null -> vm.workoutDetail = null
             vm.editing != null -> vm.editing = null
             else -> vm.showSettings = false
         }
@@ -140,6 +145,9 @@ fun VitaalRoot(
                             vm.editing != null -> EditScreen(vm, vm.editing!!)
                             vm.detailMetric != null -> DetailScreen(vm)
                             vm.showHerstel -> HerstelScreen(vm)
+                            vm.workoutForm != null -> WorkoutFormScreen(vm, vm.workoutForm!!)
+                            vm.workoutImport != null -> WorkoutImportScreen(vm, vm.workoutImport!!)
+                            vm.workoutDetail != null -> WorkoutScreen(vm, vm.workoutDetail!!)
                             vm.showSettings -> ProfileScreen(vm, onRequestHc, onOpenUrl, onShare, onSignOut, onRequestNotifications)
                             else -> PullToRefresh(vm) {
                                 HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 1) { page ->
@@ -147,6 +155,7 @@ fun VitaalRoot(
                                         Tab.Today -> TodayScreen(vm)
                                         Tab.Health -> HealthScreen(vm)
                                         Tab.Sleep -> SleepScreen(vm)
+                                        Tab.Training -> TrainingScreen(vm)
                                     }
                                 }
                             }

@@ -140,6 +140,34 @@ async function limits(sb: SupabaseClient) {
 }
 
 /** Valideert dagwaarden tegen de catalogus en schrijft ze weg. */
+const SPORTS = new Set(["running", "walking", "hiking", "cycling", "swimming", "strength", "hiit", "yoga",
+  "rowing", "elliptical", "team", "racket", "dance", "martial", "winter", "other"]);
+const inRange = (v: number | null | undefined, lo: number, hi: number) =>
+  v === null || v === undefined || !isFinite(v) || v < lo || v > hi ? null : Math.round(v * 10) / 10;
+
+/** Trainingen van een cloudbron wegschrijven (tabel workouts). Onzin wordt per training overgeslagen. */
+export async function writeWorkouts(
+  sb: SupabaseClient, rows: import("./providers/types.ts").WorkoutRow[], provider: ProviderId,
+): Promise<number> {
+  const now = new Date().toISOString();
+  const ok = new Map<string, Record<string, unknown>>();
+  for (const w of rows) {
+    const dur = Math.round(w.duration_s);
+    if (!SPORTS.has(w.sport) || !/^\d{4}-\d{2}-\d{2}$/.test(w.day) || isNaN(Date.parse(w.started_at)) || !(dur >= 60 && dur <= 86400)) continue;
+    if (!/^[A-Za-z0-9_.:@/+=-]{1,200}$/.test(w.external_id)) continue;
+    ok.set(`${w.user_id}|${w.external_id}`, {
+      user_id: w.user_id, source: provider, external_id: w.external_id, sport: w.sport, title: w.title?.slice(0, 80) || null,
+      day: w.day, started_at: w.started_at, duration_s: dur, distance_m: inRange(w.distance_m, 0, 1e6), kcal: inRange(w.kcal, 0, 20000),
+      avg_hr: inRange(w.avg_hr, 25, 250) && Math.round(w.avg_hr!), max_hr: inRange(w.max_hr, 25, 250) && Math.round(w.max_hr!),
+      ascent_m: inRange(w.ascent_m, 0, 20000), origin: w.origin?.slice(0, 120) || null, updated_at: now,
+    });
+  }
+  if (!ok.size) return 0;
+  const { error } = await sb.from("workouts").upsert([...ok.values()], { onConflict: "user_id,source,external_id" });
+  if (error) throw error;
+  return ok.size;
+}
+
 export async function writeDaily(
   sb: SupabaseClient,
   rows: { user_id: string; day: string; metric: string; value: number }[],

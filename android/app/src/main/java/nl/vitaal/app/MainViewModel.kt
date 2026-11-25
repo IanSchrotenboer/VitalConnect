@@ -22,6 +22,9 @@ import kotlinx.serialization.json.put
 import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import android.net.Uri
 
 data class MetricInfo(
     val id: String,
@@ -31,7 +34,7 @@ data class MetricInfo(
     val aggregation: String = "avg",   // sum, avg of last
 )
 
-enum class Tab { Today, Health, Sleep }
+enum class Tab { Today, Health, Sleep, Training }
 
 data class TrendPoint(val day: LocalDate, val value: Double?)
 
@@ -176,6 +179,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var notificationsAllowed by mutableStateOf(Notifier.allowed(app)); private set
     /** Herstel en fitheid (server, app_state). */
     var fitness by mutableStateOf<Fitness?>(null); private set
+    /** Tabblad Training (server, app_state). */
+    var training by mutableStateOf<Training?>(null); private set
+    /** Trainingen ouder dan 90 dagen, geladen met "Oudere trainingen laden". */
+    var olderWorkouts by mutableStateOf<List<Workout>>(emptyList()); private set
+    var olderDone by mutableStateOf(false); private set
+    /** Open training, formulier (nieuw of bewerken) en het resultaat van een import. */
+    var workoutDetail by mutableStateOf<Workout?>(null)
+    var workoutForm by mutableStateOf<Workout?>(null)
+    var workoutImport by mutableStateOf<WorkoutFiles.Result?>(null)
     /** Detailscherm Herstel en fitheid open. */
     var showHerstel by mutableStateOf(false)
     /** Metric waarvan het detailscherm (grafiek) open staat. */
@@ -229,6 +241,69 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun task(block: suspend () -> Unit) = viewModelScope.launch {
         busy = true
         try { block() } catch (e: Exception) { message = e.message ?: "Er ging iets mis" } finally { busy = false }
+    }
+
+    // ---------- Training ----------
+    fun newWorkout() { workoutForm = newManualWorkout() }
+    fun editWorkout(w: Workout) { workoutDetail = null; workoutForm = w }
+
+    private suspend fun saveWorkouts(list: List<Workout>): Int {
+        var n = 0
+        list.chunked(500).forEach { chunk ->
+            val r = api.rpc("save_workouts", buildJsonObject { put("p_rows", JsonArray(chunk.map { it.toJson() })) })
+            n += (r as? JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: 0
+        }
+        return n
+    }
+
+    fun saveManualWorkout(w: Workout) = task {
+        saveWorkouts(listOf(w.copy(source = "manual")))
+        workoutForm = null
+        loadNow()
+        message = "Training opgeslagen"
+    }
+
+    fun saveImportedWorkouts(list: List<Workout>) = task {
+        val n = saveWorkouts(list)
+        workoutImport = null
+        loadNow()
+        message = when (n) { 0 -> "Alles stond er al in"; 1 -> "1 training opgeslagen"; else -> "$n trainingen opgeslagen of bijgewerkt" }
+    }
+
+    fun deleteWorkout(w: Workout) = task {
+        val id = w.id ?: return@task
+        api.rpc("delete_workouts", buildJsonObject { put("p_ids", JsonArray(listOf(JsonPrimitive(id)))) })
+        workoutDetail = null
+        olderWorkouts = olderWorkouts.filter { it.id != id }
+        loadNow()
+        message = "Training verwijderd"
+    }
+
+    /** FIT- en JSON-bestanden lezen (hoogstens 50 bestanden van elk 25 MB) en eerst laten zien wat erin staat. */
+    fun importWorkoutFiles(uris: List<Uri>) = task {
+        val cr = getApplication<Application>().contentResolver
+        val zone = java.time.ZoneId.systemDefault()
+        val results = withContext(Dispatchers.IO) {
+            uris.take(50).map { uri ->
+                runCatching {
+                    val bytes = cr.openInputStream(uri)?.use { s -> s.readBytes().also { require(it.size <= 25 * 1024 * 1024) } } ?: error("Leeg")
+                    WorkoutFiles.read(uri.lastPathSegment.orEmpty(), bytes, zone)
+                }.getOrElse { WorkoutFiles.Result(emptyList(), 1, 1) }
+            }
+        }
+        workoutImport = WorkoutFiles.Result(
+            results.flatMap { it.workouts }.distinctBy { it.externalId }.sortedByDescending { it.startedAt },
+            results.sumOf { it.skipped }, results.size,
+        )
+    }
+
+    fun loadOlderWorkouts() = task {
+        val before = olderWorkouts.lastOrNull()?.day ?: training?.workouts?.lastOrNull()?.day ?: LocalDate.now().minusDays(89)
+        val r = api.rpc("workouts_before", buildJsonObject { put("p_day", before.toString()); put("p_limit", 50) })
+        val more = (r as? JsonArray).orEmpty().filterIsInstance<JsonObject>().mapNotNull(::parseWorkout)
+        olderWorkouts = (olderWorkouts + more).distinctBy { it.id }
+        olderDone = more.size < 50
+        if (more.isEmpty()) message = "Geen oudere trainingen"
     }
 
     // ---------- Inloggen ----------
@@ -306,6 +381,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         api.signOut(); hc.reset(); Notifier.clear(getApplication())
         signedIn = false; authStep = AuthStep.Login
         tab = Tab.Today; showSettings = false; detailMetric = null; showHerstel = false; fitness = null; editing = null; layout = Layout()
+        training = null; olderWorkouts = emptyList(); olderDone = false; workoutDetail = null; workoutForm = null; workoutImport = null
         profile = Profile(); profileTab = ProfileTab.Profile; onboarding = null
         // Niets van de vorige gebruiker laten staan op dit toestel
         prefs = emptyMap(); today = emptyMap(); connections = emptyMap(); history = emptyMap(); stats = emptyMap()
@@ -444,6 +520,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         today = st.daily.mapNotNull { (metric, days) -> days[now]?.let { metric to it } }.toMap()
         stats = st.stats.orEmpty()
         fitness = st.fitness
+        training = st.training
         lastLoaded = Instant.now()
         refreshHcStatusNow()
         Notifier.checkGoals(getApplication(), prefs.values, today, metrics)
