@@ -28,7 +28,8 @@
 5. **Veiligheidscheck:** `tests/veiligheid.sql` (RLS op elke tabel, geen rechten voor anon, isolatie tussen gebruikers)
    plus `get_advisors` (security en performance) in Supabase, en `python3 tests/opschonen.py --veiligheid`
    (back-up uit, geen cleartext, geen geheimen in de code).
-6. **Opruimen na de databasetests:** `vacuum full analyze public.daily_metrics;` via `execute_sql`.
+6. **Opruimen na de databasetests:** `vacuum full analyze public.daily_metrics;` via `execute_sql`, ook vóór de belastingtest
+   (25 november 2026: statistieken direct na stress- en chaostest 391 ms, na opruimen 113 ms).
    De tests schrijven honderdduizenden rijen en draaien ze terug; de tabel ruimt Postgres zelf op, de index niet
    (25 november 2026: 2.493 rijen in 58 MB tabel en 246 MB index, na opbouwen 312 kB en 352 kB).
    Controleer daarna met `pg_relation_size` en `pg_indexes_size` dat de tabel weer klein is.
