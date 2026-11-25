@@ -31,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
@@ -85,20 +84,13 @@ fun TodayScreen(vm: MainViewModel) {
     }
 }
 
-/** Kleuren van het blok bovenaan: op de dennengroene wijzerplaat (licht) of op OLED-zwart met een tegel (donker). */
-private data class HeadColors(val ink: Color, val muted: Color, val good: Color, val bad: Color)
-
 /**
- * Datum, begroeting, dagringen en een motiverende regel.
- * Licht: alles op de dennengroene wijzerplaat. Donker: de begroeting los op zwart en de ringen in een tegel,
- * zoals de andere tegels op Vandaag, zodat de ringen op OLED-zwart oplichten.
+ * Datum, begroeting, dagringen en een motiverende regel. Licht en donker gelijk (ontwerp C):
+ * de begroeting los op de achtergrond, de ringen in een tegel zoals de andere tegels op Vandaag.
  */
 @Composable
 private fun DialHeader(vm: MainViewModel) {
     val p = LocalPalette.current
-    val d = dialPalette()
-    val tile = p.dark
-    val c = if (tile) HeadColors(p.ink, p.muted, p.good, p.bad) else HeadColors(d.dialInk, d.dialMuted, d.good, d.bad)
     val now = LocalTime.now()
     val firstName = vm.profile.name.trim().substringBefore(' ')
     val greeting = when { now.hour < 12 -> "Goedemorgen"; now.hour < 18 -> "Goedemiddag"; else -> "Goedenavond" } +
@@ -109,27 +101,25 @@ private fun DialHeader(vm: MainViewModel) {
     val ringColors = RING_COLORS
 
     Column(
-        Modifier.fillMaxWidth()
-            .then(if (tile) Modifier else Modifier.clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)).background(d.dial))
-            .padding(start = if (tile) 16.dp else 20.dp, end = if (tile) 8.dp else 8.dp, top = 16.dp, bottom = if (tile) 0.dp else 22.dp),
-        verticalArrangement = Arrangement.spacedBy(if (tile) 12.dp else 16.dp),
+        Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(Modifier.padding(start = if (tile) 4.dp else 0.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE d MMMM", NL)).replaceFirstChar { it.uppercase() },
-                    style = MaterialTheme.typography.bodyMedium, color = c.muted)
+                    style = MaterialTheme.typography.bodyMedium, color = p.muted)
                 // Past zich aan lettergrootte, weergavegrootte en schermbreedte aan; lange namen op een tweede regel
-                FitText(greeting, MaterialTheme.typography.headlineLarge, c.ink, Modifier.semantics { heading() })
+                FitText(greeting, MaterialTheme.typography.headlineLarge, p.ink, Modifier.semantics { heading() })
             }
-            RefreshButton(vm, c)
+            RefreshButton(vm)
             IconButton(onClick = { vm.openProfile() }) {
-                Icon(VIcons.Person, contentDescription = "Profiel en koppelingen", tint = c.ink)
+                Icon(VIcons.Person, contentDescription = "Profiel en koppelingen", tint = p.ink)
             }
         }
 
         if (rings.isEmpty()) {
-            Text("Kies tot drie dagdoelen via Aanpassen om hier je voortgang te zien.", style = MaterialTheme.typography.bodyMedium, color = c.muted,
-                modifier = Modifier.padding(start = if (tile) 4.dp else 0.dp, end = 12.dp))
+            Text("Kies tot drie dagdoelen via Aanpassen om hier je voortgang te zien.", style = MaterialTheme.typography.bodyMedium, color = p.muted,
+                modifier = Modifier.padding(start = 4.dp, end = 12.dp))
         } else {
             val avg = (fractions.map { it.coerceAtMost(1f) }.average() * 100).roundToInt()
             val tiny = LocalWidthClass.current == WidthClass.Tiny
@@ -141,8 +131,8 @@ private fun DialHeader(vm: MainViewModel) {
                     rings.indices.map { i -> fractions[i] to ringColors[i] }, "$avg%", Modifier.size(ringSize),
                     description = "Dagringen: gemiddeld $avg procent van je doelen gehaald",
                     refreshing = vm.refresh == RefreshState.Busy,
-                    track = if (tile) Color(0xFF2A312F) else Color.White.copy(alpha = 0.08f),
-                    centerColor = c.ink,
+                    track = p.ringTrack,
+                    centerColor = p.ink,
                 )
             }
             val legend = @Composable { mod: Modifier ->
@@ -153,17 +143,17 @@ private fun DialHeader(vm: MainViewModel) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Dot(ringColors[i], 9.dp)
                                 Spacer(Modifier.width(8.dp))
-                                Text(m?.name ?: pref.metric, style = MaterialTheme.typography.labelMedium, color = c.muted,
+                                Text(m?.name ?: pref.metric, style = MaterialTheme.typography.labelMedium, color = p.muted,
                                     maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                                 Spacer(Modifier.weight(1f).width(8.dp))
                                 // Hoeveel procent van het doel, in de kleur van de ring
                                 Text("${(fractions[i] * 100).roundToInt()}%", style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.SemiBold, color = ringColors[i], maxLines = 1, softWrap = false)
+                                    fontWeight = FontWeight.SemiBold, color = p.ringInk(i), maxLines = 1, softWrap = false)
                             }
                             Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(start = 17.dp)) {
                                 Text(vm.today[pref.metric]?.let { fmt(pref.metric, it.value) } ?: "–",
-                                    style = MaterialTheme.typography.headlineSmall, color = c.ink, maxLines = 1, softWrap = false)
-                                Text("  / ${fmt(pref.metric, pref.goal!!)}", style = MaterialTheme.typography.bodySmall, color = c.muted,
+                                    style = MaterialTheme.typography.headlineSmall, color = p.ink, maxLines = 1, softWrap = false)
+                                Text("  / ${fmt(pref.metric, pref.goal!!)}", style = MaterialTheme.typography.bodySmall, color = p.muted,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
@@ -173,7 +163,7 @@ private fun DialHeader(vm: MainViewModel) {
             val body = @Composable {
                 // Uitleg onder de ringen als hij ernaast niet past: bij grote letters (vanaf 130%) of een smal venster
                 // (grote weergavegrootte, gesplitst scherm), zodat niets wordt afgekapt
-                BoxWithConstraints(Modifier.padding(end = if (tile) 0.dp else 12.dp)) {
+                BoxWithConstraints {
                     val stacked = fontScale > 1.3f || ringSize + gap + 140.dp * fontScale > maxWidth
                     if (stacked) Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         ringsView(); legend(Modifier.fillMaxWidth())
@@ -183,41 +173,40 @@ private fun DialHeader(vm: MainViewModel) {
                         legend(Modifier.weight(1f))
                     }
                 }
-                if (vm.layout.motivation) Motivation(vm, rings, fractions, tile, c)
+                if (vm.layout.motivation) Motivation(vm, rings, fractions)
             }
-            if (tile) {
-                Column(
-                    Modifier.padding(end = 8.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.card)
-                        .padding(horizontal = 18.dp, vertical = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(18.dp),
-                ) { body() }
-            } else body()
+            Column(
+                Modifier.padding(end = 8.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.card)
+                    .padding(horizontal = 18.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+            ) { body() }
         }
 
-        Box(Modifier.padding(start = if (tile) 4.dp else 0.dp)) { RefreshStatus(vm, c) }
+        Box(Modifier.padding(start = 4.dp)) { RefreshStatus(vm) }
     }
 }
 
 /** Knop bijwerken: draait tijdens het vernieuwen, daarna even een vinkje (gelukt) of een waarschuwing (mislukt). */
 @Composable
-private fun RefreshButton(vm: MainViewModel, c: HeadColors) {
+private fun RefreshButton(vm: MainViewModel) {
+    val p = LocalPalette.current
     IconButton(onClick = vm::refreshAll, enabled = vm.refresh != RefreshState.Busy) {
         Crossfade(vm.refresh, label = "bijwerken") { state ->
             when (state) {
                 RefreshState.Busy -> {
                     val turn by rememberInfiniteTransition(label = "draaien")
                         .animateFloat(0f, 360f, infiniteRepeatable(tween(900, easing = LinearEasing)), label = "hoek")
-                    Icon(VIcons.Sync, contentDescription = "Bezig met bijwerken", tint = c.ink,
+                    Icon(VIcons.Sync, contentDescription = "Bezig met bijwerken", tint = p.ink,
                         modifier = Modifier.graphicsLayer { rotationZ = turn })
                 }
                 RefreshState.Done -> {
                     val pop = remember { Animatable(0.6f) }
                     LaunchedEffect(Unit) { pop.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = 500f)) }
-                    Icon(VIcons.Check, contentDescription = "Bijgewerkt", tint = c.good,
+                    Icon(VIcons.Check, contentDescription = "Bijgewerkt", tint = p.good,
                         modifier = Modifier.graphicsLayer { scaleX = pop.value; scaleY = pop.value })
                 }
-                RefreshState.Failed -> Icon(VIcons.Alert, contentDescription = "Bijwerken mislukt. Tik om het opnieuw te proberen", tint = c.bad)
-                RefreshState.Idle -> Icon(VIcons.Sync, contentDescription = "Bijwerken", tint = c.ink)
+                RefreshState.Failed -> Icon(VIcons.Alert, contentDescription = "Bijwerken mislukt. Tik om het opnieuw te proberen", tint = p.bad)
+                RefreshState.Idle -> Icon(VIcons.Sync, contentDescription = "Bijwerken", tint = p.ink)
             }
         }
     }
@@ -225,7 +214,8 @@ private fun RefreshButton(vm: MainViewModel, c: HeadColors) {
 
 /** Regel onder de ringen: bezig, wanneer bijgewerkt, of waarom het mislukte. Wordt voorgelezen bij een wijziging. */
 @Composable
-private fun RefreshStatus(vm: MainViewModel, c: HeadColors) {
+private fun RefreshStatus(vm: MainViewModel) {
+    val p = LocalPalette.current
     val time = vm.lastLoaded?.atZone(ZoneId.systemDefault())?.format(DateTimeFormatter.ofPattern("HH:mm"))
     val text = when (vm.refresh) {
         RefreshState.Busy -> "Bijwerken…"
@@ -234,19 +224,16 @@ private fun RefreshStatus(vm: MainViewModel, c: HeadColors) {
         RefreshState.Idle -> time?.let { "Bijgewerkt om $it" }
     } ?: return
     val color by animateColorAsState(
-        when (vm.refresh) { RefreshState.Done -> c.good; RefreshState.Failed -> c.bad; RefreshState.Busy -> c.ink; else -> c.muted },
+        when (vm.refresh) { RefreshState.Done -> p.good; RefreshState.Failed -> p.bad; RefreshState.Busy -> p.ink; else -> p.muted },
         tween(300), label = "statuskleur",
     )
     Text(text, style = MaterialTheme.typography.labelSmall, color = color,
         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
 }
 
-/**
- * Eén zin die laat zien wat er vandaag nog te halen valt.
- * Op de wijzerplaat in een zacht vlak; in de tegel onder een scheidingslijn, met een pijl in de kleur van de ring.
- */
+/** Eén zin die laat zien wat er vandaag nog te halen valt: onder een scheidingslijn, met een pijl in de kleur van de ring. */
 @Composable
-private fun Motivation(vm: MainViewModel, rings: List<Pref>, fractions: List<Float>, tile: Boolean, c: HeadColors) {
+private fun Motivation(vm: MainViewModel, rings: List<Pref>, fractions: List<Float>) {
     val p = LocalPalette.current
     val open = rings.indices.filter { fractions[it] < 1f }.minByOrNull { 1f - fractions[it] }
     val text = if (open == null) {
@@ -258,24 +245,14 @@ private fun Motivation(vm: MainViewModel, rings: List<Pref>, fractions: List<Flo
         val unit = unitOf(pref.metric, m?.unit ?: "").let { if (it.isEmpty() && pref.metric == "steps") "stappen" else it }
         "Nog ${fmt(pref.metric, rest)} $unit tot je doel voor ${m?.name?.lowercase() ?: pref.metric}.".replace("  ", " ")
     }
-    if (tile) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(if (open == null) VIcons.Check else VIcons.ArrowRight, contentDescription = null,
-                    tint = if (open == null) c.good else RING_COLORS[open], modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(10.dp))
-                Text(text, style = MaterialTheme.typography.bodyLarge, color = if (open == null) c.good else c.ink)
-            }
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(if (open == null) VIcons.Check else VIcons.ArrowRight, contentDescription = null,
+                tint = if (open == null) p.good else p.ringInk(open), modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(10.dp))
+            Text(text, style = MaterialTheme.typography.bodyLarge, color = if (open == null) p.good else p.ink)
         }
-    } else {
-        Text(
-            text,
-            style = MaterialTheme.typography.labelLarge,
-            color = if (open == null) c.good else c.ink,
-            modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(c.ink.copy(alpha = 0.08f))
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-        )
     }
 }
 

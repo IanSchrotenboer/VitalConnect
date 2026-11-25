@@ -30,6 +30,9 @@ object WorkoutFiles {
             if (fit) Fit(bytes, hash(bytes), zone).parse() else JsonWorkouts(hash(bytes), zone).parse(bytes.decodeToString())
         } catch (e: Exception) {
             Result(emptyList(), 1, 1)
+        } catch (e: StackOverflowError) {
+            // Vangnet: een bestand mag de app nooit laten vastlopen
+            Result(emptyList(), 1, 1)
         }
     }
 
@@ -224,10 +227,14 @@ private class Fit(private val b: ByteArray, private val hash: String, private va
  * - Google Health API: exercise { exerciseType, interval, activeDuration, metricsSummary }
  */
 private class JsonWorkouts(private val hash: String, private val zone: ZoneId) {
+    private companion object { const val MAX_DEPTH = 64 }
     private var skipped = 0
 
     fun parse(text: String): WorkoutFiles.Result {
-        val root = Json.parseToJsonElement(text.trimStart('﻿'))
+        val clean = text.trimStart('\uFEFF')
+        // Een extreem diep genest bestand ([[[[…) laat de JSON-lezer de stack opgebruiken; zo'n bestand is nooit een export
+        require(depth(clean) <= MAX_DEPTH) { "Te diep genest" }
+        val root = Json.parseToJsonElement(clean)
         val items = list(root)
         val out = items.mapIndexedNotNull { i, e -> runCatching { one(e as JsonObject, i) }.getOrNull().also { if (it == null) skipped++ } }
         return WorkoutFiles.Result(out, skipped, 1)
@@ -267,7 +274,10 @@ private class JsonWorkouts(private val hash: String, private val zone: ZoneId) {
         val avg = num(o, "avg_hr", "average_heartrate", "averageHR", "averageHeartRate") ?: summary?.let { num(it, "averageHeartRateBeatsPerMinute") }
         val max = num(o, "max_hr", "max_heartrate", "maxHR", "maxHeartRate")
         val ascent = num(o, "ascent_m", "total_elevation_gain", "elevationGain") ?: summary?.let { num(it, "elevationGainMillimeters")?.div(1000) }
-        val id = str(o0, "external_id", "id", "activityId", "name")?.takeIf { it.length in 1..120 }
+        // Sleutel voor opnieuw importeren: een id als tekst of als getal (Strava, Garmin Connect), of de naam van een
+        // Google Health-datapunt. Nooit de titel: twee trainingen met dezelfde naam zouden elkaar overschrijven.
+        val id = (str(o0, "external_id", "id", "activityId") ?: wholeNumber(o0, "id", "activityId")
+            ?: str(o0, "name")?.takeIf { it.startsWith("users/") }?.substringAfterLast('/'))?.takeIf { it.length in 1..120 }
         return Workout(
             id = null, source = "file",
             externalId = "json-" + (id?.replace(Regex("[^A-Za-z0-9_.:@+=-]"), "_") ?: "$hash-$i"),
@@ -300,6 +310,25 @@ private class JsonWorkouts(private val hash: String, private val zone: ZoneId) {
 
     private fun str(o: JsonObject, vararg keys: String) = keys.firstNotNullOfOrNull { k ->
         (o[k] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotBlank() }
+    }
+
+    /** Grootste nesting van [ en { buiten tekst; stopt zodra de grens is overschreden. */
+    private fun depth(s: String): Int {
+        var d = 0; var max = 0; var inText = false; var esc = false
+        for (c in s) {
+            if (inText) { if (esc) esc = false else if (c == '\\') esc = true else if (c == '"') inText = false; continue }
+            when (c) {
+                '"' -> inText = true
+                '[', '{' -> { d++; if (d > max) { max = d; if (max > MAX_DEPTH) return max } }
+                ']', '}' -> d--
+            }
+        }
+        return max
+    }
+
+    /** Een id die als geheel getal is opgeslagen (Strava, Garmin Connect), als tekst. */
+    private fun wholeNumber(o: JsonObject, vararg keys: String) = keys.firstNotNullOfOrNull { k ->
+        (o[k] as? JsonPrimitive)?.takeIf { !it.isString }?.content?.takeIf { it.matches(Regex("-?\\d{1,19}")) }
     }
 
     /** Getal, ook als tekst ("1800", "1800s", "1800.5s"). */

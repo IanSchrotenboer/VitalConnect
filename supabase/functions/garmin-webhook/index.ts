@@ -8,6 +8,16 @@ import { garmin, GARMIN_SUMMARIES, type Item } from "../_shared/providers/garmin
 import type { Row } from "../_shared/providers/index.ts";
 import { admin, env, fail, finishRun, json, safeEqual, startRun, writeDaily } from "../_shared/shared.ts";
 
+/** Alleen https-adressen van Garmin (apis.garmin.com en subdomeinen van garmin.com). */
+export function isGarminUrl(u: string): boolean {
+  try {
+    const url = new URL(u);
+    return url.protocol === "https:" && (url.hostname === "garmin.com" || url.hostname.endsWith(".garmin.com"));
+  } catch {
+    return false;
+  }
+}
+
 async function handlePush(sb: SupabaseClient, body: Record<string, Item[]>) {
   // Garmin userId → Vitaal user_id
   const ids = new Set<string>();
@@ -15,7 +25,7 @@ async function handlePush(sb: SupabaseClient, body: Record<string, Item[]>) {
   if (!ids.size) return;
   const { data: conns } = await sb.from("connections").select("user_id,external_user_id")
     .eq("provider", "garmin").in("external_user_id", [...ids]);
-  const userOf = new Map((conns ?? []).map((c) => [c.external_user_id, c.user_id]));
+  const userOf = new Map<string, string>((conns ?? []).map((c) => [String(c.external_user_id), String(c.user_id)]));
 
   const rows: Row[] = [];
   const raw: Record<string, unknown>[] = [];
@@ -41,16 +51,19 @@ async function handlePush(sb: SupabaseClient, body: Record<string, Item[]>) {
 
       // Ping-modus (Enterprise): alleen een callbackURL, data zelf ophalen
       let list: Item[] = [item];
-      if (item.callbackURL && Object.keys(item).length <= 3) {
+      const callback = typeof item.callbackURL === "string" ? item.callbackURL : "";
+      if (callback && Object.keys(item).length <= 3) {
+        // Het toegangstoken gaat alleen mee naar Garmin zelf, nooit naar een ander adres uit het bericht
+        if (!isGarminUrl(callback)) { console.error("callbackURL niet van Garmin", type); continue; }
         const token = await accessTokenFor(sb, uid, garmin);
         if (!token) continue;
-        const r = await fetch(item.callbackURL, { headers: { Authorization: `Bearer ${token}` } });
+        const r = await fetch(callback, { headers: { Authorization: `Bearer ${token}` } });
         if (!r.ok) { console.error("ping fetch", type, r.status); continue; }
         list = await r.json();
       }
 
       for (const it of list) {
-        raw.push({ user_id: uid, provider: "garmin", summary_type: type, summary_id: it.summaryId ?? null, payload: it });
+        raw.push({ user_id: uid, provider: "garmin", summary_type: type, summary_id: typeof it.summaryId === "string" ? it.summaryId : null, payload: it });
         const [day, values] = map(it);
         if (!day) continue;
         for (const [metric, v] of Object.entries(values)) {

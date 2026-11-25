@@ -8,13 +8,20 @@ android {
     namespace = "nl.vitaal.app"
     compileSdk = 36
 
+    // Android Lint (bugtest-workflow): fouten breken de bugtest af; alle meldingen ook leesbaar in het log
+    lint {
+        abortOnError = true
+        textReport = true
+        textOutput = file("stdout")
+    }
+
     defaultConfig {
         applicationId = "nl.vitaal.app"
         minSdk = 28            // Health Connect werkt vanaf Android 9
         targetSdk = 36
         // In GitHub Actions telt het buildnummer op, zodat elke APK over de vorige heen te installeren is
         versionCode = System.getenv("BUILD_NUMBER")?.toIntOrNull() ?: 2
-        versionName = "1.14.0"
+        versionName = "1.15.0"
     }
 
     // Release-ondertekening: GitHub Actions zet de sleutel klaar (vaste sleutel uit de geheimen,
@@ -78,4 +85,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+
+    // Unittests (bugtest-workflow): bestandsimport, opmaak en het inlezen van serverantwoorden
+    testImplementation("junit:junit:4.13.2")
 }
