@@ -16,7 +16,8 @@ TRAINING
 • Zelf een training loggen: sport, tijd, duur, afstand, hartslag, hoogtemeters en notities
 • FIT- en JSON-bestanden importeren van Garmin, Suunto, Polar, Coros, Wahoo, Zwift, Strava en Google Fit, ook veel tegelijk
 • Dezelfde training uit twee bronnen telt maar één keer
-• Kies welke trainingen meetellen, bijvoorbeeld alleen die van je horloge, zonder de korte wandelingetjes die je telefoon zelf vastlegt
+• Kies welke trainingen meetellen, bijvoorbeeld alleen die van je horloge
+• Verberg korte of lichte wandelingen, zodat alleen echte trainingen overblijven
 • Je week in minuten en trainingsbelasting: wat je deze week deed tegenover wat je gewend bent
 
 GEZONDHEID

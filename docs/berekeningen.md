@@ -67,8 +67,13 @@ De functie `training(p_today)` (migraties `20261125083904_workouts.sql` en `2026
   - `google_health`: alleen trainingen die Google Health van een horloge heeft. Trainingen die Google Health zelf uit Health Connect overneemt (`origin = 'HEALTH_CONNECT'`) tellen niet mee;
   - `health_connect`: alleen trainingen uit Health Connect;
   - `all`: alles.
-- `profiles.training_own_only`: trainingen met vastlegmethode `passive` (automatisch herkend) tellen niet mee.
-- De vastlegmethode (`workouts.recording`) komt uit Google Health (`dataSource.recordingMethod`: `ACTIVELY_MEASURED`, `PASSIVELY_MEASURED`, `MANUAL`, `DERIVED`, `UNKNOWN`; zonder methode telt een START-gebeurtenis als zelf gestart) en uit Health Connect (`metadata.recordingMethod`).
+- Wandelingen (sport `walking`; migratie `20261125112403_walk_filter.sql`):
+  - `profiles.training_walk_min` (0, 10, 20 of 30): korter dan dit telt niet mee;
+  - `profiles.training_walk_light`: lichte wandelingen tellen niet mee.
+    - Licht = gemiddelde hartslag onder **rust + 30% van de hartslagreserve** (Karvonen). Rust = gemiddelde rusthartslag van 30 dagen; max = 208 − 0,7 × leeftijd. 30% is de ondergrens van matige inspanning (ACSM).
+    - Zonder hartslag of zonder grens (geen geboortedatum): telt mee bij een tempo van 4 km/u of sneller.
+    - Zonder hartslag én afstand: telt mee, want dan valt er niets te beoordelen.
+- De vastlegmethode (`workouts.recording`) komt uit Google Health (`dataSource.recordingMethod`) en Health Connect (`metadata.recordingMethod`). We bewaren hem, maar filteren er **niet** op: Google Health en de Fitbit-app markeren ook zelf gestarte trainingen als `PASSIVELY_MEASURED` (gecontroleerd op echte data, 25 november 2026). De keuze "alleen zelf gestart" uit 1.12.0 is daarom vervangen door de wandelfilters.
 - Wat je zelf logt (`manual`) of importeert (`file`) telt altijd mee.
 - Alles blijft opgeslagen; het filter zit in `training()` en `workouts_before()` (`workout_counts`), dus omschakelen werkt direct. `training()` geeft ook terug hoeveel trainingen de instelling de laatste 90 dagen verbergt.
 - Waarom: Google Fit legt elke korte wandeling vast. Die komen via Health Connect binnen én via Google Health, met een andere begintijd, zodat ontdubbelen ze niet vangt.
@@ -120,4 +125,6 @@ De functie `training(p_today)` (migraties `20261125083904_workouts.sql` en `2026
 - Uth N e.a. (2004). Estimation of VO2max from the ratio between HRmax and HRrest – the Heart Rate Ratio Method. *Eur J Appl Physiol* 91:111–115.
 - Banister EW (1991). Modeling elite athletic performance. In: *Physiological Testing of Elite Athletes*, Human Kinetics.
 - Morton RH, Fitz-Clarke JR, Banister EW (1990). Modeling human performance in running. *J Appl Physiol* 69:1171–1177.
+- Karvonen MJ, Kentala E, Mustala O (1957). The effects of training on heart rate; a longitudinal study. *Ann Med Exp Biol Fenn* 35:307–315.
+- American College of Sports Medicine (2021). *ACSM's Guidelines for Exercise Testing and Prescription*, 11e editie (matige inspanning vanaf 30–40% hartslagreserve).
 - Uth N (2005). Gender difference in the proportionality factor between the mass specific VO2max and the ratio between HRmax and HRrest. *Int J Sports Med*.
