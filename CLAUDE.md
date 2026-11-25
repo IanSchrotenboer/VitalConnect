@@ -43,7 +43,9 @@
 ## Vormgeving
 - Ontwerpskill: `.claude/skills/impeccable` (Impeccable 4.11, Apache 2.0; zonder de hooks). Gebruik `/impeccable critique`, `audit`, `polish` enz. voor ontwerpwerk aan de app en de preview.
 - Kleuren staan in `android/.../Theme.kt`, `res/values(-night)/colors.xml` (opstartachtergrond), als CSS-variabelen bovenaan `prototype/index.html` en in `site/style.css`; houd ze gelijk. Licht = salie: achtergrond #DCE6E1, tegels #FFFFFF zonder rand, lijnen #CCD7D2. Donker = OLED-zwart: achtergrond #000000, tegels #1D2321, lijnen #333B38.
-- Tabbladen: Vandaag, Gezondheid (statistieken over de hele geschiedenis), Slaap. Koppelingen en account achter het persoon-icoon.
+- Tabbladen: Vandaag, Gezondheid (statistieken over de hele geschiedenis), Slaap, Training. Koppelingen en account achter het persoon-icoon.
+- Kleur als tekst: categoriekleuren (activiteit, hart, slaap, herstel, lichaam) zijn voor stippen en iconen. Als tekst op wit gebruik je de donkere tint (`inkOf` in Theme.kt, `--actink` enz. in de preview), minstens 4,5:1. Statuskleur "Let op" = `caution` (licht #B36B00, donker #E8B04A); `warn` is alleen een achtergrond.
+- Teksten zeggen wat de gebruiker kan doen: de zin onder de ringen noemt alleen beweging die vandaag nog kan (slaap: vooruitkijken naar vanavond), herstel noemt welk signaal afwijkt, het trainingsfilter zegt "Verborgen" (niet "telt niet mee").
 - De dagringen kleuren per positie, fel en gelijk in licht en donker: abrikoos #FF8438, zeegroen #26E8C8, indigo #7B83FF (`RING_COLORS` in Theme.kt, `--ring1..3` in de preview). De sporen onder de ringen zijn neutraal, nooit een doorzichtige ringkleur.
 - Blok bovenaan Vandaag, in licht en donker gelijk (ontwerp C, canvas "Vital Connect – dagringen in donkere modus"): begroeting los op de achtergrond, de dagringen in een tegel (kaartkleur: wit of #1D2321) met percentages per doel en daaronder een lijn met wat er nog te halen is. Sporen: licht #E3E9E6, donker #2A312F. Tekst en pijlen in ringkleur gebruiken in licht de donkere tinten #B8500F, #0C7C6A, #4F57E0 (`ringInk` in Theme.kt, `--ringink1..3` in de preview), in donker de ringkleur zelf.
 
