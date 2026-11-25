@@ -91,4 +91,10 @@ select 'Trainingsinstelling heeft vaste keuzes (auto, google_health, health_conn
        count(*) >= 1,
        count(*)::text || ' controle'
 from pg_constraint
-where conrelid = 'public.profiles'::regclass and contype = 'c' and pg_get_constraintdef(oid) like '%training_source%';
+where conrelid = 'public.profiles'::regclass and contype = 'c' and pg_get_constraintdef(oid) like '%training_source%'
+union all
+select 'Wandelfilter heeft vaste keuzes (0, 10, 20, 30 minuten)',
+       count(*) >= 1,
+       count(*)::text || ' controle'
+from pg_constraint
+where conrelid = 'public.profiles'::regclass and contype = 'c' and pg_get_constraintdef(oid) like '%training_walk_min%';

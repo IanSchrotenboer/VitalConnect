@@ -180,17 +180,37 @@ begin
   insert into public.connections (user_id, provider, status) values (a, 'google_health', 'active') on conflict do nothing;
   perform set_config('role', 'authenticated', true);
   for k in 1..5 loop
-    update public.profiles set training_source = (array['auto','auto','health_connect','all','google_health'])[k], training_own_only = (k = 2) where id = a;
+    update public.profiles set training_source = (array['auto','auto','health_connect','all','google_health'])[k],
+      training_walk_min = case when k = 2 then 20 else 0 end, birth_date = '1991-04-18' where id = a;
     j := public.training(current_date);
-    rep := rep || jsonb_build_object('c', 'trainingen tellen mee volgens instelling ' || (array['auto','auto + zelf gestart','health_connect','all','google_health'])[k],
+    rep := rep || jsonb_build_object('c', 'trainingen tellen mee volgens instelling ' || (array['auto','auto + wandelingen vanaf 20 min','health_connect','all','google_health'])[k],
       'ok', (select string_agg(x->>'external_id', ',' order by x->>'external_id') from jsonb_array_elements(j->'workouts') x)
             = (array['g-autowalk,g-run,ok1','g-run,ok1','h-fitwalk,h-run,ok1','g-autowalk,g-fitwalk,g-run,ok1','g-autowalk,g-run,ok1'])[k],
       'd', (select string_agg(x->>'external_id', ',' order by x->>'external_id') from jsonb_array_elements(j->'workouts') x));
   end loop;
   begin update public.profiles set training_source = 'strava' where id = a; ok := false; exception when check_violation then ok := true; end;
-  begin update public.profiles set training_own_only = null where id = a; ok := ok and false; exception when not_null_violation then null; end;
-  rep := rep || jsonb_build_object('c','onbekende trainingsbron en lege schakelaar geweigerd','ok', ok);
-  update public.profiles set training_source = 'auto', training_own_only = false where id = a;
+  begin update public.profiles set training_walk_light = null where id = a; ok := ok and false; exception when not_null_violation then null; end;
+  begin update public.profiles set training_walk_min = 15 where id = a; ok := ok and false; exception when check_violation then null; end;
+  rep := rep || jsonb_build_object('c','onbekende trainingsbron, minuten en lege schakelaar geweigerd','ok', ok);
+  -- Lichte wandelingen: zonder rusthartslag geen grens, dan beslist het tempo (de autowalk van 15 min heeft geen afstand: telt mee)
+  update public.profiles set training_source = 'all', training_walk_light = true, birth_date = null where id = a;
+  j := public.training(current_date);
+  rep := rep || jsonb_build_object('c','lichte wandelingen zonder hartslaggrens: tempo of niets bekend telt mee','ok',
+    (select string_agg(x->>'external_id', ',' order by x->>'external_id') from jsonb_array_elements(j->'workouts') x) = 'g-autowalk,g-fitwalk,g-run,ok1'
+    and j #> '{filter,hr_limit}' = 'null'::jsonb,
+    'd', (select string_agg(x->>'external_id', ',' order by x->>'external_id') from jsonb_array_elements(j->'workouts') x));
+  perform set_config('role', 'postgres', true);
+  insert into public.daily_metrics (user_id, day, metric, source, provider, value, updated_at)
+  select a, current_date - g, 'rhr', 'garmin', 'garmin', 55, now() from generate_series(0, 29) g
+  on conflict (user_id, day, metric, source) do update set value = excluded.value;
+  perform set_config('role', 'authenticated', true);
+  update public.profiles set birth_date = '1991-04-18' where id = a;
+  j := public.training(current_date);
+  rep := rep || jsonb_build_object('c','lichte wandelingen met hartslaggrens: wandeling met hartslag 70 telt niet mee','ok',
+    (select string_agg(x->>'external_id', ',' order by x->>'external_id') from jsonb_array_elements(j->'workouts') x) = 'g-fitwalk,g-run,ok1'
+    and (j #>> '{filter,hr_limit}')::int between 80 and 110 and (j #>> '{filter,hidden_walks}')::int = 1,
+    'd', (select string_agg(x->>'external_id', ',' order by x->>'external_id') from jsonb_array_elements(j->'workouts') x) || ' | grens ' || coalesce(j #>> '{filter,hr_limit}', '-'));
+  update public.profiles set training_source = 'auto', training_walk_min = 0, training_walk_light = false where id = a;
   n := public.save_workouts(jsonb_build_array(jsonb_build_object('source','manual','external_id','m-rec','sport','yoga','day',current_date,
         'started_at',now() - interval '2 hours','duration_s',600,'recording','<script>')));
   rep := rep || jsonb_build_object('c','onbekende vastlegmethode wordt leeg opgeslagen','ok', n = 1
