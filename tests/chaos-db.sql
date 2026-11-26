@@ -1,5 +1,8 @@
 -- Chaostest Vital Connect (database): onzin, randgevallen en verkeerde volgordes op de functies die de app aanroept.
--- Alles in één transactie die wordt teruggedraaid; het resultaat komt als foutmelding "RAPPORT [...]".
+-- Alles wordt teruggedraaid; het resultaat komt terug als tabel (controle, ok, detail).
+-- Zo staat de test niet meer als "Execute SQL FAILED" in de logs van Supabase.
+create temp table if not exists testrapport (r jsonb);
+delete from pg_temp.testrapport;
 do $$
 declare
   a uuid := gen_random_uuid();
@@ -7,6 +10,7 @@ declare
   rep jsonb := '[]';
   n bigint; k bigint; v numeric; j jsonb; ok boolean; ids uuid[]; t1 timestamptz; t2 timestamptz;
 begin
+  begin
   insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
   values ('00000000-0000-0000-0000-000000000000', a, 'authenticated', 'authenticated', 'chaos-a@vitalconnect.invalid', '{}', '{}', now(), now()),
          ('00000000-0000-0000-0000-000000000000', b, 'authenticated', 'authenticated', 'chaos-b@vitalconnect.invalid', '{}', '{}', now(), now());
@@ -275,10 +279,42 @@ begin
   select count(*) into k from public.profiles;
   rep := rep || jsonb_build_object('c','tweestaps: met tweede stap werkt alles weer','ok', j ? 'profile' and k = 1);
 
+  -- Herstelcodes: alleen te maken met tweede stap; één goede code zet tweestaps uit; raden wordt na 5 keer geblokkeerd
+  declare codes text[]; begin
+    codes := public.create_recovery_codes();
+    rep := rep || jsonb_build_object('c','herstelcodes: 10 unieke codes','ok', cardinality(codes) = 10
+      and (select count(distinct c) from unnest(codes) c) = 10 and (public.app_state(current_date, current_date, false)->>'recovery_codes')::int = 10);
+    perform set_config('request.jwt.claims', jsonb_build_object('sub', b, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+    begin perform public.create_recovery_codes(); ok := false; exception when others then ok := sqlerrm = 'Tweede stap nodig'; end;
+    rep := rep || jsonb_build_object('c','herstelcodes: maken zonder tweede stap geweigerd','ok', ok);
+    perform set_config('request.jwt.claims', jsonb_build_object('sub', a, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+    ok := not public.use_recovery_code(codes[1]);
+    rep := rep || jsonb_build_object('c','herstelcodes: code van B werkt niet voor A','ok', ok);
+    perform set_config('request.jwt.claims', jsonb_build_object('sub', b, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+    ok := not public.use_recovery_code(null) and not public.use_recovery_code('') and not public.use_recovery_code(repeat('x', 5000));
+    rep := rep || jsonb_build_object('c','herstelcodes: leeg, null en onzin geweigerd zonder fout','ok', ok);
+    ok := public.use_recovery_code(lower(replace(codes[7], '-', ' ')));
+    j := public.app_state(current_date, current_date, false);
+    perform set_config('role', 'postgres', true);
+    select count(*) into n from auth.mfa_factors where user_id = b;
+    select count(*) into k from public.mfa_herstelcodes where user_id = b;
+    perform set_config('role', 'authenticated', true);
+    rep := rep || jsonb_build_object('c','herstelcodes: goede code zet tweestaps uit en de app opent weer (aal1)','ok', ok and n = 0 and k = 0 and j ? 'profile');
+    for i in 1..5 loop perform public.use_recovery_code('AAAAA-AAAAA'); end loop;
+    begin perform public.use_recovery_code('AAAAA-AAAAA'); ok := false; exception when others then ok := sqlerrm like 'Te veel pogingen%'; end;
+    rep := rep || jsonb_build_object('c','herstelcodes: na 5 foute pogingen een uur geblokkeerd','ok', ok);
+  end;
+
   -- Account verwijderen ruimt ook de cache op (koppeling met cascade)
   perform set_config('role', 'postgres', true);
   select count(*) into n from pg_constraint where conrelid = 'public.metric_stats_cache'::regclass and contype = 'f' and confdeltype = 'c';
   rep := rep || jsonb_build_object('c','cache wordt mee verwijderd met het account','ok', n = 1);
 
   raise exception 'RAPPORT %', jsonb_pretty(rep);
+  -- Alles hierboven wordt teruggedraaid (subtransactie); alleen het rapport blijft over. Echte fouten gaan gewoon door.
+  exception when others then
+    if sqlerrm not like 'RAPPORT %' then raise; end if;
+  end;
+  insert into pg_temp.testrapport values (rep);
 end $$;
+select e->>'c' as controle, (e->>'ok')::boolean as ok, e->>'d' as detail from pg_temp.testrapport, jsonb_array_elements(r) e;

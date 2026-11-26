@@ -65,6 +65,8 @@
 - Tweestapsverificatie (vrijwillig, TOTP) wordt afgedwongen in de database. Een nieuwe tabel met gegevens van gebruikers krijgt naast de eigen-rijen-policy ook
   `create policy "tweestapsverificatie" … as restrictive for all to authenticated using ((select public.mfa_ok())) with check ((select public.mfa_ok()))`.
   Een nieuwe `security definer`-functie voor de app controleert `public.mfa_ok()`; edge functions gebruiken `userFrom` (weigert een sessie zonder tweede stap). `tests/veiligheid.sql` controleert dit.
+- Tweestapsverificatie herstellen doet de gebruiker zelf met herstelcodes (`create_recovery_codes`, `use_recovery_code`); de app noemt geen contactadres voor herstel. Sms-herstel is onderzocht en niet gebouwd (zie `docs/supabase-instellingen.md`).
+- Databasetests eindigen niet met een fout: ze draaien terug in een subtransactie en geven een tabel terug (`pg_temp.testrapport`). Houd dat zo bij nieuwe tests.
 - Mails bevatten alleen een code, nooit een link (scanners van werk- en schoolmail openen links en verbruiken zo de code).
 - Beheer: `admin_overview()` (alleen `public.beheerders`) toont gebruik, versies, koppelingen en fouten, nooit gezondheidswaarden. Nieuwe beheergegevens komen daar bij.
 - Nieuwe wachtwoorden: minstens 8 tekens met letters en cijfers, en niet in Have I Been Pwned (`passwordProblem` en `leakCount` in `Api.kt`). Leaked password protection van Supabase zelf kan pas op het Pro-abonnement.

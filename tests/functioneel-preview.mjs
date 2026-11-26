@@ -321,9 +321,18 @@ const naarKoppelingen = async (p) => { await p.click("[data-tab=today]"); await 
   await p.fill("#t-code", "123456");
   await p.click("[data-act=tfaon]");
   verwacht(await p.evaluate(() => __vc.state().tfa === true), "Tweestaps: staat niet aan na een goede code");
+  // Herstelcodes: direct na aanzetten, 10 stuks, venster sluit alleen met "Ik heb ze bewaard"
+  verwacht(await zichtbaar(p, "#herstel"), "Herstelcodes: geen venster na aanzetten");
+  const codes = await p.locator("#herstel .rcl li").allTextContents();
+  verwacht(codes.length === 10 && codes.every((c) => /^[A-Z2-9]{5}-[A-Z2-9]{5}$/.test(c)) && new Set(codes).size === 10, `Herstelcodes: ${codes.length} codes, niet 10 unieke in de vorm XXXXX-XXXXX`);
+  await p.keyboard.press("Escape");
+  verwacht(await zichtbaar(p, "#herstel"), "Herstelcodes: Esc sluit het venster (moet blijven tot bevestigd)");
+  await p.click("[data-act=rcok]");
+  verwacht(!(await p.locator("#herstel").count()), "Herstelcodes: 'Ik heb ze bewaard' sluit het venster niet");
   verwacht((await p.locator("#c-tfa").textContent()).includes("Aan:"), "Tweestaps: kaart zegt niet dat het aan staat");
+  verwacht((await p.locator("#rcleft").textContent()).includes("Nog 10 herstelcodes"), "Herstelcodes: aantal staat niet in Profiel");
   // Uitloggen en opnieuw inloggen: eerst de tweede stap, dan pas verder
-  await p.click("[data-act=logout]");
+  await p.click("[data-act=logout]:visible");
   await p.click("[data-act=google]"); await p.waitForTimeout(900);
   verwacht(await zichtbaar(p, "#a-code"), "Tweestaps: na inloggen geen vraag om de code");
   await p.fill("#a-code", "12");
@@ -332,10 +341,27 @@ const naarKoppelingen = async (p) => { await p.click("[data-tab=today]"); await 
   await p.fill("#a-code", "654321");
   await p.click("[data-act=tfaok]");
   verwacht(await p.evaluate(() => __vc.state().onb === "consent"), "Tweestaps: na de code niet door naar de toestemming");
+  // Telefoon kwijt: inloggen met een herstelcode zet tweestaps uit
+  await p.click("[data-act=logout]:visible");
+  await p.click("[data-act=google]"); await p.waitForTimeout(900);
+  verwacht(!(await zichtbaar(p, "#a-rc")), "Herstelcode: veld staat al open voordat je 'Telefoon kwijt' kiest");
+  await p.click("[data-act=rclost]");
+  await p.fill("#a-rc", "AAAAA-AAAAA"); await p.click("[data-act=rcuse]");
+  verwacht((await p.locator("#anote").textContent()).includes("klopt niet") && await p.evaluate(() => __vc.state().tfa), "Herstelcode: foute code geweigerd zonder melding, of toch uitgezet");
+  await p.fill("#a-rc", "kort"); await p.click("[data-act=rcuse]");
+  verwacht((await p.locator("#anote").textContent()).includes("10 letters"), "Herstelcode: te korte code geeft geen uitleg");
+  await p.fill("#a-rc", " " + codes[4].toLowerCase().replace("-", " ") + " "); await p.click("[data-act=rcuse]");
+  verwacht(await p.evaluate(() => !__vc.state().tfa && __vc.state().rc.length === 0 && __vc.state().onb === "consent"),
+    "Herstelcode: goede code (kleine letters, spaties) zet tweestaps niet uit of laat je niet door");
+  // Opnieuw aanzetten voor de rest van de test
+  await p.evaluate(([k]) => { const s = JSON.parse(localStorage.getItem(k)); s.onb = null; localStorage.setItem(k, JSON.stringify(s)); }, [KEY]);
+  await p.reload(); await p.evaluate(() => document.getElementById("splash")?.remove()); await p.waitForTimeout(400);
+  await p.click("[data-act=settings]"); await p.click("[data-act=tfastart]"); await p.fill("#t-code", "123456"); await p.click("[data-act=tfaon]"); await p.click("[data-act=rcok]");
   // Uitzetten met bevestiging
   await p.evaluate(([k]) => { const s = JSON.parse(localStorage.getItem(k)); s.onb = null; localStorage.setItem(k, JSON.stringify(s)); }, [KEY]);
   await p.reload(); await p.evaluate(() => document.getElementById("splash")?.remove()); await p.waitForTimeout(400);
   await p.click("[data-act=settings]");
+  verwacht(!(await p.locator("#v-auth").textContent()).includes("ian.schrotenboer"), "Tweede stap: nog een mailadres voor hulp in de app");
   await p.click("[data-act=tfaoff]");
   verwacht(await p.evaluate(() => __vc.state().tfa === true), "Tweestaps: uitzetten zonder bevestiging");
   await p.click("[data-act=tfaoffok]");
@@ -347,7 +373,7 @@ const naarKoppelingen = async (p) => { await p.click("[data-tab=today]"); await 
   verwacht(beheer.includes("Versie " + (await p.evaluate(() => __vc.versie))), "Beheer: huidige versie staat er niet bij");
   verwacht(!/\d+\s*stappen|bpm|slaapscore/i.test(beheer), "Beheer: toont gezondheidswaarden");
   // Wachtwoordregels bij een nieuw account
-  await p.click("[data-ptab=profile]"); await p.click("[data-act=logout]");
+  await p.click("[data-ptab=profile]"); await p.click("[data-act=logout]:visible");
   await p.click("[data-act=email]");
   for (const [pw, tekst] of [["kort1", "8 tekens"], ["alleenletters", "letters én cijfers"], ["Wachtwoord1", "datalekken"]]) {
     await p.fill("#a-pw", pw); await p.click("[data-act=signup]");

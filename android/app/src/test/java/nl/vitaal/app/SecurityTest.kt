@@ -53,6 +53,16 @@ class TweestapsTest {
         assertEquals("ABCD EF", groupSecret("ABCDEF"))
     }
 
+    @Test fun herstelcode() {
+        assertEquals("4RVS5AGFMR", normalizeRecoveryCode("4rvs5-agfmr"))
+        assertEquals("4RVS5AGFMR", normalizeRecoveryCode(" 4RVS5 AGFMR "))
+        assertNull(normalizeRecoveryCode("4RVS5-AGFM"))
+        assertNull(normalizeRecoveryCode("4RVS5-AGFMRX"))
+        assertNull(normalizeRecoveryCode("ÄRVS5-AGFMR"))
+        val t = recoveryCodesText(listOf("AAAAA-BBBBB", "CCCCC-DDDDD"))
+        assertTrue(t.endsWith("AAAAA-BBBBB\nCCCCC-DDDDD"))
+    }
+
     @Test fun versieZoalsDeDatabase() {
         assertTrue(APP_VERSION.matches("1.19.0"))
         assertFalse(APP_VERSION.matches("1.19.0-debug"))

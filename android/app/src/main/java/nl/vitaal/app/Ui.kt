@@ -95,6 +95,8 @@ fun VitaalRoot(
 
     // "Nieuw in Vital Connect" na een update (niet tijdens inloggen of de kennismaking)
     if (vm.showWhatsNew && !inAuth) WhatsNewDialog(vm.whatsNew, BuildConfig.VERSION_NAME) { vm.showWhatsNew = false }
+    // Herstelcodes direct na het aanzetten van tweestapsverificatie (of na "Nieuwe herstelcodes")
+    vm.newRecoveryCodes?.let { codes -> RecoveryCodesDialog(codes, onShare, vm::recoveryCodesSaved) }
 
     CompositionLocalProvider(LocalWidthClass provides width) {
         Scaffold(

@@ -34,9 +34,27 @@ Controleer deze lijst na elke wijziging in het dashboard en houd hem bij.
   "tweestapsverificatie" op `profiles`, `metric_prefs`, `daily_metrics`, `connections`, `sync_runs` en `workouts`.
   `app_state` en `ingest_health_connect` geven dan de fout "Tweede stap nodig", `metric_stats` geeft niets terug.
   De edge functions (`userFrom` in `_shared/shared.ts`) weigeren een sessie zonder tweede stap.
-- **Telefoon kwijt**: Authentication → Users → gebruiker → Remove MFA factor, of
-  `delete from auth.mfa_factors where user_id = (select id from auth.users where email = '…');`
-  Doe dat alleen na een mail vanaf het adres van het account.
+- **Telefoon kwijt: de gebruiker regelt het zelf** met een herstelcode (migratie `20261126162809_mfa_herstelcodes.sql`).
+  Bij het aanzetten krijgt hij 10 eenmalige codes (`create_recovery_codes()`, alleen met tweede stap), die hij zelf bewaart.
+  Op het scherm "Tweede stap" → "Telefoon kwijt? Gebruik een herstelcode" (`use_recovery_code()`, werkt met een gewone sessie):
+  juiste code = alle factoren en codes weg, tweestapsverificatie uit. Codes staan alleen als bcrypt-hash in `mfa_herstelcodes`;
+  na 5 foute pogingen per uur volgt een blokkade (`mfa_herstel_pogingen`). In Profiel zie je hoeveel codes je nog hebt.
+- **Noodgreep beheerder** (niet in de app genoemd; de gebruiker is zelf verantwoordelijk): Authentication → Users → gebruiker →
+  Remove MFA factor, of `delete from auth.mfa_factors where user_id = (select id from auth.users where email = '…');`
+
+## Herstel via sms (onderzocht 26 november 2026, niet gebouwd)
+- **Via Supabase** (Advanced MFA Phone): $75 per maand voor het eerste project, alleen op Pro (nog eens $25 per maand),
+  plus kosten per sms bij Twilio, MessageBird of Vonage. Valt niet onder de spend cap.
+- **Zelf gebouwd** (edge function + sms-dienst, zoals de mails via Resend): geen vaste kosten, alleen per sms (in Nederland
+  ongeveer € 0,07 tot € 0,10). Vraagt een account bij een sms-dienst, het telefoonnummer opslaan (nieuw persoonsgegeven:
+  privacyverklaring en Play Store aanpassen) en een eigen code-, verloop- en limietlogica.
+- **Nadeel van beide:** sms is kwetsbaar voor SIM-swapping (iemand laat je nummer overzetten); herstel via sms is daardoor
+  zwakker dan de authenticator-app zelf. Herstelcodes hebben dat probleem niet.
+
+## Databasetests en de logs
+- `tests/chaos-db.sql`, `stress-db.sql` en `belasting.sql` draaien in een subtransactie die aan het eind wordt teruggedraaid en
+  geven het rapport terug als tabel. Tot 26 november 2026 eindigden ze met een bewuste fout ("RAPPORT …") om alles terug te draaien;
+  dat stond in Supabase als "Execute SQL FAILED". Dat waren dus geen echte fouten.
 
 ## Gelekte wachtwoorden
 - **Leaked password protection** (Authentication → Sign In / Providers → Email) kan alleen op het Pro-abonnement.

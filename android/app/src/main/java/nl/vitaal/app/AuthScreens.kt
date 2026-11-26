@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -157,8 +158,22 @@ fun TwoStepScreen(vm: MainViewModel) {
                 modifier = Modifier.fillMaxWidth())
             Button(onClick = { vm.verifyTwoStep(code) }, enabled = code.length == 6 && !vm.busy,
                 modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Bevestigen") }
-            Text("Geen toegang meer tot je authenticator-app? Mail dan naar ian.schrotenboer@proton.me vanaf het adres van je account.",
-                style = MaterialTheme.typography.bodySmall, color = p.muted)
+            var lost by rememberSaveable { mutableStateOf(false) }
+            var recovery by rememberSaveable { mutableStateOf("") }
+            if (!lost) {
+                TextButton(onClick = { lost = true }) { Text("Telefoon kwijt? Gebruik een herstelcode") }
+            } else {
+                Text("Vul een van de herstelcodes in die je kreeg bij het aanzetten. Daarna staat tweestapsverificatie uit; zet hem opnieuw aan met je nieuwe telefoon.",
+                    style = MaterialTheme.typography.bodyMedium, color = p.ink)
+                OutlinedTextField(recovery, { recovery = it.take(20) }, label = { Text("Herstelcode") }, singleLine = true,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, keyboardType = KeyboardType.Ascii, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { if (normalizeRecoveryCode(recovery) != null) vm.useRecoveryCode(recovery) }),
+                    modifier = Modifier.fillMaxWidth())
+                OutlinedButton(onClick = { vm.useRecoveryCode(recovery) }, enabled = normalizeRecoveryCode(recovery) != null && !vm.busy,
+                    modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Herstelcode gebruiken") }
+                Text("Geen telefoon en geen herstelcode meer? Dan kun je niet meer inloggen.",
+                    style = MaterialTheme.typography.bodySmall, color = p.muted)
+            }
             TextButton(onClick = vm::backToLogin) { Text("Uitloggen", color = p.muted) }
         }
     }

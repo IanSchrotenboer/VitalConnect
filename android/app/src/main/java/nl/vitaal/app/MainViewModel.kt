@@ -167,6 +167,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var twoStepOn by mutableStateOf(api.twoStepOn); private set
     /** Bezig met aanzetten: sleutel en link voor de authenticator-app. */
     var totpSetup by mutableStateOf<TotpSetup?>(null); private set
+    /** Net gemaakte herstelcodes: één keer tonen, daarna alleen nog het aantal. */
+    var newRecoveryCodes by mutableStateOf<List<String>?>(null); private set
+    var recoveryLeft by mutableIntStateOf(0); private set
     /** Beheerder (uit app_state) en het overzicht zodra het tabblad Beheer opent. */
     var isAdmin by mutableStateOf(false); private set
     var adminOverview by mutableStateOf<AdminOverview?>(null); private set
@@ -384,14 +387,38 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         twoStepOn = api.twoStepOn
         // Sessies op andere toestellen hebben de tweede stap niet gedaan: die moeten opnieuw inloggen
         runCatching { api.signOutOthers() }
+        makeRecoveryCodes()
         message = "Tweestapsverificatie staat aan."
     }
 
     fun cancelTwoStep() { totpSetup = null }
 
+    private suspend fun makeRecoveryCodes() {
+        val r = api.rpc("create_recovery_codes", JsonObject(emptyMap()))
+        val codes = (r as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+        newRecoveryCodes = codes
+        recoveryLeft = codes.size
+    }
+
+    /** Nieuwe set herstelcodes; de oude vervallen. */
+    fun renewRecoveryCodes() = task { makeRecoveryCodes() }
+
+    fun recoveryCodesSaved() { newRecoveryCodes = null }
+
+    /** Telefoon kwijt: met een herstelcode gaat tweestapsverificatie uit en log je in. */
+    fun useRecoveryCode(input: String) = task {
+        val code = normalizeRecoveryCode(input) ?: run { message = "Een herstelcode heeft 10 letters en cijfers."; return@task }
+        val ok = (api.rpc("use_recovery_code", buildJsonObject { put("p_code", code) }) as? JsonPrimitive)?.contentOrNull == "true"
+        if (!ok) { message = "Deze herstelcode klopt niet."; return@task }
+        api.forgetFactor()
+        twoStepOn = false; recoveryLeft = 0
+        message = "Tweestapsverificatie staat uit. Zet hem opnieuw aan in Profiel met je nieuwe telefoon."
+        afterSignIn()
+    }
+
     fun disableTwoStep() = task {
         api.unenrollTotp()
-        twoStepOn = false
+        twoStepOn = false; recoveryLeft = 0
         message = "Tweestapsverificatie staat uit."
     }
 
@@ -494,7 +521,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         tab = Tab.Today; showSettings = false; detailMetric = null; showHerstel = false; fitness = null; editing = null; layout = Layout()
         training = null; trainingSource = "auto"; trainingWalkMin = 0; trainingWalkLight = false; olderWorkouts = emptyList(); olderDone = false; workoutDetail = null; workoutForm = null; workoutImport = null
         profile = Profile(); profileTab = ProfileTab.Profile; onboarding = null
-        twoStepOn = false; totpSetup = null; isAdmin = false; adminOverview = null
+        twoStepOn = false; totpSetup = null; isAdmin = false; adminOverview = null; newRecoveryCodes = null; recoveryLeft = 0
         // Niets van de vorige gebruiker laten staan op dit toestel
         prefs = emptyMap(); today = emptyMap(); connections = emptyMap(); history = emptyMap(); stats = emptyMap()
         trendSeries = emptyList(); lastLoaded = null; device.cloudConnected = false
@@ -621,6 +648,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         isAdmin = st.isAdmin
+        recoveryLeft = st.recoveryCodes
         metrics = st.metrics
         prefs = st.prefs
         val prof = st.profile
