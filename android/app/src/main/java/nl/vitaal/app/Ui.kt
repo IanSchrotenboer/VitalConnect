@@ -93,6 +93,9 @@ fun VitaalRoot(
     }
     BackHandler(enabled = vm.onboarding == Onboarding.Profile) { vm.onboarding = Onboarding.Import }
 
+    // "Nieuw in Vital Connect" na een update (niet tijdens inloggen of de kennismaking)
+    if (vm.showWhatsNew && !inAuth) WhatsNewDialog(vm.whatsNew, BuildConfig.VERSION_NAME) { vm.showWhatsNew = false }
+
     CompositionLocalProvider(LocalWidthClass provides width) {
         Scaffold(
             containerColor = p.bg,

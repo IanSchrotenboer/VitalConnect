@@ -271,6 +271,43 @@ const naarKoppelingen = async (p) => { await p.click("[data-tab=today]"); await 
   await p.context().close();
 }
 
+// "Nieuw in Vital Connect" (zoals BOA Paraat): één keer na een update, niet voor nieuwe gebruikers, terug te lezen via Profiel
+{
+  try { execSync("python3 tests/nieuw-preview.py --check", { cwd: path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."), stdio: "pipe" }); }
+  catch (e) { verwacht(false, "Nieuw: preview loopt achter op de release-notities (python3 tests/nieuw-preview.py)"); }
+  const ctx = await browser.newContext({ viewport: { width: 412, height: 900 } });
+  await ctx.addInitScript(() => { window.__toonNieuw = true; });
+  const p = await ctx.newPage(); p.setDefaultTimeout(3000);
+  p.on("pageerror", (e) => fouten.push(`JavaScript-fout: ${e.message}`));
+  await p.goto(URL);
+  // bestaande gebruiker van vóór deze versie (geen "gezien" in de opslag)
+  await p.evaluate(([k, v]) => localStorage.setItem(k, v), [KEY, JSON.stringify({ onb: null, prof: { name: "Ian" } })]);
+  await p.reload(); await p.evaluate(() => document.getElementById("splash")?.remove()); await p.waitForTimeout(900);
+  const n = await p.evaluate(() => __vc.nieuw().length);
+  if (n) {
+    verwacht(await zichtbaar(p, "#nieuw"), "Nieuw: bestaande gebruiker ziet het venster niet na de update");
+    verwacht(await p.locator("#nieuw .nieuw li").count() === n, `Nieuw: venster toont niet de ${n} punten`);
+    verwacht(await p.evaluate(() => document.activeElement?.dataset.act === "nieuwok"), "Nieuw: knop 'Aan de slag' krijgt geen focus");
+    await p.keyboard.press("Escape"); await p.waitForTimeout(100);
+    verwacht(!(await p.locator("#nieuw").count()), "Nieuw: Esc sluit het venster niet");
+    await p.reload(); await p.evaluate(() => document.getElementById("splash")?.remove()); await p.waitForTimeout(900);
+    verwacht(!(await p.locator("#nieuw").count()), "Nieuw: venster komt vaker dan één keer");
+    await p.click("[data-act=settings]"); await p.locator("[data-act=nieuw]").click();
+    verwacht(await zichtbaar(p, "#nieuw"), "Nieuw: 'Wat is er nieuw' in Profiel opent het venster niet");
+    await p.click("[data-act=nieuwok]");
+    verwacht(!(await p.locator("#nieuw").count()), "Nieuw: 'Aan de slag' sluit het venster niet");
+  } else {
+    verwacht(!(await p.locator("#nieuw").count()), "Nieuw: onderhoudsversie toont toch een venster");
+    await p.click("[data-act=settings]");
+    verwacht(!(await p.locator("[data-act=nieuw]").count()), "Nieuw: lege 'Wat is er nieuw' in Profiel");
+  }
+  // nieuwe gebruiker: geen venster, ook niet na de kennismaking
+  await p.evaluate(() => localStorage.clear()); await p.reload(); await p.evaluate(() => document.getElementById("splash")?.remove()); await p.waitForTimeout(900);
+  verwacht(!(await p.locator("#nieuw").count()), "Nieuw: nieuwe gebruiker krijgt het venster");
+  verwacht(await p.evaluate(() => __vc.state().gezien === __vc.versie), "Nieuw: nieuwe gebruiker heeft deze versie niet als gezien");
+  await ctx.close();
+}
+
 await browser.close();
 if (fouten.length) { console.log("Fouten in de functionele test:\n- " + fouten.join("\n- ")); process.exit(1); }
 console.log("Geslaagd: alle functies geven de verwachte uitkomst.");

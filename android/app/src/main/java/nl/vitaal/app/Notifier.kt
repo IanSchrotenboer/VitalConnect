@@ -34,6 +34,10 @@ class DeviceSettings(ctx: Context) {
     var cloudConnected: Boolean
         get() = prefs.getBoolean(GOOGLE, false)
         set(v) = prefs.edit().putBoolean(GOOGLE, v).apply()
+    /** Versie waarvan "Nieuw in Vital Connect" al is getoond (of die je als nieuwe gebruiker al had). */
+    var seenVersion: String?
+        get() = prefs.getString(SEEN, null)
+        set(v) = prefs.edit().putString(SEEN, v).apply()
     /** Laatste keer dat de gegevens zijn bijgewerkt (achtergrond of app). */
     var lastRun: Long
         get() = prefs.getLong(LAST_RUN, 0)
@@ -56,6 +60,7 @@ class DeviceSettings(ctx: Context) {
         const val NOTIFIED_DAY = "notified_day"
         const val LAST_RUN = "last_run"
         const val GOOGLE = "google_connected"
+        const val SEEN = "seen_version"
     }
 }
 

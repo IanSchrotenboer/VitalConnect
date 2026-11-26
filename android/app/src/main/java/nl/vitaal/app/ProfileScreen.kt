@@ -98,8 +98,10 @@ fun ProfileScreen(
                 item { SectionTitle("Account", Modifier.padding(start = 4.dp, top = 12.dp)) }
                 item { AccountCard(vm, onOpenUrl, onShare, onSignOut) }
                 item {
-                    Text("$APP_NAME ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelSmall, color = p.muted,
-                        modifier = Modifier.padding(start = 4.dp, top = 8.dp))
+                    Row(Modifier.padding(start = 4.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("$APP_NAME ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelSmall, color = p.muted)
+                        if (vm.whatsNew.isNotEmpty()) TextButton(onClick = { vm.showWhatsNew = true }) { Text("Wat is er nieuw") }
+                    }
                 }
             }
             ProfileTab.Connections -> {
