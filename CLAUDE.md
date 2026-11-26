@@ -8,6 +8,8 @@
      (slug `e697eca5-9da6-4bd3-9333-549e7e9dbe05`, https://claude.ai/artifact/VUXmRLgxCuWe5GRVnUCQKn)
      met het label van de app-versie, bijvoorbeeld `v0.2.0`.
 3. Verhoog `versionName` in `android/app/build.gradle.kts` bij een zichtbare wijziging en schrijf `release-notities/v<versie>.md` (Nieuw / Verbeterd / Installeren). Met de vaste sleutel maakt GitHub dan een release met APK en AAB.
+   De punten onder **## Nieuw** (`- **Titel.** uitleg`) verschijnen na de update één keer in de app als "Nieuw in Vital Connect" (zoals BOA Paraat; `WhatsNew.kt`). Schrijf ze voor gebruikers, kort en in B1. Alleen verbeteringen? Laat **## Nieuw** weg, dan komt er geen venster.
+   Zet ze daarna in de preview met `python3 tests/nieuw-preview.py` (de functionele test controleert dat ze gelijk zijn).
    Een bestaande versie opnieuw uitbrengen: pas `release-notities/v<versie>.md` aan in dezelfde push; dan vervangt GitHub APK, AAB en tekst van die release.
 4. Raakt de wijziging de Play Store (rechten, gegevens, schermen), werk dan `play-store/` en `site/privacy.html` bij.
 
