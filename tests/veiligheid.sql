@@ -136,4 +136,14 @@ select 'App-versie heeft een vaste vorm (x.y.z) en laatst gezien ligt niet ver i
        count(*) = 2,
        count(*)::text || ' controles'
 from pg_constraint
-where conrelid = 'public.profiles'::regclass and contype = 'c' and conname in ('profiles_app_version_check', 'profiles_app_seen_check');
+where conrelid = 'public.profiles'::regclass and contype = 'c' and conname in ('profiles_app_version_check', 'profiles_app_seen_check')
+union all
+select 'Herstelcodes en pogingen niet leesbaar voor de app; codes alleen gehasht',
+       not has_table_privilege('authenticated', 'public.mfa_herstelcodes', 'select,insert,update,delete')
+         and not has_table_privilege('authenticated', 'public.mfa_herstel_pogingen', 'select,insert,update,delete')
+         and not exists (select 1 from public.mfa_herstelcodes where code_hash !~ '^\$2[aby]\$'),
+       'alleen via create_recovery_codes, use_recovery_code en recovery_codes_left'
+union all
+select 'Nieuwe herstelcodes alleen met tweede stap',
+       pg_get_functiondef('public.create_recovery_codes()'::regprocedure) like '%aal2%',
+       'anders maakt wie alleen je wachtwoord kent nieuwe codes';

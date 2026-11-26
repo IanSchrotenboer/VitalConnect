@@ -427,7 +427,21 @@ private fun TwoStepCard(vm: MainViewModel, onOpenUrl: (String) -> Unit) {
                     TextButton(onClick = vm::cancelTwoStep) { Text("Annuleren") }
                 }
             }
-            vm.twoStepOn -> TextButton(onClick = { confirmOff = true }, enabled = !vm.busy) { Text("Uitzetten") }
+            vm.twoStepOn -> {
+                val left = vm.recoveryLeft
+                Text(
+                    when (left) {
+                        0 -> "Je hebt geen herstelcodes. Maak ze nu: zonder telefoon en herstelcode kom je niet meer in je account."
+                        1 -> "Nog 1 herstelcode. Maak nieuwe codes en bewaar ze goed."
+                        else -> "Nog $left herstelcodes, voor als je je telefoon kwijt bent."
+                    },
+                    style = MaterialTheme.typography.bodySmall, color = if (left <= 2) p.caution else p.muted,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = vm::renewRecoveryCodes, enabled = !vm.busy) { Text("Nieuwe herstelcodes") }
+                    TextButton(onClick = { confirmOff = true }, enabled = !vm.busy) { Text("Uitzetten") }
+                }
+            }
             else -> OutlinedButton(onClick = vm::startTwoStep, enabled = !vm.busy) { Text("Aanzetten") }
         }
     }

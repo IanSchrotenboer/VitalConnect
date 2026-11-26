@@ -3,8 +3,10 @@
 -- (…@vitalconnect.invalid), vult er één met 5 jaar data uit twee bronnen, meet de functies die de app gebruikt,
 -- probeert als gebruiker A bij de gegevens van B te komen en test ongeldige invoer.
 -- Alles gebeurt in één transactie die aan het eind wordt teruggedraaid: er blijft niets achter in de database.
--- Het resultaat komt daarom als foutmelding terug: "RAPPORT [...]" met één regel per controle (ok = true is goed).
-
+-- Het resultaat komt terug als tabel met één regel per controle (ok = true is goed).
+-- Zo staat de test niet meer als "Execute SQL FAILED" in de logs van Supabase.
+create temp table if not exists testrapport (r jsonb);
+delete from pg_temp.testrapport;
 do $$
 declare
   a uuid := gen_random_uuid();
@@ -18,6 +20,7 @@ declare
   payload jsonb;
   grens constant numeric := 300;   -- ms per aanroep
 begin
+  begin
   -- ---------- Opzet ----------
   insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
   values ('00000000-0000-0000-0000-000000000000', a, 'authenticated', 'authenticated', 'stresstest-a-' || tag || '@vitalconnect.invalid', '{}', '{"full_name":"Stresstest A"}', now(), now()),
@@ -220,4 +223,10 @@ begin
 
   -- Terugdraaien: de testgebruikers en al hun data verdwijnen weer.
   raise exception 'RAPPORT %', jsonb_pretty(rep);
+  -- Alles hierboven wordt teruggedraaid (subtransactie); alleen het rapport blijft over. Echte fouten gaan gewoon door.
+  exception when others then
+    if sqlerrm not like 'RAPPORT %' then raise; end if;
+  end;
+  insert into pg_temp.testrapport values (rep);
 end $$;
+select e->>'c' as controle, (e->>'ok')::boolean as ok, e->>'d' as detail from pg_temp.testrapport, jsonb_array_elements(r) e;

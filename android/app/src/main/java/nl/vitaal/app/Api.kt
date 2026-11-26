@@ -49,6 +49,10 @@ fun passwordProblem(pw: String): String? = when {
     else -> null
 }
 
+/** Herstelcode zoals de database hem vergelijkt: alleen letters en cijfers, hoofdletters; null als het geen 10 tekens zijn. */
+fun normalizeRecoveryCode(s: String): String? =
+    s.filter { it.isLetterOrDigit() && it.code < 128 }.uppercase().takeIf { it.length == 10 }
+
 /** Gegevens om een authenticator-app te koppelen: geheime sleutel en otpauth-link. */
 class TotpSetup(val factorId: String, val secret: String, val uri: String)
 
@@ -110,6 +114,9 @@ class Api(context: Context) {
     suspend fun signOutOthers() {
         call("POST", "/auth/v1/logout?scope=others", JsonObject(emptyMap()))
     }
+
+    /** Tweestapsverificatie is uit (herstelcode gebruikt): niet langer om de code vragen. */
+    fun forgetFactor() = prefs.edit().remove(FACTOR).apply()
 
     suspend fun unenrollTotp() {
         val id = prefs.getString(FACTOR, null) ?: return

@@ -165,6 +165,7 @@ p.mot{border-top:0;padding:0;margin:12px 0 0 4px;color:var(--mut)}
 .sw:checked{background:var(--pri)}.sw:checked::before{transform:translateX(20px)}
 .fld{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:15px}
 .fld.col{flex-direction:column;align-items:stretch;gap:4px}.fld.col input{width:100%;box-sizing:border-box;text-align:left}
+.rcl{list-style:none;margin:0;padding:16px;border-radius:16px;background:var(--bg);display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:16px;font-weight:600}
 .arow{display:flex;align-items:baseline;gap:12px;min-height:32px}.arow span{flex:1;min-width:0}.arow b{font-weight:600}
 .akpi{flex:1;display:flex;flex-direction:column}.akpi .num{font-size:28px;font-weight:600;line-height:1.1}
 .fld input{width:8em;min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 10px;font-size:16px;text-align:right}
@@ -257,8 +258,8 @@ const KEY='vitalconnect.preview.v1';
 const SPORT_KEYS=new Set(['running','walking','hiking','cycling','swimming','strength','hiit','yoga','rowing','elliptical','team','racket','dance','martial','winter','other']);
 // "Nieuw in Vital Connect" (zoals in BOA Paraat en in de app): de punten onder "## Nieuw" in release-notities/v<versie>.md.
 // Bijwerken met: python3 tests/nieuw-preview.py (de functionele test controleert dat dit gelijk is aan de notities)
-/*NIEUW*/const VERSIE="1.19.0",NIEUW=[["Tweestapsverificatie", "Zet in Profiel → Account een extra code aan uit een authenticator-app. Iemand die je wachtwoord kent, komt dan nog niet in je account."], ["Veiligere wachtwoorden", "Een nieuw wachtwoord heeft minstens 8 tekens, met letters en cijfers. Staat het in een bekend datalek, dan vraagt de app om een ander wachtwoord."]];/*/NIEUW*/
-const fresh=()=>({gezien:VERSIE,wk:[],wsrc:'auto',wmin:0,wlight:false,order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},goal:{},rings:['steps','active','sleep'],conn:{hc:true,google:true,garmin:false},theme:'system',onb:'login',sync:60,lay:{greetName:true,motivation:true,healthTotals:true,healthHidden:[],sleepTiles:['hrv','rhr','resp'],sleepAdvice:true,herstel:true},nGoals:true,nStatus:false,tfa:false,prof:{name:'Sam de Vries',birth:'1991-04-18',sex:null,h:null,w:null}});
+/*NIEUW*/const VERSIE="1.19.1",NIEUW=[["Herstelcodes", "Zet je tweestapsverificatie aan, dan krijg je 10 herstelcodes. Bewaar ze goed. Ben je je telefoon kwijt, dan log je met een herstelcode toch in."]];/*/NIEUW*/
+const fresh=()=>({gezien:VERSIE,wk:[],wsrc:'auto',wmin:0,wlight:false,order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},goal:{},rings:['steps','active','sleep'],conn:{hc:true,google:true,garmin:false},theme:'system',onb:'login',sync:60,lay:{greetName:true,motivation:true,healthTotals:true,healthHidden:[],sleepTiles:['hrv','rhr','resp'],sleepAdvice:true,herstel:true},nGoals:true,nStatus:false,tfa:false,rc:[],prof:{name:'Sam de Vries',birth:'1991-04-18',sex:null,h:null,w:null}});
 // Opgeslagen staat wordt veld voor veld gecontroleerd: kapotte, oude of vreemde waarden vallen terug op de standaard.
 function clean(raw){const d=fresh(),o=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
 const ids=a=>Array.isArray(a)?[...new Set(a.filter(x=>x in MI))]:null,obj=x=>x&&typeof x==='object'&&!Array.isArray(x)?x:{};
@@ -270,6 +271,7 @@ for(const k of Object.keys(d.conn))if(typeof obj(o.conn)[k]==='boolean')d.conn[k
 if(['system','light','dark'].includes(o.theme))d.theme=o.theme;
 if(o.onb===null||['login','tfa','consent','import','profile'].includes(o.onb))d.onb=o.onb;
 d.tfa=o.tfa===true;
+d.rc=Array.isArray(o.rc)?o.rc.filter(c=>typeof c==='string'&&/^[A-Z2-9]{5}-[A-Z2-9]{5}$/.test(c)).slice(0,10):[];
 if([15,30,60,180,360,0].includes(o.sync))d.sync=o.sync;
 // Opgeslagen staat zonder "gezien" is van een bestaande gebruiker van vóór deze functie: die krijgt het venster wel
 d.gezien=typeof o.gezien==='string'&&o.gezien.length<20?o.gezien:raw?null:VERSIE;
@@ -727,7 +729,12 @@ function renderAuth(){
     <label class="fld col" for="a-code">Code<input id="a-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" style="font-size:22px;letter-spacing:4px"></label>
     <p class="note" id="anote" aria-live="polite" style="margin:0"></p>
     <button class="btn pri big" data-act="tfaok">Bevestigen</button>
-    <span class="gl">Geen toegang meer tot je authenticator-app? Mail dan naar ian.schrotenboer@proton.me vanaf het adres van je account. In de preview werkt elke code van 6 cijfers.</span>
+    <span class="gl">In de preview werkt elke code van 6 cijfers.</span>
+    <button class="lnk" data-act="rclost" style="padding:0">Telefoon kwijt? Gebruik een herstelcode</button>
+    <div id="rcbox" class="stack" hidden><p style="margin:0">Vul een van de herstelcodes in die je kreeg bij het aanzetten. Daarna staat tweestapsverificatie uit; zet hem opnieuw aan met je nieuwe telefoon.</p>
+    <label class="fld col" for="a-rc">Herstelcode<input id="a-rc" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="20"></label>
+    <button class="btn big" data-act="rcuse">Herstelcode gebruiken</button>
+    <span class="gl">Geen telefoon en geen herstelcode meer? Dan kun je niet meer inloggen.</span></div>
     <button class="lnk" data-act="logout" style="color:var(--mut)">Uitloggen</button></div>`;
   } else if(S.onb==='consent'){
     h=ah('Toestemming','Voordat we beginnen.',1)+`<div class="pad stack" style="margin-top:20px">
@@ -782,6 +789,18 @@ const pwProblem=pw=>pw.length<8?'Kies een wachtwoord van minimaal 8 tekens.':!/\
 // Tweestapsverificatie (authenticator-app), gelijk aan TwoStepCard in ProfileScreen.kt
 let tfaSetup=false;const TFA_KEY='JBSWY3DPEHPK3PXP';
 const groupSecret=k=>k.match(/.{1,4}/g).join(' ');
+// Herstelcodes (gelijk aan create_recovery_codes): 10 codes van 2×5 tekens, zonder tekens die op elkaar lijken
+const RC_ABC='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const makeCodes=()=>Array.from({length:10},()=>{const b=crypto.getRandomValues(new Uint8Array(10));const c=[...b].map(x=>RC_ABC[x%32]).join('');return c.slice(0,5)+'-'+c.slice(5)});
+const normRc=v=>{const c=String(v||'').replace(/[^A-Za-z0-9]/g,'').toUpperCase();return c.length===10?c:null};
+function openCodes(){S.rc=makeCodes();save();renderSettings();const el=document.createElement('div');el.id='herstel';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-labelledby','herstelT');
+  el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:24px;z-index:20';
+  el.innerHTML=`<div class="card nieuwdlg"><h2 id="herstelT">Bewaar je herstelcodes</h2>
+    <p class="mut" style="margin:0">Ben je je telefoon kwijt, dan log je met een van deze codes toch in. Elke code werkt één keer. Bewaar ze op een veilige plek, bijvoorbeeld in je wachtwoordmanager. Je ziet ze hierna niet meer.</p>
+    <ul class="rcl">${S.rc.map(c=>`<li class="num">${c}</li>`).join('')}</ul>
+    <div class="row"><button class="btn" data-act="rccopy">Kopiëren</button><button class="btn" data-act="rccopy">Delen</button></div>
+    <button class="btn pri" data-act="rcok">Ik heb ze bewaard</button></div>`;
+  document.body.appendChild(el);el.querySelector('[data-act=rcok]').focus({focusVisible:false})}
 function tfaCard(){
   const head=`<h3>Tweestapsverificatie</h3><span class="gl${S.tfa?' ok':''}">${S.tfa?'Aan: bij inloggen vragen we ook een code uit je authenticator-app.':'Uit. Zet het aan voor een extra code bij het inloggen.'}</span>`;
   if(tfaSetup)return`<div class="card" id="c-tfa">${head}
@@ -792,7 +811,10 @@ function tfaCard(){
   <label class="fld col" for="t-code">Code<input id="t-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6"></label>
   <p class="note" id="tnote" aria-live="polite" style="margin:0"></p>
   <div class="row"><button class="btn pri" data-act="tfaon">Aanzetten</button><button class="lnk" data-act="tfacancel">Annuleren</button></div></div>`;
-  return`<div class="card" id="c-tfa">${head}${S.tfa?`<button class="lnk" style="padding:0" data-act="tfaoff">Uitzetten</button>
+  const n=S.rc.length,rcTxt=n===0?'Je hebt geen herstelcodes. Maak ze nu: zonder telefoon en herstelcode kom je niet meer in je account.'
+    :n===1?'Nog 1 herstelcode. Maak nieuwe codes en bewaar ze goed.':`Nog ${n} herstelcodes, voor als je je telefoon kwijt bent.`;
+  return`<div class="card" id="c-tfa">${head}${S.tfa?`<span class="gl" id="rcleft"${n<=2?' style="color:var(--caution)"':''}>${rcTxt}</span>
+  <div class="row"><button class="btn" data-act="rcnew">Nieuwe herstelcodes</button><button class="lnk" data-act="tfaoff">Uitzetten</button></div>
   <div id="tfaoffc" class="stack" hidden><span>Tweestapsverificatie uitzetten? Daarna log je weer in met alleen Google, je wachtwoord of een code per e-mail.</span>
   <div class="row"><button class="btn" data-act="tfaoffok">Uitzetten</button><button class="lnk" data-act="tfaoffno">Annuleren</button></div></div>`
   :`<div class="row"><button class="btn" data-act="tfastart">Aanzetten</button></div>`}</div>`;
@@ -977,15 +999,23 @@ document.addEventListener('click',e=>{
   else if(d.act==='tfaopen'){toast('Authenticator-app','In de app opent nu je authenticator-app met Vital Connect erin.')}
   else if(d.act==='tfacopy'){try{navigator.clipboard?.writeText(TFA_KEY).catch(()=>{})}catch(e){}toast('Sleutel gekopieerd','')}
   else if(d.act==='tfaon'){const c=($('#t-code')?.value||'').trim();if(!/^\d{6}$/.test(c)){const n=$('#tnote');n.style.color='var(--bad)';n.textContent='Vul de 6 cijfers uit je authenticator-app in.';return}
-    S.tfa=true;tfaSetup=false;save();renderSettings();toast('Tweestapsverificatie staat aan','Andere toestellen zijn uitgelogd.')}
+    S.tfa=true;tfaSetup=false;save();renderSettings();openCodes()}
+  else if(d.act==='rcnew')openCodes();
+  else if(d.act==='rccopy'){try{navigator.clipboard?.writeText(S.rc.join('\n')).catch(()=>{})}catch(e){}toast('Herstelcodes gekopieerd','')}
+  else if(d.act==='rcok'){document.getElementById('herstel')?.remove();$('#c-tfa button')?.focus();toast('Tweestapsverificatie staat aan','Andere toestellen zijn uitgelogd.')}
+  else if(d.act==='rclost'){const r=$('#rcbox');if(r){r.hidden=false;t.hidden=true;$('#a-rc')?.focus()}}
+  else if(d.act==='rcuse'){const c=normRc($('#a-rc')?.value),n=$('#anote');n.style.color='var(--bad)';
+    if(!c){n.textContent='Een herstelcode heeft 10 letters en cijfers.';return}
+    if(!S.rc.some(x=>x.replace('-','')===c)){n.textContent='Deze herstelcode klopt niet.';return}
+    S.tfa=false;S.rc=[];S.onb='consent';agreed=false;save();renderAuth();show();toast('Tweestapsverificatie staat uit','Zet hem opnieuw aan in Profiel met je nieuwe telefoon.')}
   else if(d.act==='tfaoff'){const r=$('#tfaoffc');if(r)r.hidden=false}
   else if(d.act==='tfaoffno'){$('#tfaoffc').hidden=true}
-  else if(d.act==='tfaoffok'){S.tfa=false;save();renderSettings();toast('Tweestapsverificatie staat uit','')}
+  else if(d.act==='tfaoffok'){S.tfa=false;S.rc=[];save();renderSettings();toast('Tweestapsverificatie staat uit','')}
   else if(d.act==='email'){showEmail=true;renderAuth()}
   else if(d.act==='consent'){S.onb='import';save();renderAuth();show()}
   else if(d.act==='toProfile'){S.onb='profile';draft=null;save();renderAuth();show()}
   else if(d.act==='toImport'){S.onb='import';save();renderAuth();show()}
-  else if(d.act==='logout'){const tfa=S.tfa;tfaSetup=false;S=fresh();S.tfa=tfa;S.conn={hc:false,google:false,garmin:false};save();applyTheme();tab='today';detail=null;settings=false;editing=null;draft=null;showEmail=false;renderAll();show()}
+  else if(d.act==='logout'){const tfa=S.tfa,rc=S.rc;tfaSetup=false;S=fresh();S.tfa=tfa;S.rc=rc;S.conn={hc:false,google:false,garmin:false};save();applyTheme();tab='today';detail=null;settings=false;editing=null;draft=null;showEmail=false;renderAll();show()}
   else if(d.act==='edit'){editing='today';openEdit=null;renderEdit();show()}
   else if(d.edit){editing=d.edit;renderEdit();show()}
   else if(d.act==='done'){editing=null;save();renderAll();show()}

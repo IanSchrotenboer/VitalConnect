@@ -1,10 +1,14 @@
 -- Belastingtest Vital Connect (database), als voorproef voor 1 miljoen gebruikers.
 -- Vult 500 gewone gebruikers (60 dagen) en 1 zware gebruiker (5 jaar, 2 bronnen), meet de verzoeken die de app
 -- en de servertaken doen, toont de queryplannen en simuleert een dag van een gemiddelde gebruiker.
--- Alles wordt aan het eind teruggedraaid; het resultaat komt als foutmelding "RAPPORT [...]".
+-- Alles wordt aan het eind teruggedraaid; het resultaat komt terug als tabel (controle, ok, detail).
+-- Zo staat de test niet meer als "Execute SQL FAILED" in de logs van Supabase.
+create temp table if not exists testrapport (r jsonb);
+delete from pg_temp.testrapport;
 do $$
 declare rep jsonb := '[]'; t0 timestamptz; ms numeric; heavy uuid; u uuid; n bigint; plan text; r record; i int;
 begin
+  begin
   create temp table tu on commit drop as select gen_random_uuid() id, g from generate_series(1,500) g;
   insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
   select '00000000-0000-0000-0000-000000000000', id, 'authenticated', 'authenticated', 'load'||g||'@vitalconnect.invalid', '{}', '{}', now(), now() from tu;
@@ -95,4 +99,10 @@ begin
   select count(*) into n from public.sync_runs where user_id = heavy;
   rep := rep || jsonb_build_object('c','logregels sync_runs na 1 dag (1 gebruiker)','ok', n = 0, 'd', n);
   raise exception 'RAPPORT %', jsonb_pretty(rep);
+  -- Alles hierboven wordt teruggedraaid (subtransactie); alleen het rapport blijft over. Echte fouten gaan gewoon door.
+  exception when others then
+    if sqlerrm not like 'RAPPORT %' then raise; end if;
+  end;
+  insert into pg_temp.testrapport values (rep);
 end $$;
+select e->>'c' as controle, (e->>'ok')::boolean as ok, e->>'d' as detail from pg_temp.testrapport, jsonb_array_elements(r) e;

@@ -33,6 +33,8 @@ class AppState(
     val training: Training?,
     /** Mag het beheeroverzicht zien. */
     val isAdmin: Boolean = false,
+    /** Ongebruikte herstelcodes voor tweestapsverificatie. */
+    val recoveryCodes: Int = 0,
 )
 
 // Verdraagzaam lezen: een veld met een onverwacht type geldt als leeg, de app crasht er niet op.
@@ -68,6 +70,7 @@ suspend fun Api.appState(from: LocalDate, to: LocalDate, withStats: Boolean): Ap
         },
         profile = o["profile"] as? JsonObject,
         isAdmin = o.bool("is_admin") == true,
+        recoveryCodes = o.int("recovery_codes") ?: 0,
         sources = o.list("providers").associate { s ->
             s.str("id") to SourceInfo(s.str("id"), s.str("name"), s.str("sync"), s.bool("available") == true)
         },
