@@ -122,9 +122,11 @@ Bij **Gezondheidsapps**: kies **Activiteit en fitness** en **Slaap**. De app is 
 | Persoonlijke info → Naam | Ja (bij inloggen met Google of zelf ingevuld in het profiel) | Nee | Nee | Accountbeheer, App-functionaliteit |
 | Persoonlijke info → Andere info (geboortedatum, geslacht) | Ja, zelf ingevuld | Nee | Nee | App-functionaliteit |
 | Gezondheid en fitness → Gezondheidsinformatie (rusthartslag, HRV, SpO2, ademhaling, gewicht, lengte, VO2max, slaap) | Ja | Nee | Nee | App-functionaliteit |
+| App-activiteit → Andere acties in de app (app-versie en laatste keer geopend) | Ja | Nee | Ja | App-functionaliteit (beheer: wie een verouderde versie heeft) |
 | Gezondheid en fitness → Fitnessinformatie (stappen, afstand, calorieën, verdiepingen, actieve minuten, trainingen: sport, tijd, duur, afstand, hartslag, hoogtemeters, notities) | Ja | Nee | Nee | App-functionaliteit |
 
-Geen locatie, contacten, foto's, berichten, financiële gegevens, apparaat-ID's of app-activiteit voor analyse.
+Geen locatie, contacten, foto's, berichten, financiële gegevens, apparaat-ID's of app-activiteit voor analyse of advertenties.
+Wachtwoordcontrole (Have I Been Pwned): alleen 5 tekens van de SHA-1-hash gaan de deur uit; dat is geen persoonsgegeven en telt niet als delen.
 Bij "Gedeeld": dienstverleners die namens jou verwerken (Supabase, Resend) tellen volgens Google niet als delen.
 
 ### Health Connect-rechten (verklaring)

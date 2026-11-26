@@ -164,6 +164,9 @@ p.mot{border-top:0;padding:0;margin:12px 0 0 4px;color:var(--mut)}
 .sw::before{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .2s}
 .sw:checked{background:var(--pri)}.sw:checked::before{transform:translateX(20px)}
 .fld{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:15px}
+.fld.col{flex-direction:column;align-items:stretch;gap:4px}.fld.col input{width:100%;box-sizing:border-box;text-align:left}
+.arow{display:flex;align-items:baseline;gap:12px;min-height:32px}.arow span{flex:1;min-width:0}.arow b{font-weight:600}
+.akpi{flex:1;display:flex;flex-direction:column}.akpi .num{font-size:28px;font-weight:600;line-height:1.1}
 .fld input{width:8em;min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 10px;font-size:16px;text-align:right}
 .fld input.sw{width:48px;min-height:28px;height:28px;padding:0;border:0;border-radius:14px;background:var(--line)}.fld input.sw:checked{background:var(--pri)}
 .ib:disabled{opacity:.3;cursor:default}
@@ -254,8 +257,8 @@ const KEY='vitalconnect.preview.v1';
 const SPORT_KEYS=new Set(['running','walking','hiking','cycling','swimming','strength','hiit','yoga','rowing','elliptical','team','racket','dance','martial','winter','other']);
 // "Nieuw in Vital Connect" (zoals in BOA Paraat en in de app): de punten onder "## Nieuw" in release-notities/v<versie>.md.
 // Bijwerken met: python3 tests/nieuw-preview.py (de functionele test controleert dat dit gelijk is aan de notities)
-/*NIEUW*/const VERSIE="1.18.0",NIEUW=[["Wat is er nieuw", "Na een update zie je één keer wat er in de nieuwe versie bij is gekomen. Later lees je het terug via Profiel → Wat is er nieuw, naast het versienummer."]];/*/NIEUW*/
-const fresh=()=>({gezien:VERSIE,wk:[],wsrc:'auto',wmin:0,wlight:false,order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},goal:{},rings:['steps','active','sleep'],conn:{hc:true,google:true,garmin:false},theme:'system',onb:'login',sync:60,lay:{greetName:true,motivation:true,healthTotals:true,healthHidden:[],sleepTiles:['hrv','rhr','resp'],sleepAdvice:true,herstel:true},nGoals:true,nStatus:false,prof:{name:'Sam de Vries',birth:'1991-04-18',sex:null,h:null,w:null}});
+/*NIEUW*/const VERSIE="1.19.0",NIEUW=[["Tweestapsverificatie", "Zet in Profiel → Account een extra code aan uit een authenticator-app. Iemand die je wachtwoord kent, komt dan nog niet in je account."], ["Veiligere wachtwoorden", "Een nieuw wachtwoord heeft minstens 8 tekens, met letters en cijfers. Staat het in een bekend datalek, dan vraagt de app om een ander wachtwoord."]];/*/NIEUW*/
+const fresh=()=>({gezien:VERSIE,wk:[],wsrc:'auto',wmin:0,wlight:false,order:['steps','sleep','rhr','active','hrv','energy','kcal','weight'],size:{steps:'l',sleep:'l'},goal:{},rings:['steps','active','sleep'],conn:{hc:true,google:true,garmin:false},theme:'system',onb:'login',sync:60,lay:{greetName:true,motivation:true,healthTotals:true,healthHidden:[],sleepTiles:['hrv','rhr','resp'],sleepAdvice:true,herstel:true},nGoals:true,nStatus:false,tfa:false,prof:{name:'Sam de Vries',birth:'1991-04-18',sex:null,h:null,w:null}});
 // Opgeslagen staat wordt veld voor veld gecontroleerd: kapotte, oude of vreemde waarden vallen terug op de standaard.
 function clean(raw){const d=fresh(),o=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
 const ids=a=>Array.isArray(a)?[...new Set(a.filter(x=>x in MI))]:null,obj=x=>x&&typeof x==='object'&&!Array.isArray(x)?x:{};
@@ -265,7 +268,8 @@ d.size=Object.fromEntries(Object.entries(obj(o.size)).filter(([k,v])=>k in MI&&[
 d.goal=Object.fromEntries(Object.entries(obj(o.goal)).filter(([k,v])=>k in MI&&Number.isFinite(v)&&v>0));
 for(const k of Object.keys(d.conn))if(typeof obj(o.conn)[k]==='boolean')d.conn[k]=o.conn[k];
 if(['system','light','dark'].includes(o.theme))d.theme=o.theme;
-if(o.onb===null||['login','consent','import','profile'].includes(o.onb))d.onb=o.onb;
+if(o.onb===null||['login','tfa','consent','import','profile'].includes(o.onb))d.onb=o.onb;
+d.tfa=o.tfa===true;
 if([15,30,60,180,360,0].includes(o.sync))d.sync=o.sync;
 // Opgeslagen staat zonder "gezien" is van een bestaande gebruiker van vóór deze functie: die krijgt het venster wel
 d.gezien=typeof o.gezien==='string'&&o.gezien.length<20?o.gezien:raw?null:VERSIE;
@@ -714,9 +718,17 @@ function renderAuth(){
     <button class="btn big google" data-act="google" ${busy==='login'?'disabled':''}>${busy==='login'?'Inloggen…':'Doorgaan met Google'}</button>
     <ul class="ul">${['Geen nieuw wachtwoord nodig','Koppel Google Health, Health Connect of Garmin in de volgende stap','Vul daarna je profiel aan; je naam staat er al in'].map(t=>`<li><i class="dot" style="background:var(--good)"></i>${t}</li>`).join('')}</ul>
     ${showEmail?`<div class="card"><h3>Met je e-mailadres</h3><label class="fld" for="a-mail">E-mailadres<input id="a-mail" type="email" autocomplete="email" style="width:14em;text-align:left"></label><label class="fld" for="a-pw">Wachtwoord<input id="a-pw" type="password" autocomplete="current-password" style="width:14em;text-align:left"></label>
-    <div class="row"><button class="btn pri" data-act="google">Inloggen</button><button class="btn" data-act="google">Account maken</button></div><span class="gl">In de preview werkt elk adres.</span></div>`
+    <p class="note" id="anote" aria-live="polite" style="margin:0"></p>
+    <div class="row"><button class="btn pri" data-act="google">Inloggen</button><button class="btn" data-act="signup">Account maken</button></div><span class="gl">In de preview werkt elk adres. Een nieuw wachtwoord heeft minimaal 8 tekens, met letters en cijfers.</span></div>`
     :`<button class="btn big" data-act="email">Inloggen met e-mail</button>`}
     <a class="lnk" href="https://app.vital-connect.nl/privacy.html" style="color:var(--mut);text-decoration:none">Privacyverklaring</a></div>`;
+  } else if(S.onb==='tfa'){
+    h=ah('Tweede stap','Vul de code van 6 cijfers in uit je authenticator-app.')+`<div class="pad stack" style="margin-top:20px">
+    <label class="fld col" for="a-code">Code<input id="a-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" style="font-size:22px;letter-spacing:4px"></label>
+    <p class="note" id="anote" aria-live="polite" style="margin:0"></p>
+    <button class="btn pri big" data-act="tfaok">Bevestigen</button>
+    <span class="gl">Geen toegang meer tot je authenticator-app? Mail dan naar ian.schrotenboer@proton.me vanaf het adres van je account. In de preview werkt elke code van 6 cijfers.</span>
+    <button class="lnk" data-act="logout" style="color:var(--mut)">Uitloggen</button></div>`;
   } else if(S.onb==='consent'){
     h=ah('Toestemming','Voordat we beginnen.',1)+`<div class="pad stack" style="margin-top:20px">
     <p style="margin:0">Vital Connect verwerkt gezondheidsgegevens: stappen, hartslag, slaap, gewicht en vergelijkbare metingen. Dat zijn bijzondere persoonsgegevens volgens de AVG.</p>
@@ -744,10 +756,10 @@ const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const age=b=>{if(!b)return null;const d=new Date(b);let a=NOW.getFullYear()-d.getFullYear();if(NOW<new Date(NOW.getFullYear(),d.getMonth(),d.getDate()))a--;return a};
 let draft=null;
 function renderSettings(){
-  const pt=(k,l)=>`<button class="pill" style="flex:1" data-ptab="${k}" aria-pressed="${ptab===k}">${l}</button>`;
+  const pt=(k,l)=>`<button class="pill" style="flex:1 1 auto;padding:0 12px" data-ptab="${k}" aria-pressed="${ptab===k}">${l}</button>`;
   $('#v-settings').innerHTML=`<div class="back"><button class="ib" data-act="back" aria-label="Terug">${I.back}</button><h2>Profiel</h2></div>
-  <div class="pad stack" style="margin-top:8px"><div class="row">${pt('profile','Profiel')}${pt('conn','Koppelingen')}</div>
-  ${ptab==='profile'?profileHtml():connHtml()}</div>`;
+  <div class="pad stack" style="margin-top:8px"><div class="row">${pt('profile','Profiel')}${pt('conn','Koppelingen')}${pt('admin','Beheer')}</div>
+  ${ptab==='profile'?profileHtml():ptab==='admin'?adminHtml():connHtml()}</div>`;
 }
 function personalCard(label,onboarding){
   const p=draft||(draft={...S.prof}),a=age(p.birth);
@@ -763,6 +775,50 @@ function personalCard(label,onboarding){
   <p class="note" id="pnote" aria-live="polite" style="margin:0"></p>
   <div class="row"><button class="btn pri" data-act="${onboarding?'finish':'psave'}" ${changed?'':'disabled'}>${label}</button>${onboarding?'<button class="lnk" data-act="skip" style="color:var(--mut)">Later</button>':''}</div></div>`;
 }
+// Wachtwoordregels (gelijk aan passwordProblem in Api.kt); de preview kent een paar bekende gelekte wachtwoorden
+const LEAKED=new Set(['password1','wachtwoord1','welkom123','qwerty123','vitalconnect1']);
+const pwProblem=pw=>pw.length<8?'Kies een wachtwoord van minimaal 8 tekens.':!/\p{L}/u.test(pw)||!/\d/.test(pw)?'Gebruik letters én cijfers in je wachtwoord.'
+  :LEAKED.has(pw.toLowerCase())?'Dit wachtwoord staat in bekende datalekken. Kies een ander wachtwoord.':null;
+// Tweestapsverificatie (authenticator-app), gelijk aan TwoStepCard in ProfileScreen.kt
+let tfaSetup=false;const TFA_KEY='JBSWY3DPEHPK3PXP';
+const groupSecret=k=>k.match(/.{1,4}/g).join(' ');
+function tfaCard(){
+  const head=`<h3>Tweestapsverificatie</h3><span class="gl${S.tfa?' ok':''}">${S.tfa?'Aan: bij inloggen vragen we ook een code uit je authenticator-app.':'Uit. Zet het aan voor een extra code bij het inloggen.'}</span>`;
+  if(tfaSetup)return`<div class="card" id="c-tfa">${head}
+  <p style="margin:0">1. Open je authenticator-app met de knop, of voeg daar handmatig deze sleutel toe:</p>
+  <p class="num" style="margin:0;font-size:18px;font-weight:600;letter-spacing:1px">${groupSecret(TFA_KEY)}</p>
+  <div class="row"><button class="btn" data-act="tfaopen">Open authenticator-app</button><button class="lnk" data-act="tfacopy">Kopiëren</button></div>
+  <p style="margin:0">2. Vul de code van 6 cijfers in die de app nu toont.</p>
+  <label class="fld col" for="t-code">Code<input id="t-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6"></label>
+  <p class="note" id="tnote" aria-live="polite" style="margin:0"></p>
+  <div class="row"><button class="btn pri" data-act="tfaon">Aanzetten</button><button class="lnk" data-act="tfacancel">Annuleren</button></div></div>`;
+  return`<div class="card" id="c-tfa">${head}${S.tfa?`<button class="lnk" style="padding:0" data-act="tfaoff">Uitzetten</button>
+  <div id="tfaoffc" class="stack" hidden><span>Tweestapsverificatie uitzetten? Daarna log je weer in met alleen Google, je wachtwoord of een code per e-mail.</span>
+  <div class="row"><button class="btn" data-act="tfaoffok">Uitzetten</button><button class="lnk" data-act="tfaoffno">Annuleren</button></div></div>`
+  :`<div class="row"><button class="btn" data-act="tfastart">Aanzetten</button></div>`}</div>`;
+}
+// Beheer: voorbeeldgegevens (in de app uit admin_overview; alleen voor beheerders, geen gezondheidswaarden)
+function adminHtml(){
+  const ago=(m)=>{const d=new Date(NOW.getTime()-m*6e4);return m<60*24&&d.getDate()===NOW.getDate()?`vandaag ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`:m<60*48?'gisteren':`${Math.round(m/1440)} dagen geleden`};
+  const people=[{n:'Sam de Vries',e:'sam@voorbeeld.nl',a:ago(4),v:VERSIE,t:S.tfa,c:['Google Health','Health Connect'],f:0},
+    {n:'Noor Bakker',e:'noor@voorbeeld.nl',a:ago(60*26),v:'1.17.1',t:false,c:['Garmin Connect'],f:2},
+    {n:'',e:'test@voorbeeld.nl',a:ago(60*24*5),v:null,t:false,c:[],f:0}];
+  const row=(t,v,n)=>`<div class="arow"><span>${t}</span>${n?`<small class="gl">${n}</small>`:''}<b class="num">${v}</b></div>`;
+  const kpi=(v,l)=>`<div class="akpi"><span class="num">${v}</span><small class="gl">${l}</small></div>`;
+  return`<p class="gl" style="margin:0 4px">Alleen voor beheerders. In de preview met voorbeeldgegevens.</p>
+  <div class="card"><div class="row">${kpi(3,'Gebruikers')}${kpi(1,'Vandaag')}${kpi(2,'7 dagen')}</div>
+  <span class="gl">Nieuw deze week: 1 · Tweestaps aan: ${S.tfa?1:0} · Fouten deze week: 2</span></div>
+  <div class="sh" style="margin-bottom:0"><h2>App-versies</h2></div>
+  <div class="card">${row('Versie '+VERSIE,'1 gebruiker','deze app')}${row('Versie 1.17.1','1 gebruiker')}${row('Onbekend (vóór 1.19)','1 gebruiker')}</div>
+  <div class="sh" style="margin-bottom:0"><h2>Koppelingen</h2></div>
+  <div class="card">${row('Garmin Connect','1 gebruiker','actief')}${row('Google Health','1 gebruiker','actief')}${row('Health Connect','1 gebruiker','actief')}</div>
+  <div class="sh" style="margin-bottom:0"><h2>Fouten deze week</h2></div>
+  <div class="card">${row('Garmin Connect','2×','laatst gisteren')}<span class="gl">Toegang verlopen (401). De gebruiker moet opnieuw koppelen.</span></div>
+  <div class="sh" style="margin-bottom:0"><h2>Gebruikers · ${people.length}</h2></div>
+  ${people.map(u=>`<div class="card"><h3 style="overflow:hidden;text-overflow:ellipsis">${esc(u.n||u.e)}</h3>${u.n?`<span class="gl">${esc(u.e)}</span>`:''}
+  <span class="gl">${['Actief '+u.a,u.v?'versie '+u.v:'versie onbekend',u.t?'tweestaps aan':null].filter(Boolean).join(' · ')}</span>
+  <span style="font-size:13px">${u.c.length?u.c.join(', '):'Geen koppelingen'}</span>${u.f?`<span style="font-size:13px;color:var(--caution)">${u.f} fouten deze week</span>`:''}</div>`).join('')}`;
+}
 function profileHtml(){
   const th=(k,l)=>`<button class="pill" style="flex:1" data-theme-set="${k}" aria-pressed="${S.theme===k}">${l}</button>`;
   return personalCard('Opslaan',false)+`
@@ -773,6 +829,7 @@ function profileHtml(){
   ${sw('nStatus','Statusmelding','Een stille melding met wanneer je gegevens voor het laatst zijn bijgewerkt.',S.nStatus&&S.sync>0,S.sync===0)}
   ${S.sync===0?'<span class="gl">Zet synchroniseren op de achtergrond aan (Koppelingen) om deze melding te gebruiken.</span>':''}</div>
   <div class="sh" style="margin-bottom:0"><h2>Account</h2></div>
+  ${tfaCard()}
   <div class="card"><span class="gl">Je data is van jou. Je kunt alles exporteren of je account met alle data verwijderen.</span>
   <div class="row"><button class="btn">Mijn data exporteren</button><button class="btn" data-act="logout">Uitloggen</button></div><a class="lnk" style="padding:0;text-decoration:none" href="https://app.vital-connect.nl/privacy.html">Privacyverklaring</a><button class="lnk" style="color:var(--bad);padding:0">Account verwijderen</button></div>
   <p class="gl" style="margin:4px">Vital Connect ${VERSIE} · preview${NIEUW.length?` · <button class="lnk" data-act="nieuw">Wat is er nieuw</button>`:''}</p>`;
@@ -912,12 +969,23 @@ document.addEventListener('click',e=>{
   else if(d.act==='psave'||d.act==='finish'){if(!checkProf())return;draft.name=(draft.name||'').trim();S.prof={...draft};
     if(d.act==='finish'){S.onb=null;draft=null;save();renderAll();show();return}save();renderToday();renderSettings();$('#pnote').style.color='var(--good)';$('#pnote').textContent='Je profiel is opgeslagen.'}
   else if(d.act==='skip'){S.onb=null;draft=null;save();renderAll();show()}
-  else if(d.act==='google'){busy='login';renderAuth();setTimeout(()=>{busy=null;S.onb='consent';agreed=false;save();renderAuth();show()},700)}
+  else if(d.act==='google'){busy='login';renderAuth();setTimeout(()=>{busy=null;S.onb=S.tfa?'tfa':'consent';agreed=false;save();renderAuth();show()},700)}
+  else if(d.act==='signup'){const p=pwProblem($('#a-pw')?.value||'');if(p){const n=$('#anote');n.style.color='var(--bad)';n.textContent=p;return}S.onb=S.tfa?'tfa':'consent';agreed=false;save();renderAuth();show()}
+  else if(d.act==='tfaok'){const c=($('#a-code')?.value||'').trim();if(!/^\d{6}$/.test(c)){const n=$('#anote');n.style.color='var(--bad)';n.textContent='Vul de 6 cijfers uit je authenticator-app in.';return}S.onb='consent';agreed=false;save();renderAuth();show()}
+  else if(d.act==='tfastart'){tfaSetup=true;renderSettings();$('#t-code')?.focus()}
+  else if(d.act==='tfacancel'){tfaSetup=false;renderSettings()}
+  else if(d.act==='tfaopen'){toast('Authenticator-app','In de app opent nu je authenticator-app met Vital Connect erin.')}
+  else if(d.act==='tfacopy'){try{navigator.clipboard?.writeText(TFA_KEY).catch(()=>{})}catch(e){}toast('Sleutel gekopieerd','')}
+  else if(d.act==='tfaon'){const c=($('#t-code')?.value||'').trim();if(!/^\d{6}$/.test(c)){const n=$('#tnote');n.style.color='var(--bad)';n.textContent='Vul de 6 cijfers uit je authenticator-app in.';return}
+    S.tfa=true;tfaSetup=false;save();renderSettings();toast('Tweestapsverificatie staat aan','Andere toestellen zijn uitgelogd.')}
+  else if(d.act==='tfaoff'){const r=$('#tfaoffc');if(r)r.hidden=false}
+  else if(d.act==='tfaoffno'){$('#tfaoffc').hidden=true}
+  else if(d.act==='tfaoffok'){S.tfa=false;save();renderSettings();toast('Tweestapsverificatie staat uit','')}
   else if(d.act==='email'){showEmail=true;renderAuth()}
   else if(d.act==='consent'){S.onb='import';save();renderAuth();show()}
   else if(d.act==='toProfile'){S.onb='profile';draft=null;save();renderAuth();show()}
   else if(d.act==='toImport'){S.onb='import';save();renderAuth();show()}
-  else if(d.act==='logout'){S=fresh();S.conn={hc:false,google:false,garmin:false};save();applyTheme();tab='today';detail=null;settings=false;editing=null;draft=null;showEmail=false;renderAll();show()}
+  else if(d.act==='logout'){const tfa=S.tfa;tfaSetup=false;S=fresh();S.tfa=tfa;S.conn={hc:false,google:false,garmin:false};save();applyTheme();tab='today';detail=null;settings=false;editing=null;draft=null;showEmail=false;renderAll();show()}
   else if(d.act==='edit'){editing='today';openEdit=null;renderEdit();show()}
   else if(d.edit){editing=d.edit;renderEdit();show()}
   else if(d.act==='done'){editing=null;save();renderAll();show()}

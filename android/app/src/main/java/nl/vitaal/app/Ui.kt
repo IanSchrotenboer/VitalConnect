@@ -141,6 +141,7 @@ fun VitaalRoot(
                         when {
                             vm.authStep is AuthStep.NewPassword -> NewPasswordScreen(vm)
                             vm.authStep is AuthStep.Code -> CodeScreen(vm, vm.authStep as AuthStep.Code)
+                            vm.authStep is AuthStep.TwoStep -> TwoStepScreen(vm)
                             !vm.signedIn -> LoginScreen(vm, onGoogleSignIn, onOpenUrl)
                             vm.needsConsent -> ConsentScreen(vm, onSignOut)
                             vm.onboarding == Onboarding.Import -> ImportScreen(vm, onRequestHc, onOpenUrl)

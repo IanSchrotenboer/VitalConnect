@@ -131,7 +131,8 @@ class MainActivity : ComponentActivity() {
         try {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (_: ActivityNotFoundException) {
-            vm.message = "Kon de link niet openen."
+            vm.message = if (url.startsWith("otpauth:")) "Geen authenticator-app gevonden. Installeer er een of typ de sleutel over."
+                else "Kon de link niet openen."
         }
     }
 

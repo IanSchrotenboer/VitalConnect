@@ -34,6 +34,14 @@ otp_length = 6
 otp_expiry = 3600
 max_frequency = "1m0s"
 
+# Tweestapsverificatie met een authenticator-app (vrijwillig; afgedwongen met public.mfa_ok() in de database).
+[auth.mfa]
+max_enrolled_factors = 10
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
 # Inloggen met Google (Android via Credential Manager → signInWithIdToken).
 # client_id = de Web-client uit Google Cloud (niet geheim); het secret komt uit de omgeving.
 [auth.external.google]

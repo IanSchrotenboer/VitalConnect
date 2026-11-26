@@ -142,12 +142,34 @@ fun CodeScreen(vm: MainViewModel, step: AuthStep.Code) {
     }
 }
 
+/** Tweede stap na het inloggen: de code uit de authenticator-app. */
+@Composable
+fun TwoStepScreen(vm: MainViewModel) {
+    val p = LocalPalette.current
+    var code by rememberSaveable { mutableStateOf("") }
+    Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
+        AuthHeader("Tweede stap", "Vul de code van 6 cijfers in uit je authenticator-app.")
+        Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(code, { v -> code = v.filter(Char::isDigit).take(6) }, label = { Text("Code") }, singleLine = true,
+                textStyle = MaterialTheme.typography.headlineSmall,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { if (code.length == 6) vm.verifyTwoStep(code) }),
+                modifier = Modifier.fillMaxWidth())
+            Button(onClick = { vm.verifyTwoStep(code) }, enabled = code.length == 6 && !vm.busy,
+                modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Bevestigen") }
+            Text("Geen toegang meer tot je authenticator-app? Mail dan naar ian.schrotenboer@proton.me vanaf het adres van je account.",
+                style = MaterialTheme.typography.bodySmall, color = p.muted)
+            TextButton(onClick = vm::backToLogin) { Text("Uitloggen", color = p.muted) }
+        }
+    }
+}
+
 @Composable
 fun NewPasswordScreen(vm: MainViewModel) {
     var pw by rememberSaveable { mutableStateOf("") }
     var pw2 by rememberSaveable { mutableStateOf("") }
     Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
-        AuthHeader("Nieuw wachtwoord", "Kies een wachtwoord van minimaal 8 tekens.")
+        AuthHeader("Nieuw wachtwoord", "Minimaal 8 tekens, met letters en cijfers.")
         Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(pw, { pw = it }, label = { Text("Nieuw wachtwoord") }, singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),

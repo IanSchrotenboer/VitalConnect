@@ -83,10 +83,12 @@ fun ProfileScreen(
         val n = snapshotFlow { list.layoutInfo.totalItemsCount }.first { it > 0 }
         list.scrollToItem((n - 2).coerceAtLeast(0))
     }
+    LaunchedEffect(vm.profileTab) { if (vm.profileTab == ProfileTab.Admin) vm.loadAdmin() }
     LazyColumn(Modifier.weight(1f).imePadding(), state = list, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Segmented(listOf(ProfileTab.Profile to "Profiel", ProfileTab.Connections to "Koppelingen"), vm.profileTab,
-                Modifier.padding(horizontal = 4.dp)) { vm.profileTab = it }
+            val tabs = listOf(ProfileTab.Profile to "Profiel", ProfileTab.Connections to "Koppelingen") +
+                (if (vm.isAdmin) listOf(ProfileTab.Admin to "Beheer") else emptyList())
+            Segmented(tabs, vm.profileTab, Modifier.padding(horizontal = 4.dp)) { vm.profileTab = it }
         }
         when (vm.profileTab) {
             ProfileTab.Profile -> {
@@ -96,6 +98,7 @@ fun ProfileScreen(
                 item { SectionTitle("Meldingen", Modifier.padding(start = 4.dp, top = 12.dp)) }
                 item { NotificationsCard(vm, onRequestNotifications) }
                 item { SectionTitle("Account", Modifier.padding(start = 4.dp, top = 12.dp)) }
+                item { TwoStepCard(vm, onOpenUrl) }
                 item { AccountCard(vm, onOpenUrl, onShare, onSignOut) }
                 item {
                     Row(Modifier.padding(start = 4.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -104,6 +107,7 @@ fun ProfileScreen(
                     }
                 }
             }
+            ProfileTab.Admin -> adminItems(vm)
             ProfileTab.Connections -> {
                 val hcOn = vm.hcStatus == HcStatus.OK || vm.hcStatus == HcStatus.FOREGROUND_ONLY
                 val sources = KNOWN_SOURCES
@@ -377,6 +381,62 @@ private fun AccountCard(vm: MainViewModel, onOpenUrl: (String) -> Unit, onShare:
         text = { Text("Je account, je profiel, je dashboard en alle opgeslagen gezondheidsdata worden definitief verwijderd. Koppelingen worden ingetrokken.") },
         confirmButton = { TextButton(onClick = { confirmDelete = false; vm.deleteAccount() }) { Text("Verwijderen", color = p.bad) } },
         dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Annuleren") } },
+    )
+}
+
+/** "JBSW Y3DP EHPK 3PXP": de sleutel in groepjes van vier, makkelijker over te typen. */
+fun groupSecret(secret: String) = secret.chunked(4).joinToString(" ")
+
+/**
+ * Tweestapsverificatie met een authenticator-app (Google Authenticator, Microsoft Authenticator, 1Password …).
+ * Aanzetten: de app opent via de otpauth-link of je typt de sleutel over, daarna bevestig je met een code.
+ */
+@Composable
+private fun TwoStepCard(vm: MainViewModel, onOpenUrl: (String) -> Unit) {
+    val p = LocalPalette.current
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    val setup = vm.totpSetup
+    var code by rememberSaveable(setup?.factorId) { mutableStateOf("") }
+    var confirmOff by remember { mutableStateOf(false) }
+    VCard(Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Tweestapsverificatie", style = MaterialTheme.typography.titleSmall, color = p.ink)
+                Text(if (vm.twoStepOn) "Aan: bij inloggen vragen we ook een code uit je authenticator-app."
+                    else "Uit. Zet het aan voor een extra code bij het inloggen.",
+                    style = MaterialTheme.typography.bodySmall, color = if (vm.twoStepOn) p.good else p.muted)
+            }
+        }
+        when {
+            setup != null -> {
+                Text("1. Open je authenticator-app met de knop, of voeg daar handmatig deze sleutel toe:",
+                    style = MaterialTheme.typography.bodyMedium, color = p.ink)
+                Text(groupSecret(setup.secret), style = MaterialTheme.typography.titleMedium, color = p.ink)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { onOpenUrl(setup.uri) }) { Text("Open authenticator-app") }
+                    TextButton(onClick = { clipboard.setText(androidx.compose.ui.text.AnnotatedString(setup.secret)); vm.message = "Sleutel gekopieerd" }) {
+                        Text("Kopiëren")
+                    }
+                }
+                Text("2. Vul de code van 6 cijfers in die de app nu toont.", style = MaterialTheme.typography.bodyMedium, color = p.ink)
+                OutlinedTextField(code, { v -> code = v.filter(Char::isDigit).take(6) }, label = { Text("Code") }, singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
+                    modifier = Modifier.fillMaxWidth())
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { vm.confirmTwoStep(code) }, enabled = code.length == 6 && !vm.busy) { Text("Aanzetten") }
+                    TextButton(onClick = vm::cancelTwoStep) { Text("Annuleren") }
+                }
+            }
+            vm.twoStepOn -> TextButton(onClick = { confirmOff = true }, enabled = !vm.busy) { Text("Uitzetten") }
+            else -> OutlinedButton(onClick = vm::startTwoStep, enabled = !vm.busy) { Text("Aanzetten") }
+        }
+    }
+    if (confirmOff) AlertDialog(
+        onDismissRequest = { confirmOff = false },
+        title = { Text("Tweestapsverificatie uitzetten?") },
+        text = { Text("Daarna log je weer in met alleen je wachtwoord, Google of een code per e-mail. Verwijder de code ook uit je authenticator-app.") },
+        confirmButton = { TextButton(onClick = { confirmOff = false; vm.disableTwoStep() }) { Text("Uitzetten") } },
+        dismissButton = { TextButton(onClick = { confirmOff = false }) { Text("Annuleren") } },
     )
 }
 

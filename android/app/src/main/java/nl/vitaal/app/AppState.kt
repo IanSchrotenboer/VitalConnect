@@ -31,6 +31,8 @@ class AppState(
     val fitness: Fitness?,
     /** Tabblad Training: trainingen van 90 dagen, week, verloop en belasting; null bij een oudere server. */
     val training: Training?,
+    /** Mag het beheeroverzicht zien. */
+    val isAdmin: Boolean = false,
 )
 
 // Verdraagzaam lezen: een veld met een onverwacht type geldt als leeg, de app crasht er niet op.
@@ -65,6 +67,7 @@ suspend fun Api.appState(from: LocalDate, to: LocalDate, withStats: Boolean): Ap
             )
         },
         profile = o["profile"] as? JsonObject,
+        isAdmin = o.bool("is_admin") == true,
         sources = o.list("providers").associate { s ->
             s.str("id") to SourceInfo(s.str("id"), s.str("name"), s.str("sync"), s.bool("available") == true)
         },

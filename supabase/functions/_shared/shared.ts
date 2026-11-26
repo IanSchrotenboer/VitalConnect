@@ -47,7 +47,20 @@ export async function userFrom(req: Request, sb: SupabaseClient) {
   const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
   if (!token) return null;
   const { data, error } = await sb.auth.getUser(token);
-  return error ? null : data.user;
+  if (error || !data.user) return null;
+  // Tweestapsverificatie aan, maar deze sessie heeft de tweede stap niet gedaan: dan niet (zelfde regel als mfa_ok in de database).
+  const twoStep = (data.user.factors ?? []).some((f) => f.status === "verified");
+  return twoStep && jwtClaim(token, "aal") !== "aal2" ? null : data.user;
+}
+
+/** Claim uit een JWT dat getUser al heeft gecontroleerd. */
+function jwtClaim(token: string, name: string): unknown {
+  try {
+    const part = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(part + "=".repeat((4 - part.length % 4) % 4)))[name];
+  } catch {
+    return undefined;
+  }
 }
 
 type User = NonNullable<Awaited<ReturnType<typeof userFrom>>>;

@@ -24,95 +24,91 @@ const hookError = (status: number, message: string) =>
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 
 // ---------- Teksten ----------
-type Copy = { subject: string; intro: string; action?: string; codeLabel?: string };
+type Copy = { subject: string; intro: string; codeLabel?: string };
 
 const COPY: Record<string, Copy> = {
   signup: {
-    subject: "Bevestig je e-mailadres voor Vitaal",
-    intro: "Welkom bij Vitaal. Vul deze code in de app in om je e-mailadres te bevestigen.",
-    action: "E-mailadres bevestigen", codeLabel: "Je bevestigingscode",
+    subject: "Bevestig je e-mailadres voor Vital Connect",
+    intro: "Welkom bij Vital Connect. Vul deze code in de app in om je e-mailadres te bevestigen.",
+    codeLabel: "Je bevestigingscode",
   },
   magiclink: {
-    subject: "Je inlogcode voor Vitaal",
-    intro: "Gebruik deze code om in te loggen bij Vitaal. De code is één uur geldig.",
-    action: "Inloggen", codeLabel: "Je inlogcode",
+    subject: "Je inlogcode voor Vital Connect",
+    intro: "Gebruik deze code om in te loggen bij Vital Connect. De code is één uur geldig.",
+    codeLabel: "Je inlogcode",
   },
   email: {
-    subject: "Je inlogcode voor Vitaal",
-    intro: "Gebruik deze code om in te loggen bij Vitaal. De code is één uur geldig.",
-    action: "Inloggen", codeLabel: "Je inlogcode",
+    subject: "Je inlogcode voor Vital Connect",
+    intro: "Gebruik deze code om in te loggen bij Vital Connect. De code is één uur geldig.",
+    codeLabel: "Je inlogcode",
   },
   recovery: {
-    subject: "Nieuw wachtwoord instellen voor Vitaal",
+    subject: "Nieuw wachtwoord instellen voor Vital Connect",
     intro: "Je hebt gevraagd om een nieuw wachtwoord. Vul deze code in de app in en kies daarna een nieuw wachtwoord.",
-    action: "Nieuw wachtwoord instellen", codeLabel: "Je herstelcode",
+    codeLabel: "Je herstelcode",
   },
   invite: {
-    subject: "Je bent uitgenodigd voor Vitaal",
-    intro: "Je bent uitgenodigd om Vitaal te gebruiken. Vul deze code in de app in om je account te activeren.",
-    action: "Uitnodiging accepteren", codeLabel: "Je uitnodigingscode",
+    subject: "Je bent uitgenodigd voor Vital Connect",
+    intro: "Je bent uitgenodigd om Vital Connect te gebruiken. Vul deze code in de app in om je account te activeren.",
+    codeLabel: "Je uitnodigingscode",
   },
   email_change: {
     subject: "Bevestig de wijziging van je e-mailadres",
-    intro: "Je wilt het e-mailadres van je Vitaal-account wijzigen. Bevestig dit met de code hieronder.",
-    action: "Wijziging bevestigen", codeLabel: "Je bevestigingscode",
+    intro: "Je wilt het e-mailadres van je Vital Connect-account wijzigen. Bevestig dit met de code hieronder.",
+    codeLabel: "Je bevestigingscode",
   },
   reauthentication: {
-    subject: "Je bevestigingscode voor Vitaal",
+    subject: "Je bevestigingscode voor Vital Connect",
     intro: "Bevestig met deze code dat jij het bent.",
     codeLabel: "Je code",
   },
   password_changed_notification: {
-    subject: "Je Vitaal-wachtwoord is gewijzigd",
-    intro: "Het wachtwoord van je Vitaal-account is zojuist gewijzigd.",
+    subject: "Je Vital Connect-wachtwoord is gewijzigd",
+    intro: "Het wachtwoord van je Vital Connect-account is zojuist gewijzigd.",
   },
   email_changed_notification: {
-    subject: "Het e-mailadres van je Vitaal-account is gewijzigd",
-    intro: "Het e-mailadres van je Vitaal-account is gewijzigd.",
+    subject: "Het e-mailadres van je Vital Connect-account is gewijzigd",
+    intro: "Het e-mailadres van je Vital Connect-account is gewijzigd.",
   },
   identity_linked_notification: {
-    subject: "Nieuwe inlogmethode gekoppeld aan Vitaal",
-    intro: "Er is een nieuwe inlogmethode (bijvoorbeeld Google) aan je Vitaal-account gekoppeld.",
+    subject: "Nieuwe inlogmethode gekoppeld aan Vital Connect",
+    intro: "Er is een nieuwe inlogmethode (bijvoorbeeld Google) aan je Vital Connect-account gekoppeld.",
   },
   identity_unlinked_notification: {
-    subject: "Inlogmethode ontkoppeld van Vitaal",
-    intro: "Er is een inlogmethode van je Vitaal-account ontkoppeld.",
+    subject: "Inlogmethode ontkoppeld van Vital Connect",
+    intro: "Er is een inlogmethode van je Vital Connect-account ontkoppeld.",
   },
   mfa_factor_enrolled_notification: {
     subject: "Tweestapsverificatie ingesteld",
-    intro: "Er is een extra verificatiestap aan je Vitaal-account toegevoegd.",
+    intro: "Er is een extra verificatiestap aan je Vital Connect-account toegevoegd.",
   },
   mfa_factor_unenrolled_notification: {
     subject: "Tweestapsverificatie verwijderd",
-    intro: "Er is een verificatiestap van je Vitaal-account verwijderd.",
+    intro: "Er is een verificatiestap van je Vital Connect-account verwijderd.",
   },
 };
 
 const SECURITY_NOTE = "Was jij dit niet? Wijzig dan meteen je wachtwoord in de app, of neem contact met ons op.";
 const IGNORE_NOTE = "Heb je dit niet aangevraagd? Dan kun je deze e-mail negeren.";
 
-function verifyLink(tokenHash: string, type: string, redirectTo?: string): string {
-  const q = new URLSearchParams({ token: tokenHash, type });
-  if (redirectTo) q.set("redirect_to", redirectTo);
-  return `${env("SUPABASE_URL")}/auth/v1/verify?${q}`;
-}
-
-function render(c: Copy, code?: string, link?: string, notice = false) {
+// Alleen een code, nooit een link: beveiligingsscanners van school- en werkmail (zoals Microsoft Defender) openen links
+// in binnenkomende mail automatisch, waarmee de eenmalige code al verbruikt is voordat je hem intypt (lessen uit BOA Paraat).
+// De app vult de code zelf in (account maken, inloggen per mail, nieuw wachtwoord).
+function render(c: Copy, code?: string, notice = false) {
   const note = notice ? SECURITY_NOTE : IGNORE_NOTE;
-  const html = `<!DOCTYPE html><html lang="nl"><body style="margin:0;background:#f3f3f0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;color:#121316">
+  const html = `<!DOCTYPE html><html lang="nl"><body style="margin:0;background:#DCE6E1;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;color:#121316">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:18px">
-<tr><td style="background:#121318;border-radius:18px 18px 0 0;padding:22px 28px;color:#f4f4f1;font-size:20px;font-weight:700">Vitaal</td></tr>
+<tr><td style="background:#1C4D46;border-radius:18px 18px 0 0;padding:22px 28px;color:#ffffff;font-size:20px;font-weight:700">Vital Connect</td></tr>
 <tr><td style="padding:28px">
 <p style="margin:0 0 20px;font-size:16px;line-height:1.55">${esc(c.intro)}</p>
 ${code ? `<p style="margin:0 0 6px;font-size:14px;color:#5b5e66">${esc(c.codeLabel ?? "Je code")}</p>
-<p style="margin:0 0 24px;font-size:34px;font-weight:700;letter-spacing:6px;color:#e8492a">${esc(code)}</p>` : ""}
-${link && c.action ? `<p style="margin:0 0 24px"><a href="${esc(link)}" style="display:inline-block;background:#121316;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:22px">${esc(c.action)}</a></p>` : ""}
+<p style="margin:0 0 24px;font-size:34px;font-weight:700;letter-spacing:6px;color:#1C4D46">${esc(code)}</p>` : ""}
 <p style="margin:0;font-size:14px;line-height:1.5;color:#5b5e66">${esc(note)}</p>
 </td></tr></table>
-<p style="margin:16px 0 0;font-size:13px;color:#5b5e66">Vitaal · je gezondheidsdata op één plek</p>
+<p style="margin:16px 0 0;font-size:13px;color:#5b5e66">Vital Connect · je gezondheidsdata op één plek</p>
 </td></tr></table></body></html>`;
-  const text = [c.intro, code ? `${c.codeLabel ?? "Je code"}: ${code}` : "", link && c.action ? `${c.action}: ${link}` : "", note]
+  const text = [c.intro, code ? `${c.codeLabel ?? "Je code"}: ${code}` : "", note]
     .filter(Boolean).join("\n\n");
   return { html, text };
 }
@@ -140,24 +136,17 @@ Deno.serve(async (req) => {
 
   try {
     const type = data.email_action_type;
-    const c = COPY[type] ?? { subject: "Bericht van Vitaal", intro: "Er is een wijziging in je Vitaal-account." };
+    const c = COPY[type] ?? { subject: "Bericht van Vital Connect", intro: "Er is een wijziging in je Vital Connect-account." };
     const isNotice = type.endsWith("_notification");
-    // Links alleen als er een echte site-URL is; de app werkt met de code
-    const site = data.redirect_to || data.site_url || "";
-    const withLink = !!site && !/localhost|127\.0\.0\.1/.test(site);
-
     if (type === "email_change" && user.new_email && data.token_new) {
-      // Veilige wijziging: twee mails. Let op: de _new-velden zijn omgedraaid (zie Supabase-docs).
-      const cur = render(c, data.token, withLink && data.token_hash_new ? verifyLink(data.token_hash_new, type, data.redirect_to) : undefined);
-      const nxt = render(c, data.token_new, withLink && data.token_hash ? verifyLink(data.token_hash, type, data.redirect_to) : undefined);
+      // Veilige wijziging: twee mails, elk met een eigen code
+      const cur = render(c, data.token);
+      const nxt = render(c, data.token_new);
       await send(user.email, c.subject, cur.html, cur.text);
       await send(user.new_email, c.subject, nxt.html, nxt.text);
     } else {
       const to = type === "email_change" && user.new_email ? user.new_email : user.email;
-      const code = isNotice ? undefined : (data.token || data.token_new);
-      const hash = data.token_hash || data.token_hash_new;
-      const link = !isNotice && withLink && hash ? verifyLink(hash, type, data.redirect_to) : undefined;
-      const m = render(c, code, link, isNotice);
+      const m = render(c, isNotice ? undefined : (data.token || data.token_new), isNotice);
       await send(to, c.subject, m.html, m.text);
     }
     return new Response("{}", { status: 200, headers: { "Content-Type": "application/json" } });

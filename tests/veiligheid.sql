@@ -79,7 +79,7 @@ select 'Trainingen: elke policy alleen voor eigen rijen (select, insert, update,
        count(*) = 4 and bool_and(coalesce(qual, '') || coalesce(with_check, '') like '%auth.uid()%' and roles = '{authenticated}'),
        count(*)::text || ' policies'
 from pg_policies
-where schemaname = 'public' and tablename = 'workouts'
+where schemaname = 'public' and tablename = 'workouts' and permissive = 'PERMISSIVE'
 union all
 select 'Controles op invoer trainingen (sport, bron, duur, tekstlengtes)',
        count(*) >= 5,
@@ -97,4 +97,43 @@ select 'Wandelfilter heeft vaste keuzes (0, 10, 20, 30 minuten)',
        count(*) >= 1,
        count(*)::text || ' controle'
 from pg_constraint
-where conrelid = 'public.profiles'::regclass and contype = 'c' and pg_get_constraintdef(oid) like '%training_walk_min%';
+where conrelid = 'public.profiles'::regclass and contype = 'c' and pg_get_constraintdef(oid) like '%training_walk_min%'
+union all
+select 'Geen TRUNCATE, TRIGGER of REFERENCES voor app-rollen (TRUNCATE gaat langs row level security heen)',
+       count(*) = 0,
+       coalesce(string_agg(t.relname || ' (' || r.rolname || ')', ', '), '')
+from tabellen t cross join (values ('anon'), ('authenticated')) r(rolname)
+where has_table_privilege(r.rolname, t.oid, 'truncate') or has_table_privilege(r.rolname, t.oid, 'trigger')
+   or has_table_privilege(r.rolname, t.oid, 'references')
+union all
+select 'Tweestapsverificatie afgedwongen: restrictive policy op elke tabel met gegevens van gebruikers',
+       count(*) = 0,
+       coalesce(string_agg(t.relname, ', '), '')
+from tabellen t
+-- Gebruikersgegevens: tabellen met user_id, plus profiles. metrics en providers zijn openbare lijsten.
+where has_table_privilege('authenticated', t.oid, 'select,insert,update,delete')
+  and (t.relname = 'profiles' or exists (select 1 from pg_attribute a where a.attrelid = t.oid and a.attname = 'user_id' and not a.attisdropped))
+  and not exists (select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = t.relname
+                  and p.permissive = 'RESTRICTIVE' and p.qual like '%mfa_ok()%' and p.with_check like '%mfa_ok()%')
+union all
+select 'Functies die RLS omzeilen of de app openen controleren de tweede stap (app_state, ingest_health_connect, metric_stats, admin_overview)',
+       count(*) = 4,
+       coalesce(string_agg(proname, ', '), '')
+from functies
+where proname in ('app_state', 'ingest_health_connect', 'metric_stats', 'admin_overview')
+  and pg_get_functiondef(oid) like '%mfa_ok()%'
+union all
+select 'Beheerderslijst niet leesbaar of aan te passen door de app',
+       not has_table_privilege('authenticated', 'public.beheerders', 'select,insert,update,delete')
+         and not has_table_privilege('anon', 'public.beheerders', 'select,insert,update,delete'),
+       'alleen via is_admin() en admin_overview()'
+union all
+select 'Beheeroverzicht controleert beheerder en tweede stap',
+       pg_get_functiondef('public.admin_overview()'::regprocedure) like '%is_admin()%mfa_ok()%',
+       'anders ziet elke ingelogde alle gebruikers'
+union all
+select 'App-versie heeft een vaste vorm (x.y.z) en laatst gezien ligt niet ver in de toekomst',
+       count(*) = 2,
+       count(*)::text || ' controles'
+from pg_constraint
+where conrelid = 'public.profiles'::regclass and contype = 'c' and conname in ('profiles_app_version_check', 'profiles_app_seen_check');
