@@ -175,6 +175,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     // Synchroniseren en meldingen (instellingen van dit toestel)
     private val device = DeviceSettings(app)
+
+    /** "Nieuw in Vital Connect": de punten van deze versie en of het venster openstaat (zie WhatsNew.kt). */
+    val whatsNew: List<NewItem> by lazy { loadNew(app) }
+    var showWhatsNew by mutableStateOf(false)
+
+    /** Na het laden: één keer het venster tonen na een update; wie net begint, krijgt het niet (en ook later niet voor deze versie). */
+    private fun checkWhatsNew() {
+        val firstUse = needsConsent || onboarding != null
+        if (shouldShowNew(device.seenVersion, BuildConfig.VERSION_NAME, whatsNew.size, firstUse)) showWhatsNew = true
+        device.seenVersion = BuildConfig.VERSION_NAME
+    }
     var syncMinutes by mutableIntStateOf(device.syncMinutes); private set
     var notifyGoals by mutableStateOf(device.notifyGoals); private set
     var notifyStatus by mutableStateOf(device.notifyStatus); private set
@@ -556,6 +567,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         fitness = st.fitness
         training = st.training
         lastLoaded = Instant.now()
+        checkWhatsNew()
         refreshHcStatusNow()
         Notifier.checkGoals(getApplication(), prefs.values, today, metrics)
         Notifier.updateStatus(getApplication(), justSynced = true)

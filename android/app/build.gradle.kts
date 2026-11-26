@@ -21,7 +21,7 @@ android {
         targetSdk = 36
         // In GitHub Actions telt het buildnummer op, zodat elke APK over de vorige heen te installeren is
         versionCode = System.getenv("BUILD_NUMBER")?.toIntOrNull() ?: 2
-        versionName = "1.17.1"
+        versionName = "1.18.0"
     }
 
     // Release-ondertekening: GitHub Actions zet de sleutel klaar (vaste sleutel uit de geheimen,
@@ -55,6 +55,8 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    // "Nieuw in Vital Connect": de release-notities van deze versie gaan als asset mee (zie kopieerNieuw hieronder)
+    sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/nieuw"))
     buildFeatures {
         compose = true
         buildConfig = true
@@ -89,3 +91,13 @@ dependencies {
     // Unittests (bugtest-workflow): bestandsimport, opmaak en het inlezen van serverantwoorden
     testImplementation("junit:junit:4.13.2")
 }
+
+// De punten onder "## Nieuw" in release-notities/v<versie>.md verschijnen na de update één keer in de app (WhatsNew.kt).
+// Zonder notities (of zonder "## Nieuw") komt er geen venster.
+val kopieerNieuw by tasks.registering(Copy::class) {
+    val versie = android.defaultConfig.versionName
+    from(rootProject.file("../release-notities/v$versie.md"))
+    into(layout.buildDirectory.dir("generated/nieuw"))
+    rename { "nieuw.md" }
+}
+tasks.named("preBuild") { dependsOn(kopieerNieuw) }
