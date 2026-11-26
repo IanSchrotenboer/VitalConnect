@@ -61,3 +61,10 @@
 - Een kolom pas verwijderen nadat de app-versie die hem niet meer gebruikt is uitgebracht; anders mislukt het opslaan in de oude app (400 bij PATCH profiles).
 - Supabase-project `qtythirnpokfptchavgy`. Nieuwe migraties krijgen als bestandsnaam de versie die Supabase toekent.
 - Elke edge function moet in `supabase/config.toml` staan, anders rolt de GitHub-koppeling hem niet uit.
+- Instellingen in het Supabase-dashboard (mails, rate limits, MFA, wachtwoordregels, hook) staan in `docs/supabase-instellingen.md`; houd die bij als je er iets aan verandert.
+- Tweestapsverificatie (vrijwillig, TOTP) wordt afgedwongen in de database. Een nieuwe tabel met gegevens van gebruikers krijgt naast de eigen-rijen-policy ook
+  `create policy "tweestapsverificatie" … as restrictive for all to authenticated using ((select public.mfa_ok())) with check ((select public.mfa_ok()))`.
+  Een nieuwe `security definer`-functie voor de app controleert `public.mfa_ok()`; edge functions gebruiken `userFrom` (weigert een sessie zonder tweede stap). `tests/veiligheid.sql` controleert dit.
+- Mails bevatten alleen een code, nooit een link (scanners van werk- en schoolmail openen links en verbruiken zo de code).
+- Beheer: `admin_overview()` (alleen `public.beheerders`) toont gebruik, versies, koppelingen en fouten, nooit gezondheidswaarden. Nieuwe beheergegevens komen daar bij.
+- Nieuwe wachtwoorden: minstens 8 tekens met letters en cijfers, en niet in Have I Been Pwned (`passwordProblem` en `leakCount` in `Api.kt`). Leaked password protection van Supabase zelf kan pas op het Pro-abonnement.

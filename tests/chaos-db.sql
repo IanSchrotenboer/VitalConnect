@@ -230,6 +230,51 @@ begin
   perform set_config('role', 'authenticated', true);
   rep := rep || jsonb_build_object('c','gebruiker B kan trainingen van A niet verwijderen','ok', n = 0 and k = 1 and cardinality(ids) = 1);
 
+  -- Beheer: alleen beheerders, en alleen gegevens over gebruik (geen gezondheidswaarden)
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', b, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+  begin perform public.admin_overview(); ok := false; exception when others then ok := sqlerrm like '%beheerders%'; end;
+  rep := rep || jsonb_build_object('c','beheeroverzicht geweigerd voor wie geen beheerder is','ok', ok);
+  begin update public.profiles set app_version = '<script>' where id = b; ok := false; exception when check_violation then ok := true; end;
+  rep := rep || jsonb_build_object('c','onzin als app-versie geweigerd','ok', ok);
+  begin update public.profiles set app_seen_at = now() + interval '1 year' where id = b; ok := false; exception when check_violation then ok := true; end;
+  rep := rep || jsonb_build_object('c','laatst gezien in de toekomst geweigerd','ok', ok);
+  update public.profiles set app_version = '1.19.0', app_seen_at = now() where id = b;
+  j := public.app_state(current_date, current_date, false);
+  rep := rep || jsonb_build_object('c','app_state geeft versie terug en is_admin onwaar','ok', j #>> '{profile,app_version}' = '1.19.0' and j->>'is_admin' = 'false');
+  perform set_config('role', 'postgres', true);
+  insert into public.beheerders (user_id) values (a);
+  perform set_config('role', 'authenticated', true);
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', a, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+  j := public.admin_overview();
+  rep := rep || jsonb_build_object('c','beheerder ziet het overzicht, zonder gezondheidswaarden','ok',
+    (j #>> '{kpi,gebruikers}')::int >= 2 and jsonb_array_length(j->'gebruikers') >= 2
+    and j::text not like '%"value"%' and j::text not like '%daily%' and public.app_state(current_date, current_date, false)->>'is_admin' = 'true');
+
+  -- Tweestapsverificatie aan voor B: zonder tweede stap (aal1) kan B niets, met tweede stap (aal2) alles
+  perform set_config('role', 'postgres', true);
+  insert into auth.mfa_factors (id, user_id, friendly_name, factor_type, status, created_at, updated_at, secret)
+  values (gen_random_uuid(), b, 'chaos', 'totp', 'verified', now(), now(), 'x');
+  perform set_config('role', 'authenticated', true);
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', b, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+  begin perform public.app_state(current_date, current_date, true); ok := false; exception when others then ok := sqlerrm = 'Tweede stap nodig'; end;
+  rep := rep || jsonb_build_object('c','tweestaps: app_state zonder tweede stap geweigerd','ok', ok);
+  begin perform public.ingest_health_connect('[]'::jsonb); ok := false; exception when others then ok := sqlerrm = 'Tweede stap nodig'; end;
+  rep := rep || jsonb_build_object('c','tweestaps: upload zonder tweede stap geweigerd','ok', ok);
+  select count(*) into n from public.metric_stats();
+  select count(*) into k from public.profiles;
+  rep := rep || jsonb_build_object('c','tweestaps: zonder tweede stap geen statistieken en geen profiel','ok', n = 0 and k = 0, 'd', n + k);
+  update public.profiles set display_name = 'gehackt' where id = b;
+  get diagnostics n = row_count;
+  -- Alleen de weigering van row level security telt (42501), geen andere fout
+  begin insert into public.workouts (user_id, source, external_id, sport, day, started_at, duration_s)
+    values (b, 'manual', 'mfa', 'running', current_date, now() - interval '1 hour', 600); ok := false;
+  exception when insufficient_privilege then ok := true; end;
+  rep := rep || jsonb_build_object('c','tweestaps: zonder tweede stap niets wijzigen of toevoegen','ok', n = 0 and ok);
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', b, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  j := public.app_state(current_date, current_date, true);
+  select count(*) into k from public.profiles;
+  rep := rep || jsonb_build_object('c','tweestaps: met tweede stap werkt alles weer','ok', j ? 'profile' and k = 1);
+
   -- Account verwijderen ruimt ook de cache op (koppeling met cascade)
   perform set_config('role', 'postgres', true);
   select count(*) into n from pg_constraint where conrelid = 'public.metric_stats_cache'::regclass and contype = 'f' and confdeltype = 'c';

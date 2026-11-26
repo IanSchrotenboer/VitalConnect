@@ -120,6 +120,11 @@ data class Connection(val status: String, val lastSync: String?, val lastError: 
 data class SourceInfo(val id: String, val name: String, val sync: String, val available: Boolean)
 
 /** Bronnen die deze versie van de app kan tonen, in deze volgorde. */
+/** Foutmelding van app_state en ingest als tweestapsverificatie aan staat maar de tweede stap ontbreekt. */
+const val TWO_STEP_NEEDED = "Tweede stap nodig"
+/** Zo slaat de database de app-versie op (check-constraint op profiles.app_version). */
+val APP_VERSION = Regex("^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}$")
+
 val KNOWN_SOURCES = listOf("health_connect", "google_health", "garmin")
 
 /** Persoonlijke gegevens uit het profiel. Alles behalve het e-mailadres is optioneel. */
@@ -132,7 +137,7 @@ data class Profile(
     val weightKg: Double? = null,
 )
 
-enum class ProfileTab { Profile, Connections }
+enum class ProfileTab { Profile, Connections, Admin }
 
 /** Kennismaking na de eerste keer inloggen (na de toestemming). */
 enum class Onboarding { Import, Profile }
@@ -148,14 +153,23 @@ sealed interface AuthStep {
     /** type: signup, email (inlogcode) of recovery */
     data class Code(val email: String, val type: String) : AuthStep
     data object NewPassword : AuthStep
+    /** Tweestapsverificatie: code uit de authenticator-app na het inloggen. */
+    data class TwoStep(val factorId: String) : AuthStep
 }
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val api = Api(app)
     private val hc = HealthSync(app, api)
 
-    var signedIn by mutableStateOf(api.isSignedIn); private set
-    var authStep by mutableStateOf<AuthStep>(AuthStep.Login); private set
+    var signedIn by mutableStateOf(api.isSignedIn && api.pendingFactor == null); private set
+    var authStep by mutableStateOf<AuthStep>(api.pendingFactor?.let { AuthStep.TwoStep(it) } ?: AuthStep.Login); private set
+    /** Tweestapsverificatie staat aan voor dit account. */
+    var twoStepOn by mutableStateOf(api.twoStepOn); private set
+    /** Bezig met aanzetten: sleutel en link voor de authenticator-app. */
+    var totpSetup by mutableStateOf<TotpSetup?>(null); private set
+    /** Beheerder (uit app_state) en het overzicht zodra het tabblad Beheer opent. */
+    var isAdmin by mutableStateOf(false); private set
+    var adminOverview by mutableStateOf<AdminOverview?>(null); private set
     var needsConsent by mutableStateOf(false); private set
     var busy by mutableStateOf(false); private set
     var message by mutableStateOf<String?>(null)
@@ -346,9 +360,56 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---------- Inloggen ----------
     private suspend fun afterSignIn() {
+        twoStepOn = api.twoStepOn
+        // Tweestapsverificatie aan: eerst de code uit de authenticator-app, dan pas de gegevens
+        api.pendingFactor?.let { authStep = AuthStep.TwoStep(it); return }
         signedIn = true
         authStep = AuthStep.Login
         loadNow()
+    }
+
+    fun verifyTwoStep(code: String) = task {
+        val step = authStep as? AuthStep.TwoStep ?: return@task
+        api.verifyTotp(step.factorId, code.trim())
+        afterSignIn()
+    }
+
+    // ---------- Tweestapsverificatie instellen ----------
+    fun startTwoStep() = task { totpSetup = api.enrollTotp() }
+
+    fun confirmTwoStep(code: String) = task {
+        val setup = totpSetup ?: return@task
+        api.verifyTotp(setup.factorId, code.trim())
+        totpSetup = null
+        twoStepOn = api.twoStepOn
+        // Sessies op andere toestellen hebben de tweede stap niet gedaan: die moeten opnieuw inloggen
+        runCatching { api.signOutOthers() }
+        message = "Tweestapsverificatie staat aan."
+    }
+
+    fun cancelTwoStep() { totpSetup = null }
+
+    fun disableTwoStep() = task {
+        api.unenrollTotp()
+        twoStepOn = false
+        message = "Tweestapsverificatie staat uit."
+    }
+
+    // ---------- Beheer ----------
+    fun loadAdmin() = task { adminOverview = parseAdminOverview(api.rpc("admin_overview", JsonObject(emptyMap())) as? JsonObject) }
+
+    /** Versie en laatste gebruik voor het beheeroverzicht; alleen schrijven als het veranderd is (hooguit eens per dag). */
+    private suspend fun reportAppVersion(prof: JsonObject) {
+        val version = BuildConfig.VERSION_NAME.takeIf { APP_VERSION.matches(it) } ?: return
+        val seen = runCatching { Instant.parse(prof.str("app_seen_at")).atZone(java.time.ZoneId.systemDefault()).toLocalDate() }.getOrNull()
+        if (prof.str("app_version") == version && seen == LocalDate.now()) return
+        try {
+            api.patch("profiles?id=eq.${api.userId}", buildJsonObject {
+                put("app_version", version); put("app_seen_at", Instant.now().toString())
+            })
+        } catch (_: Exception) {
+            // Niet belangrijk genoeg voor een melding; de volgende keer opnieuw
+        }
     }
 
     fun signIn(email: String, password: String) = task {
@@ -356,7 +417,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         afterSignIn()
     }
 
+    /** Regels en datalekken; geeft de melding terug als het wachtwoord niet goed genoeg is. */
+    private suspend fun passwordRejected(password: String): String? {
+        passwordProblem(password)?.let { return it }
+        val n = api.leakCount(password) ?: 0
+        return if (n > 0) "Dit wachtwoord staat in bekende datalekken. Kies een ander wachtwoord." else null
+    }
+
     fun signUp(email: String, password: String) = task {
+        passwordRejected(password)?.let { message = it; return@task }
         val e = email.trim()
         if (api.signUp(e, password)) afterSignIn()
         else { authStep = AuthStep.Code(e, "signup"); message = "We hebben een code naar $e gestuurd." }
@@ -393,12 +462,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setNewPassword(password: String) = task {
+        passwordRejected(password)?.let { message = it; return@task }
         api.updatePassword(password)
         message = "Je wachtwoord is gewijzigd."
         afterSignIn()
     }
 
-    fun backToLogin() { authStep = AuthStep.Login }
+    fun backToLogin() {
+        // Terug vanaf de tweede stap = uitloggen (de sessie zonder tweede stap kan niets)
+        if (authStep is AuthStep.TwoStep) signOut() else authStep = AuthStep.Login
+    }
 
     fun signInWithGoogle(idToken: String, rawNonce: String) = task {
         api.signInWithGoogle(idToken, rawNonce)
@@ -421,6 +494,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         tab = Tab.Today; showSettings = false; detailMetric = null; showHerstel = false; fitness = null; editing = null; layout = Layout()
         training = null; trainingSource = "auto"; trainingWalkMin = 0; trainingWalkLight = false; olderWorkouts = emptyList(); olderDone = false; workoutDetail = null; workoutForm = null; workoutImport = null
         profile = Profile(); profileTab = ProfileTab.Profile; onboarding = null
+        twoStepOn = false; totpSetup = null; isAdmin = false; adminOverview = null
         // Niets van de vorige gebruiker laten staan op dit toestel
         prefs = emptyMap(); today = emptyMap(); connections = emptyMap(); history = emptyMap(); stats = emptyMap()
         trendSeries = emptyList(); lastLoaded = null; device.cloudConnected = false
@@ -537,7 +611,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun loadNow() {
         // Eén verzoek (app_state) in plaats van zes: profiel, dashboard, koppelingen, 14 dagen en statistieken
         val now = LocalDate.now()
-        val st = api.appState(now.minusDays(13), now, withStats = true)
+        val st = try {
+            api.appState(now.minusDays(13), now, withStats = true)
+        } catch (e: ApiException) {
+            // Tweestapsverificatie aangezet op een ander toestel: deze sessie moet de tweede stap nog doen
+            val factor = if (e.message == TWO_STEP_NEEDED) api.loadFactor() else null
+            if (factor == null) throw e
+            signedIn = false; twoStepOn = true; authStep = AuthStep.TwoStep(factor)
+            return
+        }
+        isAdmin = st.isAdmin
         metrics = st.metrics
         prefs = st.prefs
         val prof = st.profile
@@ -557,6 +640,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             trainingWalkMin = prof.int("training_walk_min")?.takeIf { m -> WALK_MINUTES.any { it.first == m } } ?: 0
             trainingWalkLight = prof.bool("training_walk_light") == true
             if (!needsConsent && onboarding == null && prof.str("onboarded_at").isEmpty()) onboarding = Onboarding.Import
+            reportAppVersion(prof)
         }
         connections = st.connections
         sources = st.sources

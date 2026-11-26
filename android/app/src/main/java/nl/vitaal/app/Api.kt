@@ -32,6 +32,35 @@ object Config {
 
 class ApiException(val code: Int, message: String) : IOException(message)
 
+fun sha1Hex(s: String): String =
+    java.security.MessageDigest.getInstance("SHA-1").digest(s.toByteArray()).joinToString("") { "%02X".format(it) }
+
+/** Telling voor deze hash in het antwoord van de range-API ("SUFFIX:AANTAL" per regel; opvulling heeft aantal 0). */
+fun leakCountIn(body: String, hash: String): Int {
+    val suffix = hash.drop(5).uppercase()
+    return body.lineSequence().map { it.trim().split(':') }
+        .firstOrNull { it.size == 2 && it[0].uppercase() == suffix }?.get(1)?.toIntOrNull() ?: 0
+}
+
+/** Regels voor een nieuw wachtwoord (ook ingesteld in Supabase Auth); null = in orde. */
+fun passwordProblem(pw: String): String? = when {
+    pw.length < 8 -> "Kies een wachtwoord van minimaal 8 tekens."
+    pw.none(Char::isLetter) || pw.none(Char::isDigit) -> "Gebruik letters én cijfers in je wachtwoord."
+    else -> null
+}
+
+/** Gegevens om een authenticator-app te koppelen: geheime sleutel en otpauth-link. */
+class TotpSetup(val factorId: String, val secret: String, val uri: String)
+
+private fun JsonObject.factors() = (this["factors"] as? kotlinx.serialization.json.JsonArray).orEmpty().filterIsInstance<JsonObject>()
+
+/** Eén claim uit een JWT (alleen lezen; de server controleert de handtekening). */
+internal fun jwtClaim(token: String, name: String): String? = try {
+    val part = token.split(".")[1]
+    val json = String(java.util.Base64.getUrlDecoder().decode(part.padEnd((part.length + 3) / 4 * 4, '=')))
+    (Json.parseToJsonElement(json).jsonObject[name] as? kotlinx.serialization.json.JsonPrimitive)?.content
+} catch (_: Exception) { null }
+
 /**
  * Kleine client voor Supabase Auth, PostgREST en Edge Functions.
  * De sessie staat in app-privé opslag; de tokens zijn versleuteld met de Android Keystore (SecureStore).
@@ -42,6 +71,51 @@ class Api(context: Context) {
 
     val isSignedIn: Boolean get() = prefs.contains(REFRESH)
     val userId: String? get() = prefs.getString(USER, null)
+
+    /** Tweestapsverificatie staat aan (een bevestigde authenticator-app). */
+    val twoStepOn: Boolean get() = prefs.getString(FACTOR, null) != null
+
+    /** Factor-ID als deze sessie de tweede stap nog moet doen, anders null. */
+    val pendingFactor: String? get() = prefs.getString(FACTOR, null)?.takeIf { prefs.getString(AAL, "aal1") != "aal2" }
+
+    /** Nieuwe authenticator-app: oude, niet afgemaakte pogingen eerst weg (anders weigert Supabase de naam). */
+    suspend fun enrollTotp(): TotpSetup {
+        val user = call("GET", "/auth/v1/user", null).jsonObject
+        user.factors().filter { it.str("status") != "verified" }.forEach { call("DELETE", "/auth/v1/factors/${it.str("id")}", null) }
+        val o = call("POST", "/auth/v1/factors", buildJsonObject {
+            put("factor_type", "totp"); put("friendly_name", "Vital Connect"); put("issuer", "Vital Connect")
+        }).jsonObject
+        val totp = o["totp"]?.jsonObject ?: throw ApiException(500, "Instellen lukte niet")
+        return TotpSetup(o.str("id"), totp.str("secret"), totp.str("uri"))
+    }
+
+    /** Code uit de authenticator-app controleren; daarna is de sessie aal2. */
+    suspend fun verifyTotp(factorId: String, code: String) {
+        val ch = call("POST", "/auth/v1/factors/$factorId/challenge", JsonObject(emptyMap())).jsonObject
+        val res = call("POST", "/auth/v1/factors/$factorId/verify", buildJsonObject {
+            put("challenge_id", ch.str("id")); put("code", code)
+        }).jsonObject
+        saveSession(res)
+    }
+
+    /** Factor ophalen als die op een ander toestel is aangezet. */
+    suspend fun loadFactor(): String? {
+        val id = call("GET", "/auth/v1/user", null).jsonObject.factors()
+            .firstOrNull { it.str("status") == "verified" && it.str("factor_type") == "totp" }?.str("id")
+        prefs.edit().putString(FACTOR, id).apply()
+        return id
+    }
+
+    /** Andere toestellen uitloggen (na het aanzetten van tweestapsverificatie). Deze sessie blijft. */
+    suspend fun signOutOthers() {
+        call("POST", "/auth/v1/logout?scope=others", JsonObject(emptyMap()))
+    }
+
+    suspend fun unenrollTotp() {
+        val id = prefs.getString(FACTOR, null) ?: return
+        call("DELETE", "/auth/v1/factors/$id", null)
+        prefs.edit().remove(FACTOR).apply()
+    }
 
     suspend fun signIn(email: String, password: String) {
         val res = call("POST", "/auth/v1/token?grant_type=password",
@@ -90,6 +164,22 @@ class Api(context: Context) {
     }
 
     fun signOut() = prefs.edit().clear().apply()
+
+    /**
+     * Hoe vaak dit wachtwoord in bekende datalekken voorkomt (Have I Been Pwned, k-anonimiteit):
+     * alleen de eerste 5 tekens van de SHA-1-hash gaan de deur uit, nooit het wachtwoord.
+     * null = niet te controleren (geen netwerk); dan houden we niemand tegen.
+     */
+    suspend fun leakCount(password: String): Int? = withContext(Dispatchers.IO) {
+        val hash = sha1Hex(password)
+        try {
+            val req = Request.Builder().url("https://api.pwnedpasswords.com/range/${hash.take(5)}")
+                .header("Add-Padding", "true").build()
+            http.newCall(req).execute().use { r -> if (r.isSuccessful) leakCountIn(r.body?.string().orEmpty(), hash) else null }
+        } catch (_: IOException) {
+            null
+        }
+    }
 
     suspend fun rpc(name: String, body: JsonObject): JsonElement = call("POST", "/rest/v1/rpc/$name", body)
     suspend fun patch(path: String, body: JsonObject) { call("PATCH", "/rest/v1/$path", body, prefer = "return=minimal") }
@@ -153,10 +243,15 @@ class Api(context: Context) {
             ?: (System.currentTimeMillis() / 1000 + (o["expires_in"]?.jsonPrimitive?.longOrNull ?: 3600))
         secure.put(ACCESS, o["access_token"]!!.jsonPrimitive.content)
         secure.put(REFRESH, o["refresh_token"]!!.jsonPrimitive.content)
-        prefs.edit()
+        val user = o["user"] as? JsonObject
+        val factor = user?.factors()?.firstOrNull { it.str("status") == "verified" && it.str("factor_type") == "totp" }?.str("id")
+        val edit = prefs.edit()
             .putLong(EXPIRES, expiresAt)
-            .putString(USER, o["user"]?.jsonObject?.get("id")?.jsonPrimitive?.content)
-            .apply()
+            .putString(USER, user?.get("id")?.jsonPrimitive?.content)
+            .putString(AAL, jwtClaim(o["access_token"]!!.jsonPrimitive.content, "aal") ?: "aal1")
+        // Zonder gebruiker in het antwoord blijft de bekende stand staan; Supabase laat "factors" weg als er geen zijn
+        if (user != null) edit.putString(FACTOR, factor)
+        edit.apply()
     }
 
     companion object {
@@ -164,6 +259,8 @@ class Api(context: Context) {
         private const val REFRESH = "refresh"
         private const val EXPIRES = "expires_at"
         private const val USER = "user_id"
+        private const val FACTOR = "totp_factor"
+        private const val AAL = "aal"
         private val JSON = "application/json".toMediaType()
         private val lock = Mutex()
         private val http = OkHttpClient.Builder()

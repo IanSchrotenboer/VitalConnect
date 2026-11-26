@@ -308,6 +308,56 @@ const naarKoppelingen = async (p) => { await p.click("[data-tab=today]"); await 
   await ctx.close();
 }
 
+// ---------- Beveiliging: tweestapsverificatie, wachtwoordregels en beheer ----------
+{
+  const p = await start({ onb: null, prof: { name: "Ian" } });
+  await p.click("[data-act=settings]");
+  verwacht((await p.locator("#c-tfa").textContent()).includes("Uit."), "Tweestaps: staat niet uit bij een nieuwe gebruiker");
+  await p.click("[data-act=tfastart]");
+  verwacht((await p.locator("#c-tfa").textContent()).includes("JBSW Y3DP EHPK 3PXP"), "Tweestaps: sleutel niet in groepjes van vier");
+  await p.fill("#t-code", "12a");
+  await p.click("[data-act=tfaon]");
+  verwacht((await p.locator("#tnote").textContent()).includes("6 cijfers"), "Tweestaps: onvolledige code wordt niet geweigerd");
+  await p.fill("#t-code", "123456");
+  await p.click("[data-act=tfaon]");
+  verwacht(await p.evaluate(() => __vc.state().tfa === true), "Tweestaps: staat niet aan na een goede code");
+  verwacht((await p.locator("#c-tfa").textContent()).includes("Aan:"), "Tweestaps: kaart zegt niet dat het aan staat");
+  // Uitloggen en opnieuw inloggen: eerst de tweede stap, dan pas verder
+  await p.click("[data-act=logout]");
+  await p.click("[data-act=google]"); await p.waitForTimeout(900);
+  verwacht(await zichtbaar(p, "#a-code"), "Tweestaps: na inloggen geen vraag om de code");
+  await p.fill("#a-code", "12");
+  await p.click("[data-act=tfaok]");
+  verwacht(await p.evaluate(() => __vc.state().onb === "tfa"), "Tweestaps: verder zonder geldige code");
+  await p.fill("#a-code", "654321");
+  await p.click("[data-act=tfaok]");
+  verwacht(await p.evaluate(() => __vc.state().onb === "consent"), "Tweestaps: na de code niet door naar de toestemming");
+  // Uitzetten met bevestiging
+  await p.evaluate(([k]) => { const s = JSON.parse(localStorage.getItem(k)); s.onb = null; localStorage.setItem(k, JSON.stringify(s)); }, [KEY]);
+  await p.reload(); await p.evaluate(() => document.getElementById("splash")?.remove()); await p.waitForTimeout(400);
+  await p.click("[data-act=settings]");
+  await p.click("[data-act=tfaoff]");
+  verwacht(await p.evaluate(() => __vc.state().tfa === true), "Tweestaps: uitzetten zonder bevestiging");
+  await p.click("[data-act=tfaoffok]");
+  verwacht(await p.evaluate(() => __vc.state().tfa === false), "Tweestaps: staat nog aan na uitzetten");
+  // Beheer
+  await p.click("[data-ptab=admin]");
+  const beheer = await p.locator("#v-settings").textContent();
+  verwacht(beheer.includes("App-versies") && beheer.includes("Gebruikers · 3"), "Beheer: overzicht toont geen versies of gebruikers");
+  verwacht(beheer.includes("Versie " + (await p.evaluate(() => __vc.versie))), "Beheer: huidige versie staat er niet bij");
+  verwacht(!/\d+\s*stappen|bpm|slaapscore/i.test(beheer), "Beheer: toont gezondheidswaarden");
+  // Wachtwoordregels bij een nieuw account
+  await p.click("[data-ptab=profile]"); await p.click("[data-act=logout]");
+  await p.click("[data-act=email]");
+  for (const [pw, tekst] of [["kort1", "8 tekens"], ["alleenletters", "letters én cijfers"], ["Wachtwoord1", "datalekken"]]) {
+    await p.fill("#a-pw", pw); await p.click("[data-act=signup]");
+    verwacht((await p.locator("#anote").textContent()).includes(tekst), `Wachtwoord: "${pw}" geeft niet de melding "${tekst}"`);
+  }
+  await p.fill("#a-pw", "fiets2026"); await p.click("[data-act=signup]");
+  verwacht(await p.evaluate(() => __vc.state().onb === "consent"), "Wachtwoord: goed wachtwoord wordt geweigerd");
+  await p.context().close();
+}
+
 await browser.close();
 if (fouten.length) { console.log("Fouten in de functionele test:\n- " + fouten.join("\n- ")); process.exit(1); }
 console.log("Geslaagd: alle functies geven de verwachte uitkomst.");
